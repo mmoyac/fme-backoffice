@@ -11,7 +11,14 @@ export default function NuevoProductoPage() {
     nombre: '',
     descripcion: '',
     sku: '',
-    imagen_url: ''
+    imagen_url: '',
+    categoria_id: 1,
+    tipo_producto_id: 1,
+    unidad_medida_id: 1,
+    es_vendible: true,
+    es_vendible_web: false,
+    es_ingrediente: false,
+    activo: true
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
