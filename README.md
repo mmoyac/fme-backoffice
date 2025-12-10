@@ -1,13 +1,14 @@
 # 🔧 Backoffice Admin Panel - Masas Estación
 
-Panel administrativo para gestionar productos, locales, inventario y precios del e-commerce.
+Panel administrativo para gestionar productos, locales, inventario, costos de producción y precios del e-commerce.
 
 ## 🚀 Stack Tecnológico
 
 - **Framework:** Next.js 14.2.33 (App Router)
 - **Lenguaje:** TypeScript
-- **Estilos:** Tailwind CSS
-- **API:** Fetch API / Axios
+- **Estilos:** Tailwind CSS (Sin dependencias externas pesadas)
+- **Autenticación:** JWT (JSON Web Tokens)
+- **API:** Fetch API con manejo centralizado de auth
 - **Puerto:** 3001 (desarrollo) / 3000 (producción en Docker)
 
 ## 📂 Estructura del Proyecto
@@ -15,18 +16,22 @@ Panel administrativo para gestionar productos, locales, inventario y precios del
 ```
 fme-backoffice/
 ├── app/
+│   ├── login/              # Página de inicio de sesión
 │   ├── admin/
 │   │   ├── dashboard/      # Dashboard con estadísticas
-│   │   ├── productos/      # CRUD de productos
+│   │   ├── mantenedores/   # Gestión de datos maestros (Admin only)
+│   │   ├── productos/      # CRUD de productos y Recetas
 │   │   ├── locales/        # CRUD de locales
 │   │   ├── inventario/     # Gestión de stock
 │   │   └── precios/        # Gestión de precios
 │   └── page.tsx
 ├── components/
 │   └── layout/
-│       └── Sidebar.tsx     # Navegación lateral
+│       └── Sidebar.tsx     # Navegación lateral dinámica por rol
 ├── lib/
-│   └── api/                # Clientes API (productos, locales, etc.)
+│   ├── api/                # Clientes API (recetas, productos, maestras...)
+│   ├── auth.ts             # Servicio de autenticación JWT
+│   └── AuthProvider.tsx    # Contexto de autenticación
 ├── public/
 ├── .env.local              # Variables de entorno (desarrollo)
 ├── .env.production         # Variables de entorno (producción)
@@ -56,166 +61,87 @@ npm run dev
 
 El backoffice estará disponible en: `http://localhost:3001`
 
-## 🐳 Despliegue en Producción
+## 🔐 Autenticación y Seguridad
 
-### 1. Build de la Imagen Docker
-
-```bash
-# Desde el directorio fme-backoffice
-docker build -t mmoyac/masas-estacion-backoffice:latest -f Dockerfile.prod .
-```
-
-### 2. Push a Docker Hub
-
-```bash
-docker push mmoyac/masas-estacion-backoffice:latest
-```
-
-### 3. Desplegar en VPS
-
-```bash
-# SSH al VPS
-ssh user@168.231.96.205
-
-# Navegar al directorio del proyecto
-cd /path/to/fme-backend
-
-# Pull de la nueva imagen
-docker pull mmoyac/masas-estacion-backoffice:latest
-
-# Desplegar con docker-compose
-docker-compose -f docker-compose.prod.yml up -d backoffice
-
-# Verificar logs
-docker logs -f masas_estacion_backoffice
-```
-
-### 4. Configurar Nginx (Reverse Proxy)
-
-```nginx
-# /etc/nginx/sites-available/masas-estacion-admin
-
-server {
-    listen 80;
-    server_name admin.masasestacion.cl;
-
-    location / {
-        proxy_pass http://localhost:3001;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-```
-
-## 🔐 Variables de Entorno
-
-### Desarrollo (.env.local)
-
-```env
-NEXT_PUBLIC_API_URL=http://localhost:8000
-NODE_ENV=development
-```
-
-### Producción (.env.production)
-
-```env
-NEXT_PUBLIC_API_URL=http://backend:8000
-NODE_ENV=production
-```
+El sistema utiliza autenticación basada en JWT:
+- **Login:** `/login` valida credenciales contra el backend.
+- **Roles:** El menú lateral se adapta según el rol (`admin` ve todo, otros roles tienen acceso limitado).
+- **Protección:** Middleware y componentes de orden superior protegen las rutas.
+- **Persistencia:** Token almacenado en localStorage con manejo de expiración.
 
 ## 📋 Funcionalidades
 
-### ✅ Productos
-- Listado completo con tabla
-- Crear nuevo producto con SKU único
-- Editar información del producto
-- Upload de imágenes (JPG, PNG, WEBP, máx 2MB)
-- Eliminar producto
+### ✅ Productos y Producción
+- Listado completo con filtros
+- **Gestión de Recetas:**
+  - Creación y edición de recetas por producto.
+  - Agregado de ingredientes con autocompletado inteligente.
+  - **Cálculo Automático de Costos:** Costo total y unitario basado en ingredientes.
+  - Actualización automática del `costo_fabricacion` del producto.
+- Campos extendidos: Categoría, Tipo, Unidad, Flags (vendible, ingrediente, receta).
+
+### ✅ Mantenedores (Admin)
+- **Categorías:** Gestión de familias de productos.
+- **Tipos de Producto:** Clasificación (Materia Prima, Producto Terminado, etc.).
+- **Unidades de Medida:** Gestión de unidades (kg, g, lt, un).
 
 ### ✅ Locales
 - Gestión de sucursales/locales
-- Código auto-generado (LOC_001, LOC_002, etc.)
+- Código auto-generado
 - Estado activo/inactivo
-- Dirección y datos de contacto
 
 ### ✅ Inventario
 - Vista matricial: Productos × Locales
-- Ajuste de stock por celda
-- Actualización en tiempo real
-- Validación de cantidades (no negativos)
+- Ajuste de stock por celda con validaciones
 
 ### ✅ Precios
 - Vista matricial: Productos × Locales
 - Configuración de precios por local
-- Formato CLP ($)
-- Validación de montos positivos
 
-### ✅ Dashboard
-- Estadísticas generales (total productos, locales, etc.)
-- Accesos rápidos a funciones principales
-- Cards con enlaces a cada sección
+## 📊 Endpoints de API Principales
 
-## 🎨 Diseño
+| Recurso | Métodos | Descripción |
+|---------|---------|-------------|
+| **Autenticación** | POST | Login y obtención de token |
+| **Productos** | CRUD | Gestión completa de productos |
+| **Recetas** | CRUD | Gestión de recetas e ingredientes |
+| **Maestras** | CRUD | Categorías, Tipos, Unidades |
+| **Locales** | CRUD | Gestión de sucursales |
+| **Inventario** | GET/PUT | Matriz de stock |
+| **Precios** | GET/PUT | Matriz de precios |
 
-- **Modo:** Dark mode
-- **Color Primario:** Turquesa `rgb(94, 200, 242)`
-- **Color Secundario:** Teal `rgb(69, 162, 154)`
-- **Fondo:** Slate-900
-- **Framework CSS:** Tailwind CSS
+## 🔄 Workflow de Producción (Recetas)
 
-## 🔄 Workflow de Desarrollo
-
-1. **Crear funcionalidad en local**
-2. **Probar con backend local** (`npm run dev`)
-3. **Build de imagen Docker** (`docker build`)
-4. **Push a Docker Hub** (`docker push`)
-5. **Deploy en VPS** (`docker-compose up -d`)
-
-## 📊 Endpoints de API Consumidos
-
-| Endpoint | Método | Descripción |
-|----------|--------|-------------|
-| `/api/productos/` | GET | Listar todos los productos |
-| `/api/productos/` | POST | Crear nuevo producto |
-| `/api/productos/{id}` | GET | Obtener producto por ID |
-| `/api/productos/{id}` | PUT | Actualizar producto |
-| `/api/productos/{id}` | DELETE | Eliminar producto |
-| `/api/productos/{id}/imagen` | POST | Subir imagen de producto |
-| `/api/locales/` | GET/POST | Gestión de locales |
-| `/api/locales/{id}` | GET/PUT/DELETE | Operaciones por local |
-| `/api/inventario/` | GET | Obtener todo el inventario |
-| `/api/inventario/producto/{p_id}/local/{l_id}` | PUT | Actualizar stock |
-| `/api/precios/` | GET | Obtener todos los precios |
-| `/api/precios/producto/{p_id}/local/{l_id}` | PUT | Actualizar precio |
+1. Crear/Seleccionar un producto.
+2. Ir a la pestaña **"Receta"**.
+3. Agregar ingredientes buscando por nombre o SKU.
+4. Definir cantidades y unidades.
+5. El sistema calcula automáticamente:
+   - Costo de cada ingrediente.
+   - Costo total de la receta.
+   - Costo unitario (según rendimiento).
 
 ## 🚦 Estado del Proyecto
 
 ✅ **Completado:**
-- Estructura base del proyecto
-- CRUD completo de Productos
-- CRUD completo de Locales
-- Gestión de Inventario (matriz)
-- Gestión de Precios (matriz)
-- Dashboard con estadísticas
-- Dockerfile de producción
+- Estructura base y Docker
+- Sistema de Autenticación JWT completo
+- Roles y Permisos (Admin)
+- CRUD Productos, Locales, Inventario, Precios
+- **Sistema de Recetas y Costos**
+- Mantenedores de Datos Maestros
+- Interfaz moderna con Tailwind CSS
 
 ⏳ **Pendiente:**
-- Sistema de autenticación (login/logout)
-- Gestión de usuarios admin
-- Auditoría de cambios
-- Reportes y exportación
+- Auditoría de cambios avanzada
+- Reportes y exportación (PDF/Excel)
 - Notificaciones en tiempo real
+- Dashboard con gráficos de ventas (integración futura)
 
 ## 📞 Soporte
 
-Para problemas o consultas, revisar el archivo `AGENTS.md` en este directorio.
+Para problemas o consultas, revisar el archivo `AGENTS.md` en el backend.
 
 ---
 
-**Última actualización:** 24 de Noviembre, 2025
+**Última actualización:** 10 de Diciembre, 2025
