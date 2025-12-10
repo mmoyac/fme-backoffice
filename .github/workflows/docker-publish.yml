@@ -41,7 +41,7 @@ jobs:
           file: Dockerfile.prod
           push: ${{ github.event_name != 'pull_request' }}
           build-args: |
-            NEXT_PUBLIC_API_URL=https://masasestacion.cl
+            NEXT_PUBLIC_API_URL=https://api.masasestacion.cl
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=registry,ref=${{ env.DOCKER_IMAGE }}:buildcache
