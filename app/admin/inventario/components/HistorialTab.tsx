@@ -5,7 +5,7 @@ import { listarMovimientos, MovimientoInventario } from '@/lib/api/movimientos';
 import { getProductos, Producto } from '@/lib/api/productos';
 import { getLocales, Local } from '@/lib/api/locales';
 
-export default function HistorialMovimientosPage() {
+export function HistorialTab() {
   const [movimientos, setMovimientos] = useState<MovimientoInventario[]>([]);
   const [productos, setProductos] = useState<Producto[]>([]);
   const [locales, setLocales] = useState<Local[]>([]);
@@ -78,9 +78,6 @@ export default function HistorialMovimientosPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-white">Historial de Movimientos</h1>
-      </div>
 
       {/* Filtros */}
       <div className="bg-slate-800 rounded-lg p-4">

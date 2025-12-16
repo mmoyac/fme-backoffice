@@ -52,6 +52,8 @@ export default function EditarProductoPage({ params }: { params: { id: string } 
         es_ingrediente: productoData.es_ingrediente,
         tiene_receta: productoData.tiene_receta,
         activo: productoData.activo,
+        stock_minimo: productoData.stock_minimo,
+        stock_critico: productoData.stock_critico,
       });
     } catch (err) {
       alert('Error al cargar datos');
@@ -145,6 +147,34 @@ export default function EditarProductoPage({ params }: { params: { id: string } 
               rows={3}
               className="w-full bg-slate-700 text-white px-4 py-2 rounded-lg border border-slate-600 focus:border-primary focus:outline-none"
             />
+          </div>
+
+
+          <div className="grid grid-cols-2 gap-4 mt-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Stock Mínimo
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={formData.stock_minimo || 0}
+                onChange={(e) => setFormData({ ...formData, stock_minimo: Number(e.target.value) })}
+                className="w-full bg-slate-700 text-white px-4 py-2 rounded-lg border border-slate-600 focus:border-primary focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Stock Crítico
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={formData.stock_critico || 0}
+                onChange={(e) => setFormData({ ...formData, stock_critico: Number(e.target.value) })}
+                className="w-full bg-slate-700 text-white px-4 py-2 rounded-lg border border-slate-600 focus:border-primary focus:outline-none"
+              />
+            </div>
           </div>
         </div>
 
@@ -351,7 +381,7 @@ export default function EditarProductoPage({ params }: { params: { id: string } 
             Cancelar
           </button>
         </div>
-      </form>
-    </div>
+      </form >
+    </div >
   );
 }

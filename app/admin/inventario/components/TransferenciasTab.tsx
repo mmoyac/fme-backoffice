@@ -6,7 +6,7 @@ import { getProductos, Producto } from '@/lib/api/productos';
 import { getLocales, Local } from '@/lib/api/locales';
 import { getInventarios, Inventario } from '@/lib/api/inventario';
 
-export default function TransferenciasPage() {
+export function TransferenciasTab() {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [locales, setLocales] = useState<Local[]>([]);
   const [inventarios, setInventarios] = useState<Inventario[]>([]);
@@ -74,7 +74,7 @@ export default function TransferenciasPage() {
       setLoading(true);
       const result = await transferirInventario(formData);
       setSuccess(result.mensaje || 'Transferencia realizada exitosamente');
-      
+
       // Limpiar formulario
       setFormData({
         producto_id: 0,
@@ -100,9 +100,7 @@ export default function TransferenciasPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-white">Transferencias de Inventario</h1>
-      </div>
+
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Formulario */}

@@ -18,6 +18,9 @@ export interface Producto {
   es_ingrediente: boolean;
   tiene_receta: boolean;
   activo: boolean;
+  stock_minimo: number;
+  stock_critico: number;
+  stock_actual: number; // Computed by backend
 }
 
 export interface ProductoCreate {
@@ -35,6 +38,8 @@ export interface ProductoCreate {
   es_ingrediente?: boolean;
   tiene_receta?: boolean;
   activo?: boolean;
+  stock_minimo?: number;
+  stock_critico?: number;
 }
 
 export type ProductoUpdate = Partial<ProductoCreate>;

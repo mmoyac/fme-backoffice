@@ -18,7 +18,9 @@ export default function NuevoProductoPage() {
     es_vendible: true,
     es_vendible_web: false,
     es_ingrediente: false,
-    activo: true
+    activo: true,
+    stock_minimo: 0,
+    stock_critico: 0
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
@@ -76,6 +78,33 @@ export default function NuevoProductoPage() {
             className="w-full bg-slate-700 text-white px-4 py-2 rounded-lg border border-slate-600 focus:border-primary focus:outline-none"
             placeholder="Ej: Masa Napolitana"
           />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Stock Mínimo
+            </label>
+            <input
+              type="number"
+              min="0"
+              value={formData.stock_minimo || 0}
+              onChange={(e) => setFormData({ ...formData, stock_minimo: Number(e.target.value) })}
+              className="w-full bg-slate-700 text-white px-4 py-2 rounded-lg border border-slate-600 focus:border-primary focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Stock Crítico
+            </label>
+            <input
+              type="number"
+              min="0"
+              value={formData.stock_critico || 0}
+              onChange={(e) => setFormData({ ...formData, stock_critico: Number(e.target.value) })}
+              className="w-full bg-slate-700 text-white px-4 py-2 rounded-lg border border-slate-600 focus:border-primary focus:outline-none"
+            />
+          </div>
         </div>
 
         <div>

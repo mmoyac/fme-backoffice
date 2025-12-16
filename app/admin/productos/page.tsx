@@ -80,6 +80,7 @@ export default function ProductosPage() {
                 <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">Nombre</th>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">Descripción</th>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">Imagen</th>
+                <th className="px-6 py-3 text-center text-sm font-semibold text-gray-300">Stock Actual</th>
                 <th className="px-6 py-3 text-right text-sm font-semibold text-gray-300">Acciones</th>
               </tr>
             </thead>
@@ -97,6 +98,9 @@ export default function ProductosPage() {
                     ) : (
                       <span className="text-gray-500">-</span>
                     )}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-center font-bold text-white">
+                    {producto.stock_actual || 0}
                   </td>
                   <td className="px-6 py-4 text-sm text-right space-x-2">
                     <Link

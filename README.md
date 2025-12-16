@@ -90,9 +90,16 @@ El sistema utiliza autenticación basada en JWT:
 - Código auto-generado
 - Estado activo/inactivo
 
-### ✅ Inventario
-- Vista matricial: Productos × Locales
-- Ajuste de stock por celda con validaciones
+### ✅ Inventario (Refactorizado)
+- **Gestión Centralizada:** Tabs para Existencias, Transferencias e Historial.
+- **Existencias:** Vista de solo lectura con alertas de stock (Mínimo/Crítico).
+- **Transferencias:** Movimiento de stock entre bodegas.
+- **Historial:** Bitácora completa de movimientos (Kardex).
+
+### ✅ Compras
+- **Flujo de Estados:** Pendiente (Editable) -> Recibida (Inmutable, afecta Stock).
+- **Gestión de Proveedores.**
+- **Tipos de Documento Tributario.**
 
 ### ✅ Precios
 - Vista matricial: Productos × Locales
@@ -105,9 +112,10 @@ El sistema utiliza autenticación basada en JWT:
 | **Autenticación** | POST | Login y obtención de token |
 | **Productos** | CRUD | Gestión completa de productos |
 | **Recetas** | CRUD | Gestión de recetas e ingredientes |
-| **Maestras** | CRUD | Categorías, Tipos, Unidades |
+| **Maestras** | CRUD | Categorías, Tipos, Unidades, Tipos Doc. |
 | **Locales** | CRUD | Gestión de sucursales |
-| **Inventario** | GET/PUT | Matriz de stock |
+| **Inventario** | GET | Consulta de existencias, transferencias, historial |
+| **Compras** | CRUD | Flujo completo de compras y recepción |
 | **Precios** | GET/PUT | Matriz de precios |
 
 ## 🔄 Workflow de Producción (Recetas)
@@ -127,9 +135,11 @@ El sistema utiliza autenticación basada en JWT:
 - Estructura base y Docker
 - Sistema de Autenticación JWT completo
 - Roles y Permisos (Admin)
-- CRUD Productos, Locales, Inventario, Precios
+- CRUD Productos, Locales
 - **Sistema de Recetas y Costos**
 - Mantenedores de Datos Maestros
+- **Gestión de Inventario (Existencias, Movimientos, Historial)**
+- **Módulo de Compras y Proveedores**
 - Interfaz moderna con Tailwind CSS
 
 ⏳ **Pendiente:**
@@ -140,8 +150,8 @@ El sistema utiliza autenticación basada en JWT:
 
 ## 📞 Soporte
 
-Para problemas o consultas, revisar el archivo `AGENTS.md` en el backend.
+Para detalles técnicos de la implementación, ver `FEATURE_INVENTORY_PURCHASE.md` y `AGENTS.md`.
 
 ---
 
-**Última actualización:** 10 de Diciembre, 2025
+**Última actualización:** 16 de Diciembre, 2025

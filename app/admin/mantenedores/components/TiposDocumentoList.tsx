@@ -2,49 +2,35 @@
 
 import { useState, useEffect } from "react";
 import {
-    getUnidades,
-    createUnidad,
-    updateUnidad,
-    deleteUnidad,
-    type UnidadCreate,
-    type UnidadMedida
+    getTiposDocumento,
+    createTipoDocumento,
+    updateTipoDocumento,
+    deleteTipoDocumento,
+    type TipoDocumentoCreate,
+    type TipoDocumento
 } from "@/lib/api/maestras";
 
-interface UnidadForm {
-    codigo: string;
-    nombre: string;
-    simbolo: string;
-    tipo: string;
-    factor_conversion: string;
-    unidad_base_id: string;
-    activo: boolean;
-}
-
-export default function UnidadesList() {
-    const [unidades, setUnidades] = useState<UnidadMedida[]>([]);
+export default function TiposDocumentoList() {
+    const [tipos, setTipos] = useState<TipoDocumento[]>([]);
     const [loading, setLoading] = useState(true);
     const [modalOpen, setModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
-    const [formData, setFormData] = useState<UnidadForm>({
+    const [formData, setFormData] = useState<TipoDocumentoCreate>({
         codigo: '',
         nombre: '',
-        simbolo: '',
-        tipo: 'CANTIDAD',
-        factor_conversion: '',
-        unidad_base_id: '',
         activo: true
     });
 
     useEffect(() => {
-        fetchUnidades();
+        fetchTipos();
     }, []);
 
-    const fetchUnidades = async () => {
+    const fetchTipos = async () => {
         try {
-            const data = await getUnidades();
-            setUnidades(data);
+            const data = await getTiposDocumento();
+            setTipos(data);
         } catch (error) {
-            console.error("Error cargando unidades:", error);
+            console.error("Error cargando tipos de documento:", error);
         } finally {
             setLoading(false);
         }
@@ -55,25 +41,17 @@ export default function UnidadesList() {
         setFormData({
             codigo: '',
             nombre: '',
-            simbolo: '',
-            tipo: 'CANTIDAD',
-            factor_conversion: '',
-            unidad_base_id: '',
             activo: true
         });
         setModalOpen(true);
     }
 
-    function openEditModal(unidad: UnidadMedida) {
-        setEditingId(unidad.id);
+    function openEditModal(tipo: TipoDocumento) {
+        setEditingId(tipo.id);
         setFormData({
-            codigo: unidad.codigo,
-            nombre: unidad.nombre,
-            simbolo: unidad.simbolo,
-            tipo: unidad.tipo || 'CANTIDAD',
-            factor_conversion: unidad.factor_conversion?.toString() || '',
-            unidad_base_id: unidad.unidad_base_id?.toString() || '',
-            activo: unidad.activo
+            codigo: tipo.codigo,
+            nombre: tipo.nombre,
+            activo: tipo.activo
         });
         setModalOpen(true);
     }
@@ -81,39 +59,28 @@ export default function UnidadesList() {
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         try {
-            const payload: UnidadCreate = {
-                codigo: formData.codigo,
-                nombre: formData.nombre,
-                simbolo: formData.simbolo,
-                tipo: formData.tipo,
-                factor_conversion: formData.factor_conversion ? parseFloat(formData.factor_conversion) : null,
-                unidad_base_id: formData.unidad_base_id ? parseInt(formData.unidad_base_id) : null,
-                activo: formData.activo
-            };
-
             if (editingId) {
-                await updateUnidad(editingId, payload);
+                await updateTipoDocumento(editingId, formData);
             } else {
-                await createUnidad(payload);
+                await createTipoDocumento(formData);
             }
-
-            await fetchUnidades();
+            await fetchTipos();
             setModalOpen(false);
         } catch (err: any) {
-            alert(err.message || 'Error al guardar unidad');
+            alert(err.message || 'Error al guardar tipo de documento');
         }
     }
 
     async function handleDelete(id: number, nombre: string) {
-        if (!confirm(`¿Está seguro de eliminar la unidad "${nombre}"?`)) {
+        if (!confirm(`¿Está seguro de eliminar el tipo de documento "${nombre}"?`)) {
             return;
         }
 
         try {
-            await deleteUnidad(id);
-            await fetchUnidades();
+            await deleteTipoDocumento(id);
+            await fetchTipos();
         } catch (err: any) {
-            alert(err.message || 'Error al eliminar unidad');
+            alert(err.message || 'Error al eliminar tipo de documento');
         }
     }
 
@@ -126,13 +93,13 @@ export default function UnidadesList() {
                     onClick={openCreateModal}
                     className="bg-primary hover:bg-primary-dark text-slate-900 px-4 py-2 rounded-lg font-semibold transition-colors"
                 >
-                    + Nueva Unidad
+                    + Nuevo Tipo de Documento
                 </button>
             </div>
 
-            {unidades.length === 0 ? (
+            {tipos.length === 0 ? (
                 <div className="text-center py-8 text-gray-400">
-                    No hay unidades registradas
+                    No hay tipos de documento registrados
                 </div>
             ) : (
                 <div className="overflow-x-auto bg-slate-700 rounded-lg">
@@ -141,33 +108,29 @@ export default function UnidadesList() {
                             <tr>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Código</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Nombre</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Símbolo</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Tipo</th>
                                 <th className="px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase">Estado</th>
                                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase">Acciones</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-600">
-                            {unidades.map((unidad) => (
-                                <tr key={unidad.id} className="hover:bg-slate-600/50">
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-300">{unidad.codigo}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">{unidad.nombre}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{unidad.simbolo}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{unidad.tipo || "-"}</td>
+                            {tipos.map((tipo) => (
+                                <tr key={tipo.id} className="hover:bg-slate-600/50">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-300">{tipo.codigo}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">{tipo.nombre}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-center">
-                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${unidad.activo ? "bg-green-900 text-green-300" : "bg-gray-700 text-gray-400"}`}>
-                                            {unidad.activo ? "Activo" : "Inactivo"}
+                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${tipo.activo ? "bg-green-900 text-green-300" : "bg-gray-700 text-gray-400"}`}>
+                                            {tipo.activo ? "Activo" : "Inactivo"}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm space-x-2">
                                         <button
-                                            onClick={() => openEditModal(unidad)}
+                                            onClick={() => openEditModal(tipo)}
                                             className="text-primary hover:text-primary-dark font-medium"
                                         >
                                             Editar
                                         </button>
                                         <button
-                                            onClick={() => handleDelete(unidad.id, unidad.nombre)}
+                                            onClick={() => handleDelete(tipo.id, tipo.nombre)}
                                             className="text-red-400 hover:text-red-300 font-medium"
                                         >
                                             Eliminar
@@ -185,7 +148,7 @@ export default function UnidadesList() {
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
                     <div className="bg-slate-800 rounded-lg p-6 max-w-lg w-full shadow-xl border border-slate-700">
                         <h2 className="text-xl font-bold text-white mb-4">
-                            {editingId ? 'Editar Unidad' : 'Nueva Unidad'}
+                            {editingId ? 'Editar Tipo de Documento' : 'Nuevo Tipo de Documento'}
                         </h2>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
@@ -206,51 +169,6 @@ export default function UnidadesList() {
                                     className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white"
                                     value={formData.nombre}
                                     onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-300 mb-1">Símbolo *</label>
-                                <input
-                                    type="text"
-                                    required
-                                    className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white"
-                                    value={formData.simbolo}
-                                    onChange={(e) => setFormData({ ...formData, simbolo: e.target.value })}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-300 mb-1">Tipo</label>
-                                <select
-                                    className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white"
-                                    value={formData.tipo}
-                                    onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
-                                >
-                                    <option value="CANTIDAD">Cantidad</option>
-                                    <option value="PESO">Peso</option>
-                                    <option value="VOLUMEN">Volumen</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-300 mb-1">Unidad Base (opcional)</label>
-                                <select
-                                    className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white"
-                                    value={formData.unidad_base_id}
-                                    onChange={(e) => setFormData({ ...formData, unidad_base_id: e.target.value })}
-                                >
-                                    <option value="">Sin unidad base</option>
-                                    {unidades.filter(u => u.id !== editingId).map(u => (
-                                        <option key={u.id} value={u.id}>{u.nombre} ({u.simbolo})</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-300 mb-1">Factor de Conversión (opcional)</label>
-                                <input
-                                    type="number"
-                                    step="0.0001"
-                                    className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white"
-                                    value={formData.factor_conversion}
-                                    onChange={(e) => setFormData({ ...formData, factor_conversion: e.target.value })}
                                 />
                             </div>
                             <div className="flex items-center">
