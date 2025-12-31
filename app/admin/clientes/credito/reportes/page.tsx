@@ -105,7 +105,7 @@ export default function ReportesCreditoPage() {
       {reporte.clientes_cerca_limite.length > 0 && (
         <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-6">
           <h2 className="text-xl font-bold text-red-400 mb-4">
-            ⚠️ Clientes Cerca del Límite (Uso > 80%)
+            ⚠️ Clientes Cerca del Límite (Uso &gt; 80%)
           </h2>
           <div className="overflow-x-auto">
             <table className="w-full">

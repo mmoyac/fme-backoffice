@@ -33,7 +33,6 @@ interface ItemFormulario {
   precio_unitario: number;
   stock_disponible?: number;
   subtotal: number;
-  precio_unitario: number;
 }
 
 interface ChequeFormulario {
