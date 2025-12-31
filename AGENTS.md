@@ -67,6 +67,8 @@ El backoffice debe tener una estructura modular con navegación lateral o superi
 - **Locales:** Gestión de sucursales/locales
 - **Inventario:** Ajuste de stock por producto y local
 - **Precios:** Configuración de precios por local
+- **Pedidos:** Gestión completa con sistema de puntos integrado
+- **Clientes:** CRUD con información de puntos de fidelización
 - **Usuarios:** (Futuro) Gestión de usuarios admin
 
 ### 3.2. Reglas de Negocio en Backoffice
@@ -315,6 +317,7 @@ npx jest --init
 - ✅ Transferencias de inventario
 - ✅ Gestión de clientes
 - ✅ Dashboard con estadísticas
+- ✅ Sistema de Puntos de Fidelización integrado
 - ✅ Despliegue en Docker Hub
 - ✅ Configuración de producción en VPS
 
@@ -333,8 +336,12 @@ npx jest --init
 
 ---
 
-**Última Actualización:** 2025-11-25  
+**Última Actualización:** 2025-12-31  
 **Cambios Recientes:**
+- ✅ Sistema completo de Puntos de Fidelización integrado
+- ✅ Creación de pedidos con calculadora de puntos y canje
+- ✅ Lista de pedidos con columna de puntos ganados
+- ✅ Gestión de clientes con información de puntos
 - ✅ Despliegue completo en producción (VPS 168.231.96.205:3001)
 - ✅ Imagen Docker publicada en Docker Hub
 - ✅ Configuración de producción con puertos mapeados

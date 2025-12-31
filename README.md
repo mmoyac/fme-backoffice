@@ -140,6 +140,10 @@ El sistema utiliza autenticación basada en JWT:
 - Mantenedores de Datos Maestros
 - **Gestión de Inventario (Existencias, Movimientos, Historial)**
 - **Módulo de Compras y Proveedores**
+- **Sistema completo de Puntos de Fidelización**
+- **Gestión de Pedidos con Puntos**
+- **Gestión de Clientes con información de Puntos**
+- **Boletas PDF con información de Puntos**
 - Interfaz moderna con Tailwind CSS
 
 ⏳ **Pendiente:**
@@ -154,4 +158,4 @@ Para detalles técnicos de la implementación, ver `FEATURE_INVENTORY_PURCHASE.m
 
 ---
 
-**Última actualización:** 16 de Diciembre, 2025
+**Última actualización:** 31 de Diciembre, 2025

@@ -10,6 +10,7 @@ export default function ClienteFormPage({ params }: { params?: { id?: string } }
   const [loading, setLoading] = useState(isEdit);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
+  const [clienteOriginal, setClienteOriginal] = useState<Cliente | null>(null);
 
   const [formData, setFormData] = useState<ClienteCreate>({
     nombre: '',
@@ -17,7 +18,8 @@ export default function ClienteFormPage({ params }: { params?: { id?: string } }
     email: '',
     telefono: '',
     direccion: '',
-    comuna: ''
+    comuna: '',
+    limite_credito: 0
   });
 
   useEffect(() => {
@@ -30,13 +32,15 @@ export default function ClienteFormPage({ params }: { params?: { id?: string } }
     try {
       setLoading(true);
       const data = await getCliente(id);
+      setClienteOriginal(data);
       setFormData({
         nombre: data.nombre,
         apellido: data.apellido || '',
         email: data.email || '',
         telefono: data.telefono || '',
         direccion: data.direccion || '',
-        comuna: data.comuna || ''
+        comuna: data.comuna || '',
+        limite_credito: data.limite_credito || 0
       });
     } catch (err) {
       setError('Error al cargar el cliente');
@@ -182,6 +186,112 @@ export default function ClienteFormPage({ params }: { params?: { id?: string } }
             className="w-full bg-slate-700 text-white rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary"
           />
         </div>
+
+        {/* Información de Crédito */}
+        <div className="border-t border-slate-700 pt-4">
+          <h3 className="text-lg font-medium text-white mb-3">Información de Crédito</h3>
+          
+          {isEdit && clienteOriginal && (
+            <div className="mb-4 p-4 bg-slate-700/50 rounded-lg">
+              <h4 className="text-sm font-medium text-gray-300 mb-2">Estado Actual</h4>
+              <div className="grid grid-cols-3 gap-4 text-sm">
+                <div>
+                  <p className="text-gray-400">Límite Actual</p>
+                  <p className="text-white font-semibold">
+                    {new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' })
+                      .format(clienteOriginal.limite_credito || 0)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-400">Crédito Usado</p>
+                  <p className="text-orange-400 font-semibold">
+                    {new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' })
+                      .format(clienteOriginal.credito_usado || 0)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-400">Disponible</p>
+                  <p className="text-green-400 font-semibold">
+                    {new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' })
+                      .format((clienteOriginal.limite_credito || 0) - (clienteOriginal.credito_usado || 0))}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              {isEdit ? 'Nuevo ' : ''}Límite de Crédito (CLP)
+            </label>
+            <input
+              type="number"
+              min="0"
+              step="1000"
+              value={formData.limite_credito || ''}
+              onChange={(e) => setFormData({ ...formData, limite_credito: parseInt(e.target.value) || 0 })}
+              className="w-full bg-slate-700 text-white rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary"
+              placeholder="0"
+            />
+            <div className="mt-1 text-xs text-gray-400">
+              {isEdit 
+                ? 'Modificar el límite de crédito afectará los pedidos futuros' 
+                : 'Deja en 0 si no deseas otorgar crédito a este cliente'
+              }
+            </div>
+          </div>
+        </div>
+
+        {/* Información de Puntos */}
+        {isEdit && clienteOriginal && (
+          <div className="border-t border-slate-700 pt-4">
+            <h3 className="text-lg font-medium text-white mb-3">Sistema de Puntos</h3>
+            
+            <div className="p-4 bg-slate-700/50 rounded-lg">
+              <h4 className="text-sm font-medium text-gray-300 mb-2">Puntos Acumulados</h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div>
+                  <p className="text-gray-400">Puntos Disponibles</p>
+                  <p className="text-yellow-400 font-bold text-lg">
+                    💰 {clienteOriginal.puntos_disponibles || 0}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Valor: ${clienteOriginal.puntos_disponibles || 0}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-400">Total Ganados</p>
+                  <p className="text-green-400 font-semibold">
+                    {clienteOriginal.puntos_totales_ganados || 0} pts
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-400">Total Usados</p>
+                  <p className="text-red-400 font-semibold">
+                    {clienteOriginal.puntos_totales_usados || 0} pts
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-400">Porcentaje Uso</p>
+                  <p className="text-blue-400 font-semibold">
+                    {clienteOriginal.puntos_totales_ganados && clienteOriginal.puntos_totales_ganados > 0 
+                      ? Math.round(((clienteOriginal.puntos_totales_usados || 0) / clienteOriginal.puntos_totales_ganados) * 100)
+                      : 0
+                    }%
+                  </p>
+                </div>
+              </div>
+              
+              {(!clienteOriginal.puntos_disponibles || clienteOriginal.puntos_disponibles === 0) && (
+                <div className="mt-3 p-3 bg-slate-600/50 rounded-lg">
+                  <p className="text-gray-400 text-sm">
+                    📝 Este cliente aún no ha acumulado puntos. Los puntos se ganan automáticamente con cada pedido confirmado.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Botones */}
         <div className="flex gap-4 pt-4">

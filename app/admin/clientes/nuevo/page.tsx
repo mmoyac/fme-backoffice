@@ -15,7 +15,8 @@ export default function NuevoClientePage() {
     email: '',
     telefono: '',
     direccion: '',
-    comuna: ''
+    comuna: '',
+    limite_credito: 0
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -138,6 +139,28 @@ export default function NuevoClientePage() {
             onChange={(e) => setFormData({ ...formData, comuna: e.target.value })}
             className="w-full bg-slate-700 text-white rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary"
           />
+        </div>
+
+        {/* Límite de Crédito */}
+        <div className="border-t border-slate-700 pt-4">
+          <h3 className="text-lg font-medium text-white mb-3">Información de Crédito</h3>
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Límite de Crédito (CLP)
+            </label>
+            <input
+              type="number"
+              min="0"
+              step="1000"
+              value={formData.limite_credito || ''}
+              onChange={(e) => setFormData({ ...formData, limite_credito: parseInt(e.target.value) || 0 })}
+              className="w-full bg-slate-700 text-white rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary"
+              placeholder="0"
+            />
+            <div className="mt-1 text-xs text-gray-400">
+              Deja en 0 si no deseas otorgar crédito a este cliente
+            </div>
+          </div>
         </div>
 
         {/* Botones */}

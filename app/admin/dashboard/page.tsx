@@ -3,15 +3,18 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { getEstadisticasDashboard, type EstadisticasDashboard } from '@/lib/api/dashboard';
+import { getClientesCercaLimite, type ClienteCredito } from '@/lib/api/clientes';
 
 export default function DashboardPage() {
   const router = useRouter();
   const [stats, setStats] = useState<EstadisticasDashboard | null>(null);
+  const [clientesCredito, setClientesCredito] = useState<ClienteCredito[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
     cargarEstadisticas();
+    cargarAlertasCredito();
   }, []);
 
   const cargarEstadisticas = async () => {
@@ -24,6 +27,15 @@ export default function DashboardPage() {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const cargarAlertasCredito = async () => {
+    try {
+      const clientesCerca = await getClientesCercaLimite();
+      setClientesCredito(clientesCerca);
+    } catch (err) {
+      console.error('Error al cargar alertas de crédito:', err);
     }
   };
 
@@ -65,6 +77,54 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold text-white">Dashboard de Ventas</h1>
+
+      {/* Alertas de Crédito */}
+      {clientesCredito.length > 0 && (
+        <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <div className="text-red-500">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-red-400 font-semibold text-lg mb-2">
+                ⚠️ Clientes cerca del límite de crédito
+              </h3>
+              <div className="space-y-2">
+                {clientesCredito.slice(0, 5).map((cliente) => (
+                  <div key={cliente.id} className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="text-white font-medium">
+                        {cliente.nombre} {cliente.apellido}
+                      </span>
+                      <span className="text-xs bg-red-500 text-white px-2 py-1 rounded-full">
+                        {cliente.porcentaje_uso.toFixed(1)}% usado
+                      </span>
+                    </div>
+                    <div className="text-right text-sm">
+                      <div className="text-red-300">
+                        Usado: {formatCurrency(cliente.credito_usado || 0)}
+                      </div>
+                      <div className="text-gray-400">
+                        de {formatCurrency(cliente.limite_credito || 0)}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {clientesCredito.length > 5 && (
+                <button
+                  onClick={() => router.push('/admin/clientes/credito/reportes')}
+                  className="mt-3 text-red-400 hover:text-red-300 text-sm font-medium"
+                >
+                  Ver todos ({clientesCredito.length} clientes) →
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* KPIs Principales */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">

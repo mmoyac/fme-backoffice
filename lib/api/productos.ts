@@ -21,6 +21,9 @@ export interface Producto {
   stock_minimo: number;
   stock_critico: number;
   stock_actual: number; // Computed by backend
+  // Información de categoría
+  categoria_nombre: string | null;
+  categoria_puntos_fidelidad: number | null;
 }
 
 export interface ProductoCreate {

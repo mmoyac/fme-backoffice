@@ -38,3 +38,19 @@ export async function updatePrecio(
   return response.json();
 }
 
+export async function getPrecioProductoLocal(productoId: number, localId: number): Promise<number> {
+  const response = await fetch(
+    `${API_URL}/api/precios/producto/${productoId}/local/${localId}`,
+    {
+      headers: AuthService.getAuthHeaders(),
+    }
+  );
+  if (!response.ok) {
+    // Si no existe el precio, retornamos 0
+    if (response.status === 404) return 0;
+    throw new Error('Error al obtener precio del producto');
+  }
+  const precio = await response.json();
+  return precio.monto_precio || 0;
+}
+

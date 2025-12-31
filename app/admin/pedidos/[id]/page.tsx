@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { obtenerPedido, actualizarPedido, Pedido } from '@/lib/api/pedidos';
+import { obtenerPedido, actualizarPedido, Pedido, descargarBoleta } from '@/lib/api/pedidos';
 import { getLocales, Local } from '@/lib/api/locales';
 import { getInventarios, Inventario } from '@/lib/api/inventario';
+import { obtenerPedidoConCheques, actualizarCheque, obtenerEstadosCheque, PedidoConCheques, Cheque, EstadoCheque } from '@/lib/api/cheques';
 
 export default function DetallePedidoPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -17,6 +18,12 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
   const [guardando, setGuardando] = useState(false);
   const [notasAdmin, setNotasAdmin] = useState('');
   const [mostrarSelectorLocal, setMostrarSelectorLocal] = useState(false);
+  
+  // Estados para cheques
+  const [pedidoConCheques, setPedidoConCheques] = useState<PedidoConCheques | null>(null);
+  const [estadosCheque, setEstadosCheque] = useState<EstadoCheque[]>([]);
+  const [actualizandoCheque, setActualizandoCheque] = useState<number | null>(null);
+  const [generandoBoleta, setGenerandoBoleta] = useState(false);
 
   const estados = [
     { value: 'PENDIENTE', label: 'Pendiente', color: 'bg-yellow-500' },
@@ -30,7 +37,26 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
     cargarPedido();
     cargarLocales();
     cargarInventarios();
+    cargarEstadosCheque();
   }, [params.id]);
+
+  const cargarEstadosCheque = async () => {
+    try {
+      const data = await obtenerEstadosCheque();
+      setEstadosCheque(data);
+    } catch (err) {
+      console.error('Error al cargar estados de cheque:', err);
+    }
+  };
+
+  const cargarCheques = async () => {
+    try {
+      const data = await obtenerPedidoConCheques(Number(params.id));
+      setPedidoConCheques(data);
+    } catch (err) {
+      console.error('Error al cargar cheques:', err);
+    }
+  };
 
   const cargarInventarios = async () => {
     try {
@@ -60,6 +86,11 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
       setPedido(data);
       setNotasAdmin(data.notas_admin || '');
       setLocalSeleccionado(data.local_despacho_id || null);
+      
+      // Si el pedido permite cheques, cargar información de cheques
+      if (data.permite_cheque) {
+        cargarCheques();
+      }
     } catch (err) {
       setError('Error al cargar el pedido');
       console.error(err);
@@ -109,6 +140,35 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
       console.error(err);
     } finally {
       setGuardando(false);
+    }
+  };
+
+  const cambiarEstadoCheque = async (chequeId: number, nuevoEstadoId: number) => {
+    try {
+      setActualizandoCheque(chequeId);
+      await actualizarCheque(chequeId, { estado_id: nuevoEstadoId });
+      
+      // Recargar información de cheques y pedido
+      await Promise.all([cargarCheques(), cargarPedido()]);
+    } catch (err: any) {
+      setError(err.message || 'Error al actualizar el cheque');
+      console.error(err);
+    } finally {
+      setActualizandoCheque(null);
+    }
+  };
+
+  const handleDescargarBoleta = async () => {
+    if (!pedido) return;
+    
+    try {
+      setGenerandoBoleta(true);
+      await descargarBoleta(pedido.id);
+    } catch (err: any) {
+      setError(err.message || 'Error al generar la boleta');
+      console.error(err);
+    } finally {
+      setGenerandoBoleta(false);
     }
   };
 
@@ -202,6 +262,29 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
             Pedido #{pedido.numero_pedido}
           </h1>
           <p className="text-gray-400 mt-1">{formatFecha(pedido.fecha_pedido)}</p>
+        </div>
+        
+        {/* Botones de acción */}
+        <div className="flex gap-3">
+          <button
+            onClick={handleDescargarBoleta}
+            disabled={generandoBoleta}
+            className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+          >
+            {generandoBoleta ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                Generando...
+              </>
+            ) : (
+              <>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Descargar Boleta
+              </>
+            )}
+          </button>
         </div>
       </div>
 
@@ -392,18 +475,137 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
           {/* Estado de Pago */}
           <div className="bg-slate-800 rounded-lg p-6">
             <h2 className="text-xl font-bold text-white mb-4">Estado de Pago</h2>
-            <button
-              onClick={togglePagado}
-              disabled={guardando}
-              className={`w-full px-4 py-3 rounded-lg font-semibold transition-all ${
-                pedido.pagado
-                  ? 'bg-green-500 hover:bg-green-600 text-white'
-                  : 'bg-yellow-500 hover:bg-yellow-600 text-white'
-              } disabled:opacity-50`}
-            >
-              {pedido.pagado ? '✓ Pagado' : '⏳ Marcar como Pagado'}
-            </button>
+            
+            {pedido.permite_cheque ? (
+              <div className="space-y-3">
+                <div className={`w-full px-4 py-3 rounded-lg font-semibold text-center ${
+                  pedido.pagado
+                    ? 'bg-green-500 text-white'
+                    : 'bg-yellow-500/20 border border-yellow-500 text-yellow-400'
+                }`}>
+                  {pedido.pagado ? '✓ Pagado' : '⏳ Pendiente de Cheques'}
+                </div>
+                
+                <p className="text-sm text-gray-400 text-center">
+                  {pedido.pagado 
+                    ? 'Todos los cheques han sido cobrados'
+                    : 'El pago se marcará automáticamente cuando todos los cheques estén cobrados'
+                  }
+                </p>
+              </div>
+            ) : (
+              <button
+                onClick={togglePagado}
+                disabled={guardando}
+                className={`w-full px-4 py-3 rounded-lg font-semibold transition-all ${
+                  pedido.pagado
+                    ? 'bg-green-500 hover:bg-green-600 text-white'
+                    : 'bg-yellow-500 hover:bg-yellow-600 text-white'
+                } disabled:opacity-50`}
+              >
+                {pedido.pagado ? '✓ Pagado' : '⏳ Marcar como Pagado'}
+              </button>
+            )}
           </div>
+
+          {/* Gestión de Cheques */}
+          {pedido.permite_cheque && (
+            <div className="bg-slate-800 rounded-lg p-6">
+              <h2 className="text-xl font-bold text-white mb-4">Gestión de Cheques</h2>
+              
+              {/* Resumen de cheques */}
+              {pedidoConCheques?.resumen_cheques && (
+                <div className="bg-slate-700 rounded-lg p-4 mb-4">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-gray-400">Total Cheques</p>
+                      <p className="text-white font-semibold">{pedidoConCheques.resumen_cheques.total_cheques}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400">Monto Total</p>
+                      <p className="text-white font-semibold">${pedidoConCheques.resumen_cheques.monto_total_cheques.toLocaleString('es-CL')}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400">Pendientes</p>
+                      <p className="text-yellow-400 font-semibold">{pedidoConCheques.resumen_cheques.cheques_pendientes}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400">Cobrados</p>
+                      <p className="text-green-400 font-semibold">{pedidoConCheques.resumen_cheques.cheques_cobrados}</p>
+                    </div>
+                  </div>
+                  
+                  {pedidoConCheques.resumen_cheques.todos_cobrados && (
+                    <div className="mt-3 p-3 bg-green-500/10 border border-green-500 rounded-lg">
+                      <p className="text-green-400 font-semibold text-center">
+                        ✅ Todos los cheques están cobrados
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {/* Lista de cheques */}
+              {!pedidoConCheques ? (
+                <div className="text-center py-4">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                  <p className="text-gray-400 mt-2">Cargando cheques...</p>
+                </div>
+              ) : pedidoConCheques.cheques.length === 0 ? (
+                <p className="text-gray-400 text-center py-4">No hay cheques registrados</p>
+              ) : (
+                <div className="space-y-3">
+                  {pedidoConCheques.cheques.map((cheque) => (
+                    <div key={cheque.id} className="bg-slate-700 rounded-lg p-4">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <p className="text-white font-semibold">Cheque #{cheque.numero_cheque}</p>
+                          <p className="text-sm text-gray-400">{cheque.banco?.nombre || 'Banco no especificado'}</p>
+                          <p className="text-lg text-primary font-bold">${cheque.monto.toLocaleString('es-CL')}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm text-gray-400">Vencimiento</p>
+                          <p className="text-sm text-white">{new Date(cheque.fecha_vencimiento).toLocaleDateString('es-CL')}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-3">
+                        <label className="text-sm text-gray-400">Estado:</label>
+                        <select
+                          value={cheque.estado_id}
+                          onChange={(e) => cambiarEstadoCheque(cheque.id, parseInt(e.target.value))}
+                          disabled={actualizandoCheque === cheque.id}
+                          className="bg-slate-600 text-white rounded-lg px-3 py-1 text-sm focus:ring-2 focus:ring-primary"
+                        >
+                          {estadosCheque.map((estado) => (
+                            <option key={estado.id} value={estado.id}>
+                              {estado.nombre}
+                            </option>
+                          ))}
+                        </select>
+                        
+                        {actualizandoCheque === cheque.id && (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                        )}
+                      </div>
+                      
+                      {cheque.librador_nombre && (
+                        <p className="text-sm text-gray-400 mt-2">
+                          Librador: {cheque.librador_nombre}
+                        </p>
+                      )}
+                      
+                      {cheque.observaciones && (
+                        <p className="text-sm text-gray-400 mt-1">
+                          Observaciones: {cheque.observaciones}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Información del Cliente */}
           <div className="bg-slate-800 rounded-lg p-6">

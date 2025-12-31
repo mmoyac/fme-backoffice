@@ -279,3 +279,63 @@ export async function deleteUnidad(id: number): Promise<void> {
         throw new Error(error.detail || 'Error al eliminar unidad');
     }
 }
+
+// ============================================
+// MEDIOS DE PAGO
+// ============================================
+
+export interface MedioPago {
+    id: number;
+    codigo: string;
+    nombre: string;
+    permite_cheque: boolean;
+    activo: boolean;
+}
+
+export async function getMediosPago(): Promise<MedioPago[]> {
+    const response = await fetch(`${API_URL}/api/maestras/medios-pago`, {
+        headers: AuthService.getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Error al cargar medios de pago');
+    return response.json();
+}
+
+// ============================================
+// ESTADOS DE CHEQUE
+// ============================================
+
+export interface EstadoCheque {
+    id: number;
+    codigo: string;
+    nombre: string;
+    es_final: boolean;
+    activo: boolean;
+}
+
+export async function getEstadosCheque(): Promise<EstadoCheque[]> {
+    const response = await fetch(`${API_URL}/api/maestras/estados-cheque`, {
+        headers: AuthService.getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Error al cargar estados de cheque');
+    return response.json();
+}
+
+// ============================================
+// BANCOS
+// ============================================
+
+export interface Banco {
+    id: number;
+    codigo: string;
+    nombre: string;
+    nombre_corto?: string;
+    activo: boolean;
+}
+
+export async function getBancos(): Promise<Banco[]> {
+    const response = await fetch(`${API_URL}/api/maestras/bancos`, {
+        headers: AuthService.getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Error al cargar bancos');
+    return response.json();
+}

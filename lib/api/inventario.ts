@@ -38,3 +38,19 @@ export async function updateInventario(
   return response.json();
 }
 
+export async function getStockProductoLocal(productoId: number, localId: number): Promise<number> {
+  const response = await fetch(
+    `${API_URL}/api/inventario/producto/${productoId}/local/${localId}`,
+    {
+      headers: AuthService.getAuthHeaders(),
+    }
+  );
+  if (!response.ok) {
+    // Si no existe el inventario, retornamos 0
+    if (response.status === 404) return 0;
+    throw new Error('Error al obtener stock del producto');
+  }
+  const inventario = await response.json();
+  return inventario.cantidad_stock || 0;
+}
+
