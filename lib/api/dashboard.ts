@@ -46,6 +46,59 @@ export interface EstadisticasDashboard {
     estado: string;
     fecha: string;
   }>;
+  caja: {
+    turnos_abiertos: number;
+    ventas_hoy: number;
+    diferencias_pendientes: number;
+  };
+}
+
+export interface MetricasCaja {
+  fecha_consulta: string;
+  turnos_abiertos: {
+    total: number;
+    detalle: Array<{
+      turno_id: number;
+      local_id: number;
+      local_nombre: string;
+      vendedor_id: number;
+      vendedor_nombre: string;
+      fecha_apertura: string;
+      monto_inicial: number;
+      ventas_acumuladas: number;
+      efectivo_esperado: number;
+    }>;
+  };
+  ventas_por_vendedor_hoy: {
+    total_vendedores_activos: number;
+    detalle: Array<{
+      vendedor_id: number;
+      vendedor_nombre: string;
+      num_ventas: number;
+      total_ventas: number;
+    }>;
+  };
+  diferencias_cuadre_recientes: {
+    total_con_diferencia: number;
+    detalle: Array<{
+      turno_id: number;
+      fecha_cierre: string;
+      local_nombre: string;
+      vendedor_nombre: string;
+      efectivo_esperado: number;
+      efectivo_real: number;
+      diferencia: number;
+      tipo_diferencia: string;
+    }>;
+  };
+  resumen_operaciones_30d: {
+    por_tipo: Array<{
+      tipo: string;
+      cantidad: number;
+      total_monto: number;
+    }>;
+    total_operaciones: number;
+  };
 }
 
 export async function getEstadisticasDashboard(): Promise<EstadisticasDashboard> {
@@ -56,3 +109,10 @@ export async function getEstadisticasDashboard(): Promise<EstadisticasDashboard>
   return response.json();
 }
 
+export async function getMetricasCaja(): Promise<MetricasCaja> {
+  const response = await fetch(`${API_URL}/api/dashboard/metricas-caja`, {
+    headers: AuthService.getAuthHeaders(),
+  });
+  if (!response.ok) throw new Error('Error al obtener métricas de caja');
+  return response.json();
+}

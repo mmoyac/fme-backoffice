@@ -62,23 +62,30 @@ Todas las operaciones CRUD deben estar centralizadas en el directorio **`service
 El backoffice debe tener una estructura modular con navegación lateral o superior para acceder a las diferentes secciones administrativas.
 
 **Secciones principales:**
-- **Dashboard:** Vista general con estadísticas (total productos, stock bajo, etc.)
+- **Dashboard:** Navegación jerárquica a diferentes tableros
+  - **Tablero de Ventas:** Estadísticas, pedidos, productos más vendidos
+  - **Tablero de Cajas:** Estado de cajas, turnos abiertos, métricas financieras
 - **Productos:** CRUD completo de productos con upload de imágenes
 - **Locales:** Gestión de sucursales/locales
 - **Inventario:** Ajuste de stock por producto y local
 - **Precios:** Configuración de precios por local
 - **Pedidos:** Gestión completa con sistema de puntos integrado
 - **Clientes:** CRUD con información de puntos de fidelización
+- **Caja:** Control completo de flujo de efectivo por vendedor (NUEVO)
 - **Usuarios:** (Futuro) Gestión de usuarios admin
 
 ### 3.2. Reglas de Negocio en Backoffice
 
 * **Permisos:** Solo usuarios autenticados pueden acceder al backoffice.
+* **Restricción por Local:** Vendedores solo pueden abrir caja en su local asignado.
+* **Control de Caja:** Un vendedor solo puede tener un turno abierto a la vez.
 * **Validaciones:** 
   - SKU debe ser único al crear productos
   - Stock no puede ser negativo
   - Precios deben ser mayores a cero
+  - Efectivo real debe coincidir con esperado en cierre de caja
 * **Upload de Imágenes:** Validar formato (JPG, PNG, WEBP) y tamaño máximo (2MB).
+* **PDFs de Cierre:** Solo se generan para turnos cerrados.
 * **Auditoría:** (Futuro) Registrar cambios con usuario y timestamp.
 
 ---
@@ -316,7 +323,13 @@ npx jest --init
 - ✅ Gestión de pedidos (todos los estados)
 - ✅ Transferencias de inventario
 - ✅ Gestión de clientes
-- ✅ Dashboard con estadísticas
+- ✅ Dashboard con estructura jerárquica
+- ✅ **Tablero de Ventas** con todas las estadísticas
+- ✅ **Tablero de Cajas** con supervisión en tiempo real
+- ✅ **Sistema completo de Caja** con turnos y operaciones
+- ✅ **Control de flujo de efectivo** por vendedor
+- ✅ **Generación de PDFs** para cierre de caja
+- ✅ **Restricciones por local asignado**
 - ✅ Sistema de Puntos de Fidelización integrado
 - ✅ Despliegue en Docker Hub
 - ✅ Configuración de producción en VPS
@@ -336,8 +349,18 @@ npx jest --init
 
 ---
 
-**Última Actualización:** 2025-12-31  
+**Última Actualización:** 2026-01-02  
 **Cambios Recientes:**
+- ✅ **Reestructuración completa del Dashboard jerárquico**
+- ✅ **Tablero de Ventas** (/admin/dashboard/ventas) con todas las métricas
+- ✅ **Tablero de Cajas** (/admin/dashboard/cajas) con supervisión en tiempo real
+- ✅ **Sistema completo de Control de Caja** con turnos y operaciones
+- ✅ **Restricción automática por local asignado** - vendedores solo ven su local
+- ✅ **Generación y descarga de PDFs** para cierre de caja
+- ✅ **Navegación intuitiva** entre tableros con botones de retorno
+- ✅ **Actualización automática cada 30 segundos** en tablero de cajas
+- ✅ **Información visual del local asignado** en página de caja
+- ✅ **Validaciones mejoradas** para apertura y cierre de caja
 - ✅ Sistema completo de Puntos de Fidelización integrado
 - ✅ Creación de pedidos con calculadora de puntos y canje
 - ✅ Lista de pedidos con columna de puntos ganados

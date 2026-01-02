@@ -15,6 +15,7 @@ export interface User {
     email: string;
     nombre_completo: string;
     is_active: boolean;
+    local_defecto_id?: number;
     role?: {
         id: number;
         nombre: string;

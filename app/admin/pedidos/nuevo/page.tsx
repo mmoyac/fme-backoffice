@@ -23,6 +23,7 @@ import {
 } from '@/lib/api/maestras';
 import { getStockProductoLocal } from '@/lib/api/inventario';
 import { getPrecioProductoLocal } from '@/lib/api/precios';
+import { AuthService } from '@/lib/auth';
 
 interface ItemFormulario {
   id: string;
@@ -53,6 +54,7 @@ export default function NuevoPedidoPage() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [productos, setProductos] = useState<Producto[]>([]);
   const [locales, setLocales] = useState<Local[]>([]);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [mediosPago, setMediosPago] = useState<MedioPago[]>([]);
   const [bancos, setBancos] = useState<Banco[]>([]);
   const [estadosCheque, setEstadosCheque] = useState<EstadoCheque[]>([]);
@@ -91,14 +93,16 @@ export default function NuevoPedidoPage() {
           localesData,
           mediosData,
           bancosData,
-          estadosData
+          estadosData,
+          userData
         ] = await Promise.all([
           getClientes(),
           getProductos(),
           getLocales(),
           getMediosPago(),
           getBancos(),
-          getEstadosCheque()
+          getEstadosCheque(),
+          AuthService.getCurrentUser()
         ]);
         
         setClientes(clientesData);
@@ -107,11 +111,18 @@ export default function NuevoPedidoPage() {
         setMediosPago(mediosData.filter(m => m.activo));
         setBancos(bancosData.filter(b => b.activo));
         setEstadosCheque(estadosData);
+        setCurrentUser(userData);
         
-        // Seleccionar local WEB por defecto
-        const localWeb = localesData.find(l => l.codigo === 'WEB');
-        if (localWeb) {
-          setLocalId(localWeb.id);
+        // Asignar local basado en el usuario
+        if (userData && userData.local_defecto_id) {
+          // Si el usuario tiene un local asignado, usar ese local
+          setLocalId(userData.local_defecto_id);
+        } else {
+          // Si no tiene local asignado, usar local WEB por defecto
+          const localWeb = localesData.find(l => l.codigo === 'WEB');
+          if (localWeb) {
+            setLocalId(localWeb.id);
+          }
         }
       } catch (err) {
         setError('Error al cargar datos iniciales');
@@ -544,19 +555,32 @@ export default function NuevoPedidoPage() {
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 Local *
               </label>
-              <select
-                value={localId}
-                onChange={(e) => setLocalId(Number(e.target.value))}
-                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-primary"
-                required
-              >
-                <option value={0}>Seleccionar local...</option>
-                {locales.map(local => (
-                  <option key={local.id} value={local.id}>
-                    {local.nombre}
-                  </option>
-                ))}
-              </select>
+              {currentUser && currentUser.local_defecto_id ? (
+                // Usuario con local asignado - solo mostrar info
+                <div className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white flex justify-between items-center">
+                  <span>
+                    {locales.find(l => l.id === localId)?.nombre || 'Local no encontrado'}
+                  </span>
+                  <span className="text-sm text-green-400 bg-green-400/10 px-2 py-1 rounded">
+                    Local asignado
+                  </span>
+                </div>
+              ) : (
+                // Usuario sin local asignado - puede seleccionar
+                <select
+                  value={localId}
+                  onChange={(e) => setLocalId(Number(e.target.value))}
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-primary"
+                  required
+                >
+                  <option value={0}>Seleccionar local...</option>
+                  {locales.map(local => (
+                    <option key={local.id} value={local.id}>
+                      {local.nombre}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
             
             {/* Medio de pago */}
