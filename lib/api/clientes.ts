@@ -55,16 +55,40 @@ export async function getCliente(id: number): Promise<Cliente> {
 }
 
 export async function createCliente(data: ClienteCreate): Promise<Cliente> {
+  console.log('🤝 Creando cliente:', data);
+  
   const response = await fetch(`${API_URL}/api/clientes/`, {
     method: 'POST',
     headers: AuthService.getAuthHeaders(),
     body: JSON.stringify(data),
   });
+
+  console.log('📡 Respuesta creación cliente:', response.status, response.statusText);
+
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Error al crear cliente');
+    const errorData = await response.json();
+    console.error('❌ Error al crear cliente:', errorData);
+    
+    let mensajeError = `Error ${response.status}: `;
+    
+    if (errorData.detail) {
+      if (Array.isArray(errorData.detail)) {
+        mensajeError += errorData.detail.map((err: any) => 
+          `Campo '${err.loc?.join('.')}': ${err.msg}`
+        ).join(', ');
+      } else {
+        mensajeError += errorData.detail;
+      }
+    } else {
+      mensajeError += response.statusText;
+    }
+    
+    throw new Error(mensajeError);
   }
-  return response.json();
+  
+  const cliente = await response.json();
+  console.log('✅ Cliente creado:', cliente);
+  return cliente;
 }
 
 export async function updateCliente(id: number, data: ClienteUpdate): Promise<Cliente> {

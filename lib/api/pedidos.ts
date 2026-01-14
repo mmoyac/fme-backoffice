@@ -24,6 +24,12 @@ export interface Cliente {
   telefono?: string;
   direccion?: string;
   comuna?: string;
+  
+  // Campos tributarios
+  rut?: string;
+  razon_social?: string;
+  giro?: string;
+  es_empresa?: boolean;
 }
 
 export interface Pedido {
@@ -44,6 +50,21 @@ export interface Pedido {
   medio_pago_codigo?: string;
   medio_pago_nombre?: string;
   permite_cheque?: boolean;
+  // Información de tipo de pedido
+  tipo_pedido_id?: number;
+  tipo_pedido_codigo?: string;
+  tipo_pedido_nombre?: string;
+  
+  // Control SII (Facturación Electrónica)
+  tipo_documento_tributario_id?: number;
+  tipo_documento_codigo?: string;
+  tipo_documento_nombre?: string;
+  estado_sii?: string;
+  folio_sii?: string;
+  numero_dte?: string;
+  fecha_envio_sii?: string;
+  fecha_respuesta_sii?: string;
+  observaciones_sii?: string;
   // Información de puntos
   puntos_ganados?: number;
   puntos_usados?: number;
@@ -85,11 +106,18 @@ export interface PedidoCreate {
   direccion_entrega: string;
   local_id: number;
   medio_pago_id: number;
+  tipo_documento_tributario_id?: number;
   notas?: string;
   items: ItemPedidoCreate[];
   cheques?: ChequeCreate[];
   // Campos para sistema de puntos
   puntos_usar?: number;
+  
+  // Campos tributarios del cliente
+  cliente_rut?: string;
+  cliente_razon_social?: string;
+  cliente_giro?: string;
+  cliente_es_empresa?: boolean;
 }
 
 export interface PedidoCreateResponse {
@@ -139,15 +167,37 @@ export async function actualizarPedido(id: number, data: PedidoUpdate): Promise<
 }
 
 export async function crearPedido(data: PedidoCreate): Promise<PedidoCreateResponse> {
+  console.log('🚀 Enviando pedido:', data);
+  
   const response = await fetch(`${API_URL}/api/pedidos/backoffice`, {
     method: 'POST',
     headers: AuthService.getAuthHeaders(),
     body: JSON.stringify(data),
   });
 
+  console.log('📡 Respuesta del servidor:', response.status, response.statusText);
+
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Error al crear el pedido');
+    const errorData = await response.json();
+    console.error('❌ Error del servidor:', errorData);
+    
+    // Crear un error más descriptivo
+    let mensajeError = `Error ${response.status}: `;
+    
+    if (errorData.detail) {
+      if (Array.isArray(errorData.detail)) {
+        // Error de validación de Pydantic
+        mensajeError += errorData.detail.map((err: any) => 
+          `Campo '${err.loc?.join('.')}': ${err.msg}`
+        ).join(', ');
+      } else {
+        mensajeError += errorData.detail;
+      }
+    } else {
+      mensajeError += response.statusText;
+    }
+    
+    throw new Error(mensajeError);
   }
   return response.json();
 }
@@ -186,4 +236,27 @@ export async function descargarBoleta(pedidoId: number): Promise<void> {
   link.click();
   link.remove();
   window.URL.revokeObjectURL(url);
+}
+
+export async function actualizarEstadoSII(
+  pedidoId: number, 
+  estadoSii: string, 
+  observaciones: string = ''
+): Promise<any> {
+  const token = await AuthService.getToken();
+  
+  const response = await fetch(`${API_URL}/api/pedidos/${pedidoId}/estado-sii?estado_sii=${encodeURIComponent(estadoSii)}&observaciones=${encodeURIComponent(observaciones)}`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || 'Error al actualizar estado SII');
+  }
+
+  return response.json();
 }

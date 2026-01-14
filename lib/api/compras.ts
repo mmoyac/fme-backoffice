@@ -3,6 +3,18 @@ import { AuthService } from '../auth';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 // ============================================================================
+// Tipos de Proveedor
+// ============================================================================
+
+export interface TipoProveedor {
+    id: number;
+    codigo: string;
+    nombre: string;
+    descripcion?: string;
+    activo: boolean;
+}
+
+// ============================================================================
 // Proveedores
 // ============================================================================
 
@@ -14,6 +26,8 @@ export interface Proveedor {
     email?: string;
     telefono?: string;
     direccion?: string;
+    tipo_proveedor_id?: number | null;
+    tipo_proveedor?: TipoProveedor | null;
     activo: boolean;
 }
 
@@ -24,7 +38,16 @@ export interface ProveedorCreate {
     email?: string;
     telefono?: string;
     direccion?: string;
+    tipo_proveedor_id?: number | null;
     activo?: boolean;
+}
+
+export async function getTiposProveedor(): Promise<TipoProveedor[]> {
+    const response = await fetch(`${API_URL}/api/maestras/tipos-proveedor`, {
+        headers: AuthService.getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Error al cargar tipos de proveedor');
+    return response.json();
 }
 
 export async function getProveedores(): Promise<Proveedor[]> {

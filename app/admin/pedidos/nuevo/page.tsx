@@ -184,13 +184,14 @@ export default function NuevoPedidoPage() {
           
           setItems(prevItems => prevItems.map(item => {
             if (item.id === id) {
+              const precioMonto = precio?.monto_precio || 0;
               return {
                 ...item,
                 sku: producto.sku,
                 nombre: producto.nombre,
                 stock_disponible: stock,
-                precio_unitario: precio,
-                subtotal: item.cantidad * precio
+                precio_unitario: precioMonto,
+                subtotal: item.cantidad * precioMonto
               };
             }
             return item;
@@ -229,11 +230,12 @@ export default function NuevoPedidoPage() {
                   getPrecioProductoLocal(item.producto_id, localId as number)
                 ]);
                 
+                const precioMonto = precio?.monto_precio || 0;
                 return {
                   ...item,
                   stock_disponible: stock,
-                  precio_unitario: precio,
-                  subtotal: item.cantidad * precio
+                  precio_unitario: precioMonto,
+                  subtotal: item.cantidad * precioMonto
                 };
               } catch (error) {
                 return { ...item, stock_disponible: 0, precio_unitario: 0, subtotal: 0 };

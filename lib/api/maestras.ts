@@ -2,12 +2,22 @@ import { AuthService } from '../auth';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
+export interface TipoVenta {
+    id: number;
+    codigo: string;
+    nombre: string;
+    descripcion: string | null;
+    activo: boolean;
+}
+
 export interface CategoriaProducto {
     id: number;
     codigo: string;
     nombre: string;
     descripcion: string | null;
     puntos_fidelidad: number;
+    tipo_venta_id: number | null;
+    tipo_venta: TipoVenta | null;
     activo: boolean;
 }
 
@@ -101,6 +111,7 @@ export interface CategoriaCreate {
     nombre: string;
     descripcion?: string;
     puntos_fidelidad: number;
+    tipo_venta_id?: number | null;
     activo: boolean;
 }
 
@@ -172,6 +183,16 @@ export async function deleteCategoria(id: number): Promise<void> {
         const error = await response.json();
         throw new Error(error.detail || 'Error al eliminar categoría');
     }
+}
+
+// --- Tipos de Venta ---
+
+export async function getTiposVenta(): Promise<TipoVenta[]> {
+    const response = await fetch(`${API_URL}/api/maestras/tipos-venta`, {
+        headers: AuthService.getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Error al cargar tipos de venta');
+    return response.json();
 }
 
 // --- Tipos de Producto ---

@@ -6,14 +6,17 @@ import {
     createCategoria,
     updateCategoria,
     deleteCategoria,
+    getTiposVenta,
     type CategoriaCreate,
-    type CategoriaProducto
+    type CategoriaProducto,
+    type TipoVenta
 } from "@/lib/api/maestras";
 
 interface Categoria extends CategoriaProducto { } // Adapt local interface or just use CategoriaProducto
 
 export default function CategoriasList() {
     const [categorias, setCategorias] = useState<CategoriaProducto[]>([]);
+    const [tiposVenta, setTiposVenta] = useState<TipoVenta[]>([]);
     const [loading, setLoading] = useState(true);
     const [modalOpen, setModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
@@ -22,11 +25,13 @@ export default function CategoriasList() {
         nombre: '',
         descripcion: '',
         puntos_fidelidad: 0,
+        tipo_venta_id: null,
         activo: true
     });
 
     useEffect(() => {
         fetchCategorias();
+        fetchTiposVenta();
     }, []);
 
     const fetchCategorias = async () => {
@@ -40,6 +45,15 @@ export default function CategoriasList() {
         }
     };
 
+    const fetchTiposVenta = async () => {
+        try {
+            const data = await getTiposVenta();
+            setTiposVenta(data);
+        } catch (error) {
+            console.error("Error cargando tipos de venta:", error);
+        }
+    };
+
     function openCreateModal() {
         setEditingId(null);
         setFormData({
@@ -47,6 +61,7 @@ export default function CategoriasList() {
             nombre: '',
             descripcion: '',
             puntos_fidelidad: 0,
+            tipo_venta_id: null,
             activo: true
         });
         setModalOpen(true);
@@ -59,6 +74,7 @@ export default function CategoriasList() {
             nombre: categoria.nombre,
             descripcion: categoria.descripcion || '',
             puntos_fidelidad: categoria.puntos_fidelidad,
+            tipo_venta_id: categoria.tipo_venta_id,
             activo: categoria.activo
         });
         setModalOpen(true);
@@ -119,6 +135,7 @@ export default function CategoriasList() {
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Código</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Nombre</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Descripción</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Tipo Venta</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Puntos</th>
                                 <th className="px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">Estado</th>
                                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">Acciones</th>
@@ -130,6 +147,15 @@ export default function CategoriasList() {
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-300">{categoria.codigo}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">{categoria.nombre}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{categoria.descripcion || "-"}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                                        {categoria.tipo_venta ? (
+                                            <span className="px-2 py-1 bg-slate-600 rounded text-xs font-medium">
+                                                {categoria.tipo_venta.nombre}
+                                            </span>
+                                        ) : (
+                                            <span className="text-gray-500 italic">Sin definir</span>
+                                        )}
+                                    </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{categoria.puntos_fidelidad}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-center">
                                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${categoria.activo ? "bg-green-900 text-green-300" : "bg-gray-700 text-gray-400"}`}>
@@ -203,6 +229,21 @@ export default function CategoriasList() {
                                     value={formData.puntos_fidelidad}
                                     onChange={(e) => setFormData({ ...formData, puntos_fidelidad: parseInt(e.target.value) || 0 })}
                                 />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-1">Tipo de Venta</label>
+                                <select
+                                    className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white"
+                                    value={formData.tipo_venta_id || ''}
+                                    onChange={(e) => setFormData({ ...formData, tipo_venta_id: e.target.value ? parseInt(e.target.value) : null })}
+                                >
+                                    <option value="">Seleccionar tipo de venta...</option>
+                                    {tiposVenta.map(tipo => (
+                                        <option key={tipo.id} value={tipo.id}>
+                                            {tipo.nombre} ({tipo.codigo})
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
                             <div className="flex items-center gap-2">
                                 <input

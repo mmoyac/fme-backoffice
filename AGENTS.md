@@ -72,6 +72,12 @@ El backoffice debe tener una estructura modular con navegación lateral o superi
 - **Pedidos:** Gestión completa con sistema de puntos integrado
 - **Clientes:** CRUD con información de puntos de fidelización
 - **Caja:** Control completo de flujo de efectivo por vendedor (NUEVO)
+- **Despacho:** Sistema completo de delivery y picking (NUEVO)
+  - **Asignar Despachos:** Interface para asignar pedidos a despachadores
+  - **Centro de Picking:** Interface móvil para recolección de productos
+  - **Dashboard Despachos:** Métricas y estadísticas de entregas
+  - **Lista de Despachos:** Vista general con filtros por estado
+  - **Detalle de Despacho:** Vista completa con timeline y edición
 - **Usuarios:** (Futuro) Gestión de usuarios admin
 
 ### 3.2. Reglas de Negocio en Backoffice
@@ -79,10 +85,23 @@ El backoffice debe tener una estructura modular con navegación lateral o superi
 * **Permisos:** Solo usuarios autenticados pueden acceder al backoffice.
 * **Restricción por Local:** Vendedores solo pueden abrir caja en su local asignado.
 * **Control de Caja:** Un vendedor solo puede tener un turno abierto a la vez.
+* **Sistema de Despachos (NUEVO):**
+  - Estados del flujo: ASIGNADO → EN_PICKING → LISTO_EMPAQUE → EN_RUTA → ENTREGADO
+  - Asignación automática de despachadores a pedidos confirmados
+  - Interface de picking con cantidades solicitadas vs recogidas
+  - Tracking completo con timestamps por estado
+  - Dashboard con métricas de performance
+* **Cajas Variables (NUEVO):**
+  - Modal de confirmación obligatorio para pedidos tipo CAJAS_VARIABLES
+  - Muestra lotes específicos que se asignarán (FIFO)
+  - Comparación precio estimado vs precio real
+  - Detalles: código lote, peso, precio/kg, vencimiento, proveedor
+  - Confirmación actualiza precio total automáticamente
 * **Validaciones:** 
   - SKU debe ser único al crear productos
   - Stock no puede ser negativo
   - Precios deben ser mayores a cero
+  - Lotes suficientes disponibles para cajas variables
   - Efectivo real debe coincidir con esperado en cierre de caja
 * **Upload de Imágenes:** Validar formato (JPG, PNG, WEBP) y tamaño máximo (2MB).
 * **PDFs de Cierre:** Solo se generan para turnos cerrados.
@@ -292,10 +311,12 @@ El backoffice está funcional y operativo, pero aún no cuenta con tests automat
 - [ ] Tabla de pedidos con filtros
 - [ ] Dashboard (carga de estadísticas)
 - [ ] Formulario de clientes
+- [ ] Sistema de despachos (asignar, picking, dashboard)
 
 #### Tests de Integración:
 - [ ] Flujo completo: Login → Crear producto → Configurar precio → Ajustar inventario
 - [ ] Flujo de pedidos: Ver pedido → Cambiar estado → Confirmar
+- [ ] Flujo de despachos: Asignar → Picking → Completar → Entregar
 - [ ] Búsqueda y filtros en tablas
 
 #### Configuración Sugerida:
@@ -330,6 +351,16 @@ npx jest --init
 - ✅ **Control de flujo de efectivo** por vendedor
 - ✅ **Generación de PDFs** para cierre de caja
 - ✅ **Restricciones por local asignado**
+- ✅ **Sistema de Cajas Variables con Modal de Confirmación** (NUEVO)
+- ✅ **Asignación Visual de Lotes Específicos** (NUEVO)
+- ✅ **Comparación Precio Estimado vs Real** (NUEVO)
+- ✅ **Detalles de Lotes: Peso, Precio/kg, Vencimiento** (NUEVO)
+- ✅ **Sistema Completo de Despachos** (NUEVO)
+- ✅ **Asignar Despachos:** Interface para asignar pedidos a despachadores
+- ✅ **Centro de Picking:** Interface móvil para recolección de productos  
+- ✅ **Dashboard Despachos:** Métricas y estadísticas de entregas
+- ✅ **Lista de Despachos:** Vista general con filtros por estado
+- ✅ **Detalle de Despacho:** Vista completa con timeline y edición
 - ✅ Sistema de Puntos de Fidelización integrado
 - ✅ Despliegue en Docker Hub
 - ✅ Configuración de producción en VPS
@@ -349,18 +380,29 @@ npx jest --init
 
 ---
 
-**Última Actualización:** 2026-01-02  
+**Última Actualización:** 2026-01-07  
 **Cambios Recientes:**
-- ✅ **Reestructuración completa del Dashboard jerárquico**
-- ✅ **Tablero de Ventas** (/admin/dashboard/ventas) con todas las métricas
-- ✅ **Tablero de Cajas** (/admin/dashboard/cajas) con supervisión en tiempo real
-- ✅ **Sistema completo de Control de Caja** con turnos y operaciones
-- ✅ **Restricción automática por local asignado** - vendedores solo ven su local
-- ✅ **Generación y descarga de PDFs** para cierre de caja
-- ✅ **Navegación intuitiva** entre tableros con botones de retorno
-- ✅ **Actualización automática cada 30 segundos** en tablero de cajas
-- ✅ **Información visual del local asignado** en página de caja
-- ✅ **Validaciones mejoradas** para apertura y cierre de caja
+- ✅ **Sistema Completo de Despachos implementado** (NUEVO)
+- ✅ **Frontend completo con 6 páginas:** Principal, Lista, Asignar, Picking, Dashboard, Detalle
+- ✅ **Estados de flujo:** ASIGNADO → EN_PICKING → LISTO_EMPAQUE → EN_RUTA → ENTREGADO
+- ✅ **Interface de Asignación:** Selección de pedidos y despachadores
+- ✅ **Centro de Picking:** Proceso de recolección con cantidades en tiempo real
+- ✅ **Dashboard de Métricas:** Estadísticas completas de despachos
+- ✅ **Vista de Detalle:** Timeline completo con edición de estado
+- ✅ **Integración con Backend:** Todos los endpoints funcionando
+- ✅ **Responsive Design:** Mobile-first con Tailwind CSS
+- ✅ **Autenticación JWT:** Protección en todas las páginas
+- ✅ **Manejo de Estados:** Loading, error, success en todas las operaciones
+- ✅ Sistema completo de Cajas Variables implementado
+- ✅ Modal de Confirmación de Lotes Específicos en pedidos tipo 2
+- ✅ Visualización detallada de lotes: código, peso, precio/kg, vencimiento
+- ✅ Comparación automática precio estimado vs precio real
+- ✅ Cálculo dinámico de incrementos/descuentos por lotes asignados
+- ✅ Integración con endpoint lotes-disponibles con autenticación Bearer
+- ✅ Función obtenerCajasParaPedido con cálculos de precios
+- ✅ Modal responsive para mostrar información completa de asignación
+- ✅ Correción campo pedido.total para resumen de precios
+- ✅ Manejo de errores para lotes insuficientes con mensajes claros
 - ✅ Sistema completo de Puntos de Fidelización integrado
 - ✅ Creación de pedidos con calculadora de puntos y canje
 - ✅ Lista de pedidos con columna de puntos ganados

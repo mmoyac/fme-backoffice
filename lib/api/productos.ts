@@ -24,6 +24,9 @@ export interface Producto {
   // Información de categoría
   categoria_nombre: string | null;
   categoria_puntos_fidelidad: number | null;
+  // Información de tipo de venta (peso vs cantidad)
+  tipo_venta_codigo: string | null; // UNITARIO, PESO_SUELTO
+  tipo_venta_nombre: string | null;
 }
 
 export interface ProductoCreate {

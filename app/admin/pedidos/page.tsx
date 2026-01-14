@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { listarPedidos, Pedido } from '@/lib/api/pedidos';
+import { listarPedidos, Pedido, actualizarEstadoSII } from '@/lib/api/pedidos';
 
 export default function PedidosPage() {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
@@ -56,16 +56,46 @@ export default function PedidosPage() {
     });
   };
 
+  const actualizarSII = async (pedidoId: number, nuevoEstado: string) => {
+    try {
+      await actualizarEstadoSII(pedidoId, nuevoEstado);
+      // Recargar pedidos para mostrar el cambio
+      await cargarPedidos();
+    } catch (error) {
+      console.error('Error actualizando estado SII:', error);
+      alert('Error al actualizar el estado SII');
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-white">Pedidos</h1>
-        <Link 
-          href="/admin/pedidos/nuevo"
-          className="bg-primary hover:bg-teal-600 text-white px-6 py-2 rounded-lg transition-colors font-semibold"
-        >
-          + Nuevo Pedido
-        </Link>
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold text-white">Pedidos</h1>
+          <p className="text-gray-400">Gestión de pedidos regulares y cajas variables</p>
+        </div>
+        <div className="flex space-x-3">
+          <Link 
+            href="/admin/pedidos/pos"
+            className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition-colors font-semibold flex items-center"
+          >
+            <span className="mr-2">🛒</span>
+            POS Tablet
+          </Link>
+          <Link 
+            href="/admin/pedidos/nuevo"
+            className="bg-primary hover:bg-teal-600 text-white px-6 py-2 rounded-lg transition-colors font-semibold"
+          >
+            + Nuevo Pedido
+          </Link>
+          <Link 
+            href="/admin/pedidos/cajas"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg transition-colors font-semibold flex items-center"
+          >
+            <span className="mr-2">📦</span>
+            + Pedido Cajas
+          </Link>
+        </div>
       </div>
 
       {/* Filtros */}
@@ -148,6 +178,12 @@ export default function PedidosPage() {
                     Estado
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 uppercase">
+                    Documento
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 uppercase">
+                    Tipo de Venta
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 uppercase">
                     Medio de Pago
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 uppercase">
@@ -184,6 +220,40 @@ export default function PedidosPage() {
                     </td>
                     <td className="px-4 py-4">
                       {getEstadoBadge(pedido.estado)}
+                    </td>
+                    <td className="px-4 py-4">
+                      {pedido.tipo_documento_codigo === 'FAC' ? (
+                        <div className="flex flex-col">
+                          <span className="bg-purple-600 text-white px-3 py-1 rounded-full text-xs font-semibold mb-2">
+                            📄 Factura
+                          </span>
+                          <select
+                            value={pedido.estado_sii || 'PENDIENTE'}
+                            onChange={(e) => actualizarSII(pedido.id, e.target.value)}
+                            className="bg-slate-700 text-white text-xs px-2 py-1 rounded border border-slate-600 focus:border-purple-400 focus:outline-none"
+                          >
+                            <option value="PENDIENTE">📋 Pendiente</option>
+                            <option value="ENVIADO">📤 Enviado</option>
+                            <option value="APROBADO">✅ Aprobado</option>
+                            <option value="RECHAZADO">❌ Rechazado</option>
+                          </select>
+                        </div>
+                      ) : (
+                        <span className="bg-green-600 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                          📄 Boleta
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-4">
+                      {pedido.tipo_pedido_codigo === 'CAJAS_VARIABLES' ? (
+                        <span className="bg-orange-600 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                          📦 Cajas Variables
+                        </span>
+                      ) : (
+                        <span className="bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                          📦 Productos
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-2">

@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getProveedores, createProveedor, updateProveedor, deleteProveedor, Proveedor, ProveedorCreate } from '@/lib/api/compras';
+import { getProveedores, createProveedor, updateProveedor, deleteProveedor, getTiposProveedor, Proveedor, ProveedorCreate, TipoProveedor } from '@/lib/api/compras';
 
 export default function ProveedoresList() {
     const [proveedores, setProveedores] = useState<Proveedor[]>([]);
+    const [tiposProveedor, setTiposProveedor] = useState<TipoProveedor[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -23,6 +24,7 @@ export default function ProveedoresList() {
 
     useEffect(() => {
         loadData();
+        loadTiposProveedor();
     }, []);
 
     async function loadData() {
@@ -38,6 +40,15 @@ export default function ProveedoresList() {
         }
     }
 
+    async function loadTiposProveedor() {
+        try {
+            const data = await getTiposProveedor();
+            setTiposProveedor(data);
+        } catch (err: any) {
+            console.error('Error cargando tipos de proveedor:', err);
+        }
+    }
+
     function openCreateModal() {
         setEditingId(null);
         setFormData({
@@ -47,6 +58,7 @@ export default function ProveedoresList() {
             email: '',
             telefono: '',
             direccion: '',
+            tipo_proveedor_id: null,
             activo: true
         });
         setModalOpen(true);
@@ -61,6 +73,7 @@ export default function ProveedoresList() {
             email: proveedor.email || '',
             telefono: proveedor.telefono || '',
             direccion: proveedor.direccion || '',
+            tipo_proveedor_id: proveedor.tipo_proveedor_id || null,
             activo: proveedor.activo
         });
         setModalOpen(true);
@@ -124,6 +137,7 @@ export default function ProveedoresList() {
                             <tr>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Nombre</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">RUT</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Tipo</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Contacto</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Email</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Teléfono</th>
@@ -136,6 +150,15 @@ export default function ProveedoresList() {
                                 <tr key={proveedor.id} className="hover:bg-slate-600/50">
                                     <td className="px-6 py-4 text-sm font-medium text-white">{proveedor.nombre}</td>
                                     <td className="px-6 py-4 text-sm text-gray-300">{proveedor.rut || '-'}</td>
+                                    <td className="px-6 py-4 text-sm text-gray-300">
+                                        {proveedor.tipo_proveedor ? (
+                                            <span className="px-2 py-1 bg-slate-600 rounded text-xs font-medium text-gray-200">
+                                                {proveedor.tipo_proveedor.nombre}
+                                            </span>
+                                        ) : (
+                                            <span className="text-gray-500 italic">Sin definir</span>
+                                        )}
+                                    </td>
                                     <td className="px-6 py-4 text-sm text-gray-300">{proveedor.contacto || '-'}</td>
                                     <td className="px-6 py-4 text-sm text-gray-300">{proveedor.email || '-'}</td>
                                     <td className="px-6 py-4 text-sm text-gray-300">{proveedor.telefono || '-'}</td>
@@ -191,6 +214,21 @@ export default function ProveedoresList() {
                                     value={formData.rut}
                                     onChange={(e) => setFormData({ ...formData, rut: e.target.value })}
                                 />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-1">Tipo de Proveedor</label>
+                                <select
+                                    className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white"
+                                    value={formData.tipo_proveedor_id || ''}
+                                    onChange={(e) => setFormData({ ...formData, tipo_proveedor_id: e.target.value ? parseInt(e.target.value) : null })}
+                                >
+                                    <option value="">Seleccionar tipo...</option>
+                                    {tiposProveedor.map(tipo => (
+                                        <option key={tipo.id} value={tipo.id}>
+                                            {tipo.nombre} ({tipo.codigo})
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-300 mb-1">Contacto</label>

@@ -7,6 +7,16 @@ const nextConfig = {
         protocol: 'https',
         hostname: '**',
       },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '8000',
+      },
+      {
+        protocol: 'http',
+        hostname: '168.231.96.205',
+        port: '8001',
+      },
     ],
   },
   async rewrites() {

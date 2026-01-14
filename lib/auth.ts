@@ -16,6 +16,7 @@ export interface User {
     nombre_completo: string;
     is_active: boolean;
     local_defecto_id?: number;
+    access_token?: string | null;
     role?: {
         id: number;
         nombre: string;

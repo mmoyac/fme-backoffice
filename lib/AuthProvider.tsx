@@ -31,7 +31,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             try {
                 if (AuthService.isAuthenticated()) {
                     const currentUser = await AuthService.getCurrentUser();
-                    setUser(currentUser);
+                    const token = AuthService.getToken();
+                    // Agregar el token al objeto user
+                    setUser({
+                        ...currentUser,
+                        access_token: token
+                    });
                 } else {
                     // Si no está autenticado y no está en la página de login, redirigir
                     if (pathname !== '/login' && pathname !== '/') {

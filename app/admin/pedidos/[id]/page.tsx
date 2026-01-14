@@ -6,6 +6,7 @@ import { obtenerPedido, actualizarPedido, Pedido, descargarBoleta } from '@/lib/
 import { getLocales, Local } from '@/lib/api/locales';
 import { getInventarios, Inventario } from '@/lib/api/inventario';
 import { obtenerPedidoConCheques, actualizarCheque, obtenerEstadosCheque, PedidoConCheques, Cheque, EstadoCheque } from '@/lib/api/cheques';
+import { AuthService } from '@/lib/auth';
 
 export default function DetallePedidoPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -24,6 +25,11 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
   const [estadosCheque, setEstadosCheque] = useState<EstadoCheque[]>([]);
   const [actualizandoCheque, setActualizandoCheque] = useState<number | null>(null);
   const [generandoBoleta, setGenerandoBoleta] = useState(false);
+  
+  // Estados para confirmación de cajas variables
+  const [mostrarConfirmacionCajas, setMostrarConfirmacionCajas] = useState(false);
+  const [cajasDisponibles, setCajasDisponibles] = useState<any[]>([]);
+  const [cargandoCajas, setCargandoCajas] = useState(false);
 
   const estados = [
     { value: 'PENDIENTE', label: 'Pendiente', color: 'bg-yellow-500' },
@@ -78,6 +84,127 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
     }
   };
 
+  const obtenerCajasParaPedido = async () => {
+    if (!pedido || !pedido.items) return [];
+    
+    setCargandoCajas(true);
+    try {
+      const cajasPorItem = [];
+      let totalPrecioEstimado = 0;
+      let totalPrecioReal = 0;
+      
+      const token = AuthService.getToken();
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      };
+      
+      for (const item of pedido.items) {
+        const precioEstimadoItem = item.precio_unitario_venta * item.cantidad;
+        totalPrecioEstimado += precioEstimadoItem;
+        
+        try {
+          // Llamar al endpoint de lotes específicos disponibles
+          const response = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/api/stock-cajas/lotes-disponibles/${item.producto_id}?cantidad_requerida=${item.cantidad}`,
+            { headers }
+          );
+          
+          if (response.ok) {
+            const lotesData = await response.json();
+            console.log(`Datos de lotes para producto ${item.producto_id}:`, lotesData);
+            
+            // Validar que la respuesta tenga los datos esperados
+            if (lotesData.lotes && lotesData.lotes.length > 0) {
+              const precioRealItem = lotesData.lotes.reduce((total: number, lote: any) => total + lote.precio_total, 0);
+              totalPrecioReal += precioRealItem;
+              
+              cajasPorItem.push({
+                producto: item.producto?.nombre || `Producto ID ${item.producto_id}`,
+                cantidad_requerida: item.cantidad,
+                lotes_disponibles: lotesData.cajas_disponibles,
+                lotes_especificos: lotesData.lotes,
+                proveedor: lotesData.lotes[0]?.proveedor_nombre || 'Sin proveedor',
+                precio_estimado: precioEstimadoItem,
+                precio_real: precioRealItem
+              });
+            } else if (lotesData.error) {
+              cajasPorItem.push({
+                producto: item.producto?.nombre || `Producto ID ${item.producto_id}`,
+                cantidad_requerida: item.cantidad,
+                error: lotesData.error,
+                precio_estimado: precioEstimadoItem,
+                precio_real: 0
+              });
+            } else {
+              cajasPorItem.push({
+                producto: item.producto?.nombre || `Producto ID ${item.producto_id}`,
+                cantidad_requerida: item.cantidad,
+                error: 'No hay lotes disponibles para este producto',
+                precio_estimado: precioEstimadoItem,
+                precio_real: 0
+              });
+            }
+          } else {
+            const errorData = await response.json();
+            cajasPorItem.push({
+              producto: item.producto?.nombre || `Producto ID ${item.producto_id}`,
+              cantidad_requerida: item.cantidad,
+              error: errorData.detail || 'No hay lotes suficientes disponibles',
+              precio_estimado: precioEstimadoItem,
+              precio_real: 0
+            });
+          }
+        } catch (itemError) {
+          console.error(`Error para producto ${item.producto_id}:`, itemError);
+          cajasPorItem.push({
+            producto: item.producto?.nombre || `Producto ID ${item.producto_id}`,
+            cantidad_requerida: item.cantidad,
+            error: 'Error al consultar lotes disponibles',
+            precio_estimado: precioEstimadoItem,
+            precio_real: 0
+          });
+        }
+      }
+      
+      // Agregar información de precios totales
+      (cajasPorItem as any).totalPrecioEstimado = totalPrecioEstimado;
+      (cajasPorItem as any).totalPrecioReal = totalPrecioReal;
+      (cajasPorItem as any).diferenciaPrecio = totalPrecioReal - totalPrecioEstimado;
+      
+      return cajasPorItem;
+    } catch (error) {
+      console.error('Error al obtener cajas:', error);
+      return [];
+    } finally {
+      setCargandoCajas(false);
+    }
+  };
+
+  const confirmarCajasYProceder = async () => {
+    if (!pedido) return;
+    
+    try {
+      setGuardando(true);
+      const updateData: any = { estado: 'CONFIRMADO' };
+      
+      // Si hay local seleccionado, incluirlo
+      if (localSeleccionado) {
+        updateData.local_despacho_id = localSeleccionado;
+      }
+      
+      const actualizado = await actualizarPedido(pedido.id, updateData);
+      setPedido(actualizado);
+      setMostrarConfirmacionCajas(false);
+      setCajasDisponibles([]);
+    } catch (err: any) {
+      setError(err.message || 'Error al confirmar el pedido');
+      console.error(err);
+    } finally {
+      setGuardando(false);
+    }
+  };
+
   const cargarPedido = async () => {
     try {
       setLoading(true);
@@ -101,6 +228,14 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
 
   const cambiarEstado = async (nuevoEstado: string) => {
     if (!pedido) return;
+    
+    // Si va a confirmar un pedido de cajas variables, mostrar confirmación especial
+    if (nuevoEstado === 'CONFIRMADO' && pedido.tipo_pedido_codigo === 'CAJAS_VARIABLES') {
+      const cajas = await obtenerCajasParaPedido();
+      setCajasDisponibles(cajas);
+      setMostrarConfirmacionCajas(true);
+      return;
+    }
     
     // Si va a confirmar y no hay local de despacho, mostrar selector
     if (nuevoEstado === 'CONFIRMADO' && !pedido.local_despacho_id && !localSeleccionado) {
@@ -441,6 +576,202 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
                     Cancelar
                   </button>
                 </div>
+              </div>
+            )}
+            
+            {/* Modal de confirmación para cajas variables */}
+            {mostrarConfirmacionCajas && (
+              <div className="mb-4 p-4 bg-blue-500/10 border border-blue-500 rounded-lg">
+                <p className="text-blue-500 font-semibold mb-3">
+                  Confirmación de Asignación de Cajas Variables
+                </p>
+                
+                {cargandoCajas ? (
+                  <div className="text-center py-4">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mx-auto"></div>
+                    <p className="text-sm text-gray-400 mt-2">Calculando cajas necesarias...</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3 mb-4">
+                    <p className="text-sm text-gray-300 mb-3">
+                      Al confirmar este pedido se entregarán las siguientes cajas específicas:
+                    </p>
+                    
+                    {cajasDisponibles.map((caja, idx) => (
+                      <div
+                        key={idx}
+                        className={`p-4 rounded-lg border ${
+                          caja.error 
+                            ? 'border-red-500/30 bg-red-500/5' 
+                            : 'border-slate-600 bg-slate-700'
+                        }`}
+                      >
+                        <div className="flex justify-between items-start mb-3">
+                          <div>
+                            <p className="text-white font-semibold">{caja.producto}</p>
+                            <p className="text-sm text-gray-400">
+                              Cantidad requerida: {caja.cantidad_requerida} cajas
+                            </p>
+                            {!caja.error && (
+                              <>
+                                <p className="text-sm text-gray-400">
+                                  Proveedor: {caja.proveedor}
+                                </p>
+                                <p className="text-sm font-semibold text-green-400">
+                                  Precio total: ${caja.lotes_especificos?.reduce((total: number, lote: any) => total + lote.precio_total, 0).toLocaleString('es-CL')}
+                                </p>
+                              </>
+                            )}
+                          </div>
+                          
+                          {caja.error ? (
+                            <span className="text-xs bg-red-500 text-white px-2 py-1 rounded">
+                              ⚠️ Sin stock
+                            </span>
+                          ) : (
+                            <span className="text-xs bg-green-500 text-white px-2 py-1 rounded">
+                              ✓ Disponible
+                            </span>
+                          )}
+                        </div>
+                        
+                        {!caja.error && caja.lotes_especificos && (
+                          <div className="space-y-2 border-t border-slate-600 pt-3">
+                            <p className="text-xs font-semibold text-gray-300 mb-2">
+                              Lotes específicos a entregar:
+                            </p>
+                            {caja.lotes_especificos.map((lote: any, loteIdx: number) => (
+                              <div
+                                key={loteIdx}
+                                className="bg-slate-800 rounded-md p-2 text-xs"
+                              >
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div>
+                                    <span className="text-gray-400">Lote:</span>
+                                    <span className="text-white font-mono ml-2">#{lote.codigo_lote}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-400">Peso:</span>
+                                    <span className="text-white font-semibold ml-2">{lote.peso_kg} kg</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-400">$/kg:</span>
+                                    <span className="text-white ml-2">${lote.precio_por_kg?.toLocaleString('es-CL')}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-400">Total:</span>
+                                    <span className="text-green-400 font-semibold ml-2">${lote.precio_total?.toLocaleString('es-CL')}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-400">Vencimiento:</span>
+                                    <span className="text-yellow-400 ml-2">{new Date(lote.fecha_vencimiento).toLocaleDateString('es-CL')}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-400">Lote Proveedor:</span>
+                                    <span className="text-gray-200 ml-2 font-mono">{lote.lote_proveedor}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                            
+                            <div className="border-t border-slate-600 pt-2 mt-3">
+                              <div className="flex justify-between items-center text-sm">
+                                <span className="text-gray-400">Resumen:</span>
+                                <div className="text-right">
+                                  <div className="text-white">
+                                    {caja.lotes_especificos.reduce((total: number, lote: any) => total + lote.peso_kg, 0).toFixed(2)} kg total
+                                  </div>
+                                  <div className="text-green-400 font-bold">
+                                    ${caja.lotes_especificos.reduce((total: number, lote: any) => total + lote.precio_total, 0).toLocaleString('es-CL')} CLP
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {caja.error && (
+                          <p className="text-red-400 text-sm mt-2">{caja.error}</p>
+                        )}
+                      </div>
+                    ))}
+                    
+                    {/* Resumen de precios total */}
+                    {cajasDisponibles.length > 0 && !cajasDisponibles.some(caja => caja.error) && (
+                      <div className="border-t border-slate-600 pt-4 mt-6">
+                        <div className="bg-slate-800 rounded-lg p-4">
+                          <h4 className="text-white font-semibold mb-3">Resumen de Precios Total:</h4>
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <span className="text-gray-400">Precio Estimado Original:</span>
+                              <div className="text-white font-mono text-lg">
+                                ${(pedido?.total || 0).toLocaleString('es-CL')}
+                              </div>
+                            </div>
+                            <div>
+                              <span className="text-gray-400">Precio Real (Lotes Específicos):</span>
+                              <div className="text-green-400 font-mono text-lg font-bold">
+                                ${cajasDisponibles
+                                  .filter(caja => !caja.error && caja.lotes_especificos)
+                                  .reduce((total: number, caja) => 
+                                    total + (caja.lotes_especificos?.reduce((loteTotal: number, lote: any) => loteTotal + lote.precio_total, 0) || 0), 0)
+                                  .toLocaleString('es-CL')}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Mostrar diferencia si existe */}
+                          {(() => {
+                            const precioOriginal = pedido?.total || 0;
+                            const precioReal = cajasDisponibles
+                              .filter(caja => !caja.error && caja.lotes_especificos)
+                              .reduce((total: number, caja) => 
+                                total + (caja.lotes_especificos?.reduce((loteTotal: number, lote: any) => loteTotal + lote.precio_total, 0) || 0), 0);
+                            
+                            const diferencia = precioReal - precioOriginal;
+                            
+                            if (Math.abs(diferencia) > 0.01) {
+                              return (
+                                <div className={`mt-3 p-3 rounded-lg text-center ${
+                                  diferencia > 0 
+                                    ? 'bg-red-500/10 border border-red-500/30' 
+                                    : 'bg-green-500/10 border border-green-500/30'
+                                }`}>
+                                  <span className={`font-semibold ${diferencia > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                                    {diferencia > 0 ? 'Incremento' : 'Descuento'}: ${Math.abs(diferencia).toLocaleString('es-CL')}
+                                  </span>
+                                  <div className="text-xs text-gray-400 mt-1">
+                                    El precio del pedido se actualizará automáticamente
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className="flex gap-2 mt-4">
+                      <button
+                        onClick={confirmarCajasYProceder}
+                        disabled={guardando || cajasDisponibles.some(caja => caja.error)}
+                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg disabled:opacity-50"
+                      >
+                        {guardando ? 'Confirmando...' : 'Confirmar Asignación'}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setMostrarConfirmacionCajas(false);
+                          setCajasDisponibles([]);
+                        }}
+                        className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
             

@@ -7,6 +7,7 @@ import UnidadesList from "./components/UnidadesList";
 import ProveedoresList from "./components/ProveedoresList";
 import LocalesList from "./components/LocalesList";
 import TiposDocumentoList from "./components/TiposDocumentoList";
+import TiposPedidoList from "./components/TiposPedidoList";
 
 export default function MantenedoresPage() {
     const [activeTab, setActiveTab] = useState("categorias");
@@ -77,6 +78,15 @@ export default function MantenedoresPage() {
                     >
                         📄 Tipos Documento
                     </button>
+                    <button
+                        onClick={() => setActiveTab("tipos_pedido")}
+                        className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === "tipos_pedido"
+                            ? "border-primary text-primary"
+                            : "border-transparent text-gray-400 hover:text-gray-300 hover:border-slate-600"
+                            }`}
+                    >
+                        📦 Tipos Pedido
+                    </button>
                 </nav>
             </div>
 
@@ -139,6 +149,16 @@ export default function MantenedoresPage() {
                             Gestiona los tipos de documento tributario (Factura, Boleta, Guía, etc.)
                         </p>
                         <TiposDocumentoList />
+                    </div>
+                )}
+
+                {activeTab === "tipos_pedido" && (
+                    <div>
+                        <h2 className="text-xl font-semibold text-white mb-2">Tipos de Pedido</h2>
+                        <p className="text-gray-400 mb-4">
+                            Gestiona los tipos de pedido y sus locales de despacho por defecto
+                        </p>
+                        <TiposPedidoList />
                     </div>
                 )}
             </div>
