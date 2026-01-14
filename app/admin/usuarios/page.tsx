@@ -93,8 +93,8 @@ export default function UsuariosPage() {
 
     const fetchLocales = async () => {
         try {
-            console.log('Fetching locales from:', `${API_URL}/api/locales`);
-            const res = await fetch(`${API_URL}/api/locales`, { headers: getHeaders() });
+            console.log('Fetching locales from:', `${API_URL}/api/locales/`);
+            const res = await fetch(`${API_URL}/api/locales/`, { headers: getHeaders() });
             if (res.ok) {
                 const data = await res.json();
                 console.log('Locales received:', data);
