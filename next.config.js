@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Para producción Docker: standalone
+  output: 'standalone',
   reactStrictMode: true,
   swcMinify: true,
   images: {
@@ -19,11 +21,6 @@ const nextConfig = {
         port: '8001',
       },
     ],
-  },
-  // Exportar solo las páginas necesarias para el POS
-  // Esto evita problemas con rutas dinámicas
-  experimental: {
-    // Deshabilitar optimizaciones que causan problemas con export
   },
 }
 
