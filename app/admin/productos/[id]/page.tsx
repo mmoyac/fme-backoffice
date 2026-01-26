@@ -2,8 +2,9 @@
 
 import { useState, useEffect, FormEvent } from 'react';
 import { getProducto, updateProducto, uploadImagen, type Producto, type ProductoUpdate } from '@/lib/api/productos';
-import { getCategorias, getTipos, getUnidades, type CategoriaProducto, type TipoProducto, type UnidadMedida } from '@/lib/api/maestras';
 import { useRouter } from 'next/navigation';
+import { getCategorias, getTipos, getUnidades, type CategoriaProducto, type TipoProducto, type UnidadMedida } from '@/lib/api/maestras';
+import { AuthService } from '@/lib/auth';
 
 export default function EditarProductoPage({ params }: { params: { id: string } }) {
   const router = useRouter();

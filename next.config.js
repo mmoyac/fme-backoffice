@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',
+  reactStrictMode: true,
+  swcMinify: true,
   images: {
     remotePatterns: [
       {
@@ -19,13 +20,10 @@ const nextConfig = {
       },
     ],
   },
-  async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: 'http://localhost:8000/api/:path*', // Proxy to backend
-      },
-    ];
+  // Exportar solo las páginas necesarias para el POS
+  // Esto evita problemas con rutas dinámicas
+  experimental: {
+    // Deshabilitar optimizaciones que causan problemas con export
   },
 }
 

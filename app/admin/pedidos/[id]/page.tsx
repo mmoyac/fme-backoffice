@@ -19,13 +19,13 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
   const [guardando, setGuardando] = useState(false);
   const [notasAdmin, setNotasAdmin] = useState('');
   const [mostrarSelectorLocal, setMostrarSelectorLocal] = useState(false);
-  
+
   // Estados para cheques
   const [pedidoConCheques, setPedidoConCheques] = useState<PedidoConCheques | null>(null);
   const [estadosCheque, setEstadosCheque] = useState<EstadoCheque[]>([]);
   const [actualizandoCheque, setActualizandoCheque] = useState<number | null>(null);
   const [generandoBoleta, setGenerandoBoleta] = useState(false);
-  
+
   // Estados para confirmación de cajas variables
   const [mostrarConfirmacionCajas, setMostrarConfirmacionCajas] = useState(false);
   const [cajasDisponibles, setCajasDisponibles] = useState<any[]>([]);
@@ -86,39 +86,39 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
 
   const obtenerCajasParaPedido = async () => {
     if (!pedido || !pedido.items) return [];
-    
+
     setCargandoCajas(true);
     try {
       const cajasPorItem = [];
       let totalPrecioEstimado = 0;
       let totalPrecioReal = 0;
-      
+
       const token = AuthService.getToken();
       const headers = {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       };
-      
+
       for (const item of pedido.items) {
         const precioEstimadoItem = item.precio_unitario_venta * item.cantidad;
         totalPrecioEstimado += precioEstimadoItem;
-        
+
         try {
           // Llamar al endpoint de lotes específicos disponibles
           const response = await fetch(
             `${process.env.NEXT_PUBLIC_API_URL}/api/stock-cajas/lotes-disponibles/${item.producto_id}?cantidad_requerida=${item.cantidad}`,
             { headers }
           );
-          
+
           if (response.ok) {
             const lotesData = await response.json();
             console.log(`Datos de lotes para producto ${item.producto_id}:`, lotesData);
-            
+
             // Validar que la respuesta tenga los datos esperados
             if (lotesData.lotes && lotesData.lotes.length > 0) {
               const precioRealItem = lotesData.lotes.reduce((total: number, lote: any) => total + lote.precio_total, 0);
               totalPrecioReal += precioRealItem;
-              
+
               cajasPorItem.push({
                 producto: item.producto?.nombre || `Producto ID ${item.producto_id}`,
                 cantidad_requerida: item.cantidad,
@@ -166,12 +166,12 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
           });
         }
       }
-      
+
       // Agregar información de precios totales
       (cajasPorItem as any).totalPrecioEstimado = totalPrecioEstimado;
       (cajasPorItem as any).totalPrecioReal = totalPrecioReal;
       (cajasPorItem as any).diferenciaPrecio = totalPrecioReal - totalPrecioEstimado;
-      
+
       return cajasPorItem;
     } catch (error) {
       console.error('Error al obtener cajas:', error);
@@ -183,16 +183,16 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
 
   const confirmarCajasYProceder = async () => {
     if (!pedido) return;
-    
+
     try {
       setGuardando(true);
       const updateData: any = { estado: 'CONFIRMADO' };
-      
+
       // Si hay local seleccionado, incluirlo
       if (localSeleccionado) {
         updateData.local_despacho_id = localSeleccionado;
       }
-      
+
       const actualizado = await actualizarPedido(pedido.id, updateData);
       setPedido(actualizado);
       setMostrarConfirmacionCajas(false);
@@ -213,7 +213,7 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
       setPedido(data);
       setNotasAdmin(data.notas_admin || '');
       setLocalSeleccionado(data.local_despacho_id || null);
-      
+
       // Si el pedido permite cheques, cargar información de cheques
       if (data.permite_cheque) {
         cargarCheques();
@@ -228,7 +228,7 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
 
   const cambiarEstado = async (nuevoEstado: string) => {
     if (!pedido) return;
-    
+
     // Si va a confirmar un pedido de cajas variables, mostrar confirmación especial
     if (nuevoEstado === 'CONFIRMADO' && pedido.tipo_pedido_codigo === 'CAJAS_VARIABLES') {
       const cajas = await obtenerCajasParaPedido();
@@ -236,22 +236,22 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
       setMostrarConfirmacionCajas(true);
       return;
     }
-    
+
     // Si va a confirmar y no hay local de despacho, mostrar selector
     if (nuevoEstado === 'CONFIRMADO' && !pedido.local_despacho_id && !localSeleccionado) {
       setMostrarSelectorLocal(true);
       return;
     }
-    
+
     try {
       setGuardando(true);
       const updateData: any = { estado: nuevoEstado };
-      
+
       // Si está confirmando y hay local seleccionado, incluirlo
       if (nuevoEstado === 'CONFIRMADO' && localSeleccionado) {
         updateData.local_despacho_id = localSeleccionado;
       }
-      
+
       const actualizado = await actualizarPedido(pedido.id, updateData);
       setPedido(actualizado);
       setMostrarSelectorLocal(false);
@@ -265,7 +265,7 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
 
   const togglePagado = async () => {
     if (!pedido) return;
-    
+
     try {
       setGuardando(true);
       const actualizado = await actualizarPedido(pedido.id, { pagado: !pedido.pagado });
@@ -282,7 +282,7 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
     try {
       setActualizandoCheque(chequeId);
       await actualizarCheque(chequeId, { estado_id: nuevoEstadoId });
-      
+
       // Recargar información de cheques y pedido
       await Promise.all([cargarCheques(), cargarPedido()]);
     } catch (err: any) {
@@ -295,7 +295,7 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
 
   const handleDescargarBoleta = async () => {
     if (!pedido) return;
-    
+
     try {
       setGenerandoBoleta(true);
       await descargarBoleta(pedido.id);
@@ -309,7 +309,7 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
 
   const guardarNotasAdmin = async () => {
     if (!pedido) return;
-    
+
     try {
       setGuardando(true);
       const actualizado = await actualizarPedido(pedido.id, { notas_admin: notasAdmin });
@@ -333,7 +333,7 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
   // Verificar si un local tiene stock suficiente para todos los productos del pedido
   const localTieneStockSuficiente = (localId: number): boolean => {
     if (!pedido?.items) return false;
-    
+
     return pedido.items.every(item => {
       const stockDisponible = getStockProductoLocal(item.producto_id, localId);
       return stockDisponible >= item.cantidad;
@@ -343,7 +343,7 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
   // Obtener detalles de stock de un local para el pedido
   const getDetalleStockLocal = (localId: number) => {
     if (!pedido?.items) return [];
-    
+
     return pedido.items.map(item => ({
       producto: item.producto?.nombre || 'Producto',
       requerido: item.cantidad,
@@ -398,7 +398,7 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
           </h1>
           <p className="text-gray-400 mt-1">{formatFecha(pedido.fecha_pedido)}</p>
         </div>
-        
+
         {/* Botones de acción */}
         <div className="flex gap-3">
           <button
@@ -490,28 +490,27 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
           {/* Estado del Pedido */}
           <div className="bg-slate-800 rounded-lg p-6">
             <h2 className="text-xl font-bold text-white mb-4">Estado del Pedido</h2>
-            
+
             {/* Selector de Local (solo si va a confirmar y no tiene local asignado) */}
             {mostrarSelectorLocal && (
               <div className="mb-4 p-4 bg-yellow-500/10 border border-yellow-500 rounded-lg">
                 <p className="text-yellow-500 font-semibold mb-3">Seleccione el local de despacho:</p>
-                
+
                 {/* Lista de locales con stock */}
                 <div className="space-y-3 mb-4">
                   {locales.map((local) => {
                     const tieneSuficiente = localTieneStockSuficiente(local.id);
                     const detalleStock = getDetalleStockLocal(local.id);
-                    
+
                     return (
                       <div
                         key={local.id}
-                        className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                          localSeleccionado === local.id
-                            ? 'border-primary bg-primary/10'
-                            : tieneSuficiente
+                        className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${localSeleccionado === local.id
+                          ? 'border-primary bg-primary/10'
+                          : tieneSuficiente
                             ? 'border-slate-600 bg-slate-700 hover:border-slate-500'
                             : 'border-red-500/30 bg-red-500/5 opacity-60'
-                        }`}
+                          }`}
                         onClick={() => tieneSuficiente && setLocalSeleccionado(local.id)}
                       >
                         <div className="flex items-start justify-between mb-2">
@@ -538,15 +537,14 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
                             </span>
                           )}
                         </div>
-                        
+
                         {/* Detalle de stock por producto */}
                         <div className="text-xs space-y-1 ml-6">
                           {detalleStock.map((detalle, idx) => (
                             <div
                               key={idx}
-                              className={`flex justify-between ${
-                                detalle.suficiente ? 'text-gray-400' : 'text-red-400'
-                              }`}
+                              className={`flex justify-between ${detalle.suficiente ? 'text-gray-400' : 'text-red-400'
+                                }`}
                             >
                               <span>{detalle.producto}</span>
                               <span>
@@ -560,7 +558,7 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
                     );
                   })}
                 </div>
-                
+
                 <div className="flex gap-2">
                   <button
                     onClick={() => cambiarEstado('CONFIRMADO')}
@@ -578,14 +576,14 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
                 </div>
               </div>
             )}
-            
+
             {/* Modal de confirmación para cajas variables */}
             {mostrarConfirmacionCajas && (
               <div className="mb-4 p-4 bg-blue-500/10 border border-blue-500 rounded-lg">
                 <p className="text-blue-500 font-semibold mb-3">
                   Confirmación de Asignación de Cajas Variables
                 </p>
-                
+
                 {cargandoCajas ? (
                   <div className="text-center py-4">
                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mx-auto"></div>
@@ -596,15 +594,14 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
                     <p className="text-sm text-gray-300 mb-3">
                       Al confirmar este pedido se entregarán las siguientes cajas específicas:
                     </p>
-                    
+
                     {cajasDisponibles.map((caja, idx) => (
                       <div
                         key={idx}
-                        className={`p-4 rounded-lg border ${
-                          caja.error 
-                            ? 'border-red-500/30 bg-red-500/5' 
-                            : 'border-slate-600 bg-slate-700'
-                        }`}
+                        className={`p-4 rounded-lg border ${caja.error
+                          ? 'border-red-500/30 bg-red-500/5'
+                          : 'border-slate-600 bg-slate-700'
+                          }`}
                       >
                         <div className="flex justify-between items-start mb-3">
                           <div>
@@ -623,7 +620,7 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
                               </>
                             )}
                           </div>
-                          
+
                           {caja.error ? (
                             <span className="text-xs bg-red-500 text-white px-2 py-1 rounded">
                               ⚠️ Sin stock
@@ -634,7 +631,7 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
                             </span>
                           )}
                         </div>
-                        
+
                         {!caja.error && caja.lotes_especificos && (
                           <div className="space-y-2 border-t border-slate-600 pt-3">
                             <p className="text-xs font-semibold text-gray-300 mb-2">
@@ -673,7 +670,7 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
                                 </div>
                               </div>
                             ))}
-                            
+
                             <div className="border-t border-slate-600 pt-2 mt-3">
                               <div className="flex justify-between items-center text-sm">
                                 <span className="text-gray-400">Resumen:</span>
@@ -689,13 +686,13 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
                             </div>
                           </div>
                         )}
-                        
+
                         {caja.error && (
                           <p className="text-red-400 text-sm mt-2">{caja.error}</p>
                         )}
                       </div>
                     ))}
-                    
+
                     {/* Resumen de precios total */}
                     {cajasDisponibles.length > 0 && !cajasDisponibles.some(caja => caja.error) && (
                       <div className="border-t border-slate-600 pt-4 mt-6">
@@ -713,30 +710,29 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
                               <div className="text-green-400 font-mono text-lg font-bold">
                                 ${cajasDisponibles
                                   .filter(caja => !caja.error && caja.lotes_especificos)
-                                  .reduce((total: number, caja) => 
+                                  .reduce((total: number, caja) =>
                                     total + (caja.lotes_especificos?.reduce((loteTotal: number, lote: any) => loteTotal + lote.precio_total, 0) || 0), 0)
                                   .toLocaleString('es-CL')}
                               </div>
                             </div>
                           </div>
-                          
+
                           {/* Mostrar diferencia si existe */}
                           {(() => {
                             const precioOriginal = pedido?.total || 0;
                             const precioReal = cajasDisponibles
                               .filter(caja => !caja.error && caja.lotes_especificos)
-                              .reduce((total: number, caja) => 
+                              .reduce((total: number, caja) =>
                                 total + (caja.lotes_especificos?.reduce((loteTotal: number, lote: any) => loteTotal + lote.precio_total, 0) || 0), 0);
-                            
+
                             const diferencia = precioReal - precioOriginal;
-                            
+
                             if (Math.abs(diferencia) > 0.01) {
                               return (
-                                <div className={`mt-3 p-3 rounded-lg text-center ${
-                                  diferencia > 0 
-                                    ? 'bg-red-500/10 border border-red-500/30' 
-                                    : 'bg-green-500/10 border border-green-500/30'
-                                }`}>
+                                <div className={`mt-3 p-3 rounded-lg text-center ${diferencia > 0
+                                  ? 'bg-red-500/10 border border-red-500/30'
+                                  : 'bg-green-500/10 border border-green-500/30'
+                                  }`}>
                                   <span className={`font-semibold ${diferencia > 0 ? 'text-red-400' : 'text-green-400'}`}>
                                     {diferencia > 0 ? 'Incremento' : 'Descuento'}: ${Math.abs(diferencia).toLocaleString('es-CL')}
                                   </span>
@@ -751,7 +747,7 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
                         </div>
                       </div>
                     )}
-                    
+
                     <div className="flex gap-2 mt-4">
                       <button
                         onClick={confirmarCajasYProceder}
@@ -774,7 +770,7 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
                 )}
               </div>
             )}
-            
+
             {/* Info de inventario */}
             {pedido.inventario_descontado && pedido.local_despacho_id && (
               <div className="mb-4 p-3 bg-green-500/10 border border-green-500 rounded-lg text-sm">
@@ -783,18 +779,17 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
                 </p>
               </div>
             )}
-            
+
             <div className="space-y-2">
               {estados.map((estado) => (
                 <button
                   key={estado.value}
                   onClick={() => cambiarEstado(estado.value)}
                   disabled={guardando || pedido.estado === estado.value}
-                  className={`w-full text-left px-4 py-3 rounded-lg transition-all ${
-                    pedido.estado === estado.value
-                      ? `${estado.color} text-white font-semibold`
-                      : 'bg-slate-700 text-gray-300 hover:bg-slate-600'
-                  } disabled:opacity-50`}
+                  className={`w-full text-left px-4 py-3 rounded-lg transition-all ${pedido.estado === estado.value
+                    ? `${estado.color} text-white font-semibold`
+                    : 'bg-slate-700 text-gray-300 hover:bg-slate-600'
+                    } disabled:opacity-50`}
                 >
                   {estado.label}
                   {pedido.estado === estado.value && ' ✓'}
@@ -806,19 +801,18 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
           {/* Estado de Pago */}
           <div className="bg-slate-800 rounded-lg p-6">
             <h2 className="text-xl font-bold text-white mb-4">Estado de Pago</h2>
-            
+
             {pedido.permite_cheque ? (
               <div className="space-y-3">
-                <div className={`w-full px-4 py-3 rounded-lg font-semibold text-center ${
-                  pedido.pagado
-                    ? 'bg-green-500 text-white'
-                    : 'bg-yellow-500/20 border border-yellow-500 text-yellow-400'
-                }`}>
+                <div className={`w-full px-4 py-3 rounded-lg font-semibold text-center ${pedido.pagado
+                  ? 'bg-green-500 text-white'
+                  : 'bg-yellow-500/20 border border-yellow-500 text-yellow-400'
+                  }`}>
                   {pedido.pagado ? '✓ Pagado' : '⏳ Pendiente de Cheques'}
                 </div>
-                
+
                 <p className="text-sm text-gray-400 text-center">
-                  {pedido.pagado 
+                  {pedido.pagado
                     ? 'Todos los cheques han sido cobrados'
                     : 'El pago se marcará automáticamente cuando todos los cheques estén cobrados'
                   }
@@ -828,11 +822,10 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
               <button
                 onClick={togglePagado}
                 disabled={guardando}
-                className={`w-full px-4 py-3 rounded-lg font-semibold transition-all ${
-                  pedido.pagado
-                    ? 'bg-green-500 hover:bg-green-600 text-white'
-                    : 'bg-yellow-500 hover:bg-yellow-600 text-white'
-                } disabled:opacity-50`}
+                className={`w-full px-4 py-3 rounded-lg font-semibold transition-all ${pedido.pagado
+                  ? 'bg-green-500 hover:bg-green-600 text-white'
+                  : 'bg-yellow-500 hover:bg-yellow-600 text-white'
+                  } disabled:opacity-50`}
               >
                 {pedido.pagado ? '✓ Pagado' : '⏳ Marcar como Pagado'}
               </button>
@@ -843,7 +836,7 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
           {pedido.permite_cheque && (
             <div className="bg-slate-800 rounded-lg p-6">
               <h2 className="text-xl font-bold text-white mb-4">Gestión de Cheques</h2>
-              
+
               {/* Resumen de cheques */}
               {pedidoConCheques?.resumen_cheques && (
                 <div className="bg-slate-700 rounded-lg p-4 mb-4">
@@ -865,7 +858,7 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
                       <p className="text-green-400 font-semibold">{pedidoConCheques.resumen_cheques.cheques_cobrados}</p>
                     </div>
                   </div>
-                  
+
                   {pedidoConCheques.resumen_cheques.todos_cobrados && (
                     <div className="mt-3 p-3 bg-green-500/10 border border-green-500 rounded-lg">
                       <p className="text-green-400 font-semibold text-center">
@@ -875,7 +868,7 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
                   )}
                 </div>
               )}
-              
+
               {/* Lista de cheques */}
               {!pedidoConCheques ? (
                 <div className="text-center py-4">
@@ -899,7 +892,7 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
                           <p className="text-sm text-white">{new Date(cheque.fecha_vencimiento).toLocaleDateString('es-CL')}</p>
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center gap-3">
                         <label className="text-sm text-gray-400">Estado:</label>
                         <select
@@ -914,18 +907,18 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
                             </option>
                           ))}
                         </select>
-                        
+
                         {actualizandoCheque === cheque.id && (
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
                         )}
                       </div>
-                      
+
                       {cheque.librador_nombre && (
                         <p className="text-sm text-gray-400 mt-2">
                           Librador: {cheque.librador_nombre}
                         </p>
                       )}
-                      
+
                       {cheque.observaciones && (
                         <p className="text-sm text-gray-400 mt-1">
                           Observaciones: {cheque.observaciones}
