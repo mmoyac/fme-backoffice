@@ -6,6 +6,10 @@ export interface Cliente {
   id: number;
   nombre: string;
   apellido?: string;
+  rut?: string;
+  es_empresa?: boolean;
+  razon_social?: string;
+  giro?: string;
   email?: string;
   telefono?: string;
   direccion?: string;
@@ -21,6 +25,10 @@ export interface Cliente {
 export interface ClienteCreate {
   nombre: string;
   apellido?: string;
+  rut?: string;
+  es_empresa?: boolean;
+  razon_social?: string;
+  giro?: string;
   email?: string;
   telefono?: string;
   direccion?: string;
@@ -31,6 +39,10 @@ export interface ClienteCreate {
 export interface ClienteUpdate {
   nombre?: string;
   apellido?: string;
+  rut?: string;
+  es_empresa?: boolean;
+  razon_social?: string;
+  giro?: string;
   email?: string;
   telefono?: string;
   direccion?: string;

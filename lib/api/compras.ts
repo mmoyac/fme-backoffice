@@ -14,6 +14,56 @@ export interface TipoProveedor {
     activo: boolean;
 }
 
+export interface TipoProveedorCreate {
+    nombre: string;
+    descripcion?: string;
+}
+
+export async function getTiposProveedor(): Promise<TipoProveedor[]> {
+    const response = await fetch(`${API_URL}/api/maestras/tipos-proveedor`, {
+        headers: AuthService.getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Error al cargar tipos de proveedor');
+    return response.json();
+}
+
+export async function createTipoProveedor(tipo: TipoProveedorCreate): Promise<TipoProveedor> {
+    const response = await fetch(`${API_URL}/api/maestras/tipos-proveedor`, {
+        method: 'POST',
+        headers: AuthService.getAuthHeaders(),
+        body: JSON.stringify(tipo),
+    });
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Error al crear tipo de proveedor');
+    }
+    return response.json();
+}
+
+export async function updateTipoProveedor(id: number, tipo: Partial<TipoProveedorCreate>): Promise<TipoProveedor> {
+    const response = await fetch(`${API_URL}/api/maestras/tipos-proveedor/${id}`, {
+        method: 'PUT',
+        headers: AuthService.getAuthHeaders(),
+        body: JSON.stringify(tipo),
+    });
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Error al actualizar tipo de proveedor');
+    }
+    return response.json();
+}
+
+export async function deleteTipoProveedor(id: number): Promise<void> {
+    const response = await fetch(`${API_URL}/api/maestras/tipos-proveedor/${id}`, {
+        method: 'DELETE',
+        headers: AuthService.getAuthHeaders(),
+    });
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Error al eliminar tipo de proveedor');
+    }
+}
+
 // ============================================================================
 // Proveedores
 // ============================================================================
@@ -40,14 +90,6 @@ export interface ProveedorCreate {
     direccion?: string;
     tipo_proveedor_id?: number | null;
     activo?: boolean;
-}
-
-export async function getTiposProveedor(): Promise<TipoProveedor[]> {
-    const response = await fetch(`${API_URL}/api/maestras/tipos-proveedor`, {
-        headers: AuthService.getAuthHeaders(),
-    });
-    if (!response.ok) throw new Error('Error al cargar tipos de proveedor');
-    return response.json();
 }
 
 export async function getProveedores(): Promise<Proveedor[]> {

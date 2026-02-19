@@ -5,6 +5,7 @@ import CategoriasList from "./components/CategoriasList";
 import TiposList from "./components/TiposList";
 import UnidadesList from "./components/UnidadesList";
 import ProveedoresList from "./components/ProveedoresList";
+import TiposProveedorList from "./components/TiposProveedorList";
 import LocalesList from "./components/LocalesList";
 import TiposDocumentoList from "./components/TiposDocumentoList";
 import TiposPedidoList from "./components/TiposPedidoList";
@@ -70,6 +71,15 @@ export default function MantenedoresPage() {
                         🏢 Proveedores
                     </button>
                     <button
+                        onClick={() => setActiveTab("tipos_proveedor")}
+                        className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === "tipos_proveedor"
+                            ? "border-primary text-primary"
+                            : "border-transparent text-gray-400 hover:text-gray-300 hover:border-slate-600"
+                            }`}
+                    >
+                        🏭 Tipos Proveedor
+                    </button>
+                    <button
                         onClick={() => setActiveTab("tipos_documento")}
                         className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === "tipos_documento"
                             ? "border-primary text-primary"
@@ -86,6 +96,33 @@ export default function MantenedoresPage() {
                             }`}
                     >
                         📦 Tipos Pedido
+                    </button>
+                    <button
+                        onClick={() => setActiveTab("config_landing")}
+                        className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === "config_landing"
+                            ? "border-primary text-primary"
+                            : "border-transparent text-gray-400 hover:text-gray-300 hover:border-slate-600"
+                            }`}
+                    >
+                        🌐 Config. Landing
+                    </button>
+                    <button
+                        onClick={() => setActiveTab("usuarios")}
+                        className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === "usuarios"
+                            ? "border-primary text-primary"
+                            : "border-transparent text-gray-400 hover:text-gray-300 hover:border-slate-600"
+                            }`}
+                    >
+                        👤 Usuarios
+                    </button>
+                    <button
+                        onClick={() => setActiveTab("tenants")}
+                        className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === "tenants"
+                            ? "border-primary text-primary"
+                            : "border-transparent text-gray-400 hover:text-gray-300 hover:border-slate-600"
+                            }`}
+                    >
+                        🏢 Tenants (SaaS)
                     </button>
                 </nav>
             </div>
@@ -142,6 +179,16 @@ export default function MantenedoresPage() {
                     </div>
                 )}
 
+                {activeTab === "tipos_proveedor" && (
+                    <div>
+                        <h2 className="text-xl font-semibold text-white mb-2">Tipos de Proveedor</h2>
+                        <p className="text-gray-400 mb-4">
+                            Gestiona los tipos de proveedor (Materias Primas, Insumos, Servicios, etc.)
+                        </p>
+                        <TiposProveedorList />
+                    </div>
+                )}
+
                 {activeTab === "tipos_documento" && (
                     <div>
                         <h2 className="text-xl font-semibold text-white mb-2">Tipos de Documento</h2>
@@ -159,6 +206,66 @@ export default function MantenedoresPage() {
                             Gestiona los tipos de pedido y sus locales de despacho por defecto
                         </p>
                         <TiposPedidoList />
+                    </div>
+                )}
+
+                {activeTab === "config_landing" && (
+                    <div>
+                        <h2 className="text-xl font-semibold text-white mb-2">Configuración de Landing Page</h2>
+                        <p className="text-gray-400 mb-4">
+                            Personaliza la apariencia y contenido de tu landing page
+                        </p>
+                        <div className="bg-slate-700 rounded-lg p-6 text-center">
+                            <p className="text-gray-300 mb-4">
+                                La configuración de landing está disponible en una página dedicada
+                            </p>
+                            <a
+                                href="/admin/configuracion/landing"
+                                className="inline-block bg-primary hover:bg-primary-dark text-slate-900 font-semibold px-6 py-3 rounded-lg transition-colors"
+                            >
+                                🌐 Ir a Configuración de Landing
+                            </a>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === "usuarios" && (
+                    <div>
+                        <h2 className="text-xl font-semibold text-white mb-2">Usuarios del Sistema</h2>
+                        <p className="text-gray-400 mb-4">
+                            Gestiona usuarios, roles y permisos del sistema
+                        </p>
+                        <div className="bg-slate-700 rounded-lg p-6 text-center">
+                            <p className="text-gray-300 mb-4">
+                                La gestión de usuarios está disponible en una página dedicada
+                            </p>
+                            <a
+                                href="/admin/usuarios"
+                                className="inline-block bg-primary hover:bg-primary-dark text-slate-900 font-semibold px-6 py-3 rounded-lg transition-colors"
+                            >
+                                👤 Ir a Gestión de Usuarios
+                            </a>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === "tenants" && (
+                    <div>
+                        <h2 className="text-xl font-semibold text-white mb-2">Tenants Multi-Tenant SaaS</h2>
+                        <p className="text-gray-400 mb-4">
+                            Gestiona clientes de la plataforma (activar/desactivar, ajustar correlativos)
+                        </p>
+                        <div className="bg-slate-700 rounded-lg p-6 text-center">
+                            <p className="text-gray-300 mb-4">
+                                La gestión de tenants está disponible en una página dedicada
+                            </p>
+                            <a
+                                href="/admin/tenants"
+                                className="inline-block bg-primary hover:bg-primary-dark text-slate-900 font-semibold px-6 py-3 rounded-lg transition-colors"
+                            >
+                                🏢 Ir a Gestión de Tenants
+                            </a>
+                        </div>
                     </div>
                 )}
             </div>

@@ -69,6 +69,10 @@ export interface Pedido {
   puntos_ganados?: number;
   puntos_usados?: number;
   descuento_puntos?: number;
+  // Información del usuario que creó el pedido
+  usuario_id?: number;
+  usuario_nombre?: string;
+  usuario_email?: string;
   cliente?: Cliente;
   items?: ItemPedido[];
 }
@@ -78,6 +82,7 @@ export interface PedidoUpdate {
   pagado?: boolean;
   notas_admin?: string;
   local_despacho_id?: number;
+  medio_pago_id?: number;
 }
 
 export interface ItemPedidoCreate {
@@ -154,16 +159,31 @@ export async function obtenerPedido(id: number): Promise<Pedido> {
 }
 
 export async function actualizarPedido(id: number, data: PedidoUpdate): Promise<Pedido> {
+  console.log(`[API] Actualizando pedido ${id}`, data);
+  
   const response = await fetch(`${API_URL}/api/pedidos/${id}`, {
     method: 'PUT',
     headers: AuthService.getAuthHeaders(),
     body: JSON.stringify(data),
   });
 
+  console.log(`[API] Response status: ${response.status}`);
+
   if (!response.ok) {
-    throw new Error('Error al actualizar el pedido');
+    const errorText = await response.text();
+    console.error('[API] Error response:', errorText);
+    
+    try {
+      const error = JSON.parse(errorText);
+      throw new Error(error.detail || 'Error al actualizar el pedido');
+    } catch {
+      throw new Error(`Error ${response.status}: ${errorText || 'Error al actualizar el pedido'}`);
+    }
   }
-  return response.json();
+  
+  const result = await response.json();
+  console.log('[API] Pedido actualizado exitosamente:', result);
+  return result;
 }
 
 export async function crearPedido(data: PedidoCreate): Promise<PedidoCreateResponse> {

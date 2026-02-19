@@ -29,7 +29,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         async function loadUser() {
             try {
-                if (AuthService.isAuthenticated()) {
+                const hasToken = AuthService.isAuthenticated();
+                console.log('🔐 AuthProvider: pathname =', pathname, ', hasToken =', hasToken);
+                
+                if (hasToken) {
+                    console.log('🔐 AuthProvider: Token encontrado, cargando usuario...');
                     const currentUser = await AuthService.getCurrentUser();
                     const token = AuthService.getToken();
                     // Agregar el token al objeto user
@@ -37,16 +41,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                         ...currentUser,
                         access_token: token
                     });
+                    console.log('✅ AuthProvider: Usuario cargado:', currentUser.email);
                 } else {
-                    // Si no está autenticado y no está en la página de login, redirigir
-                    if (pathname !== '/login' && pathname !== '/') {
+                    console.log('⚠️ AuthProvider: No hay token, usuario no autenticado');
+                    setUser(null);
+                    // Si no está autenticado y está en ruta protegida, redirigir
+                    if (pathname?.startsWith('/admin')) {
+                        console.log('🔀 AuthProvider: Redirigiendo a /login desde', pathname);
                         router.push('/login');
                     }
                 }
             } catch (error) {
-                console.error('Error loading user:', error);
-                // Si hay error al cargar el usuario, limpiar token y redirigir
-                AuthService.logout();
+                console.error('❌ AuthProvider: Error loading user:', error);
+                setUser(null);
+                // Si hay error al cargar el usuario, limpiar token solo si estamos en rutas protegidas
+                if (pathname?.startsWith('/admin')) {
+                    AuthService.logout();
+                    router.push('/login');
+                }
             } finally {
                 setLoading(false);
             }

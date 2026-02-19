@@ -8,6 +8,7 @@ export interface Producto {
   descripcion: string | null;
   sku: string;
   imagen_url: string | null;
+  codigo_barra: string | null;
   categoria_id: number;
   tipo_producto_id: number;
   unidad_medida_id: number;
@@ -34,6 +35,7 @@ export interface ProductoCreate {
   descripcion?: string;
   sku: string;
   imagen_url?: string;
+  codigo_barra?: string;
   categoria_id: number;
   tipo_producto_id: number;
   unidad_medida_id: number;
@@ -80,16 +82,31 @@ export async function createProducto(producto: ProductoCreate): Promise<Producto
 }
 
 export async function updateProducto(id: number, producto: Partial<ProductoCreate>): Promise<Producto> {
+  console.log(`[API] Actualizando producto ${id}`, producto);
+  
   const response = await fetch(`${API_URL}/api/productos/${id}`, {
     method: 'PUT',
     headers: AuthService.getAuthHeaders(),
     body: JSON.stringify(producto),
   });
+  
+  console.log(`[API] Response status: ${response.status}`);
+  
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Error al actualizar producto');
+    const errorText = await response.text();
+    console.error('[API] Error response:', errorText);
+    
+    try {
+      const error = JSON.parse(errorText);
+      throw new Error(error.detail || 'Error al actualizar producto');
+    } catch {
+      throw new Error(`Error ${response.status}: ${errorText || 'Error al actualizar producto'}`);
+    }
   }
-  return response.json();
+  
+  const result = await response.json();
+  console.log('[API] Producto actualizado exitosamente:', result);
+  return result;
 }
 
 export async function deleteProducto(id: number): Promise<void> {
@@ -101,6 +118,8 @@ export async function deleteProducto(id: number): Promise<void> {
 }
 
 export async function uploadImagen(productoId: number, file: File): Promise<Producto> {
+  console.log(`[API] Subiendo imagen para producto ${productoId}`, file.name, `(${file.size} bytes)`);
+  
   const formData = new FormData();
   formData.append('file', file);
 
@@ -116,10 +135,22 @@ export async function uploadImagen(productoId: number, file: File): Promise<Prod
     body: formData,
   });
 
+  console.log(`[API] Upload response status: ${response.status}`);
+
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Error al subir imagen');
+    const errorText = await response.text();
+    console.error('[API] Error uploading image:', errorText);
+    
+    try {
+      const error = JSON.parse(errorText);
+      throw new Error(error.detail || 'Error al subir imagen');
+    } catch {
+      throw new Error(`Error ${response.status}: ${errorText || 'Error al subir imagen'}`);
+    }
   }
-  return response.json();
+  
+  const result = await response.json();
+  console.log('[API] Imagen subida exitosamente:', result);
+  return result;
 }
 

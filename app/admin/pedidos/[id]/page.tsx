@@ -6,6 +6,7 @@ import { obtenerPedido, actualizarPedido, Pedido, descargarBoleta } from '@/lib/
 import { getLocales, Local } from '@/lib/api/locales';
 import { getInventarios, Inventario } from '@/lib/api/inventario';
 import { obtenerPedidoConCheques, actualizarCheque, obtenerEstadosCheque, PedidoConCheques, Cheque, EstadoCheque } from '@/lib/api/cheques';
+import { getMediosPago, MedioPago } from '@/lib/api/maestras';
 import { AuthService } from '@/lib/auth';
 
 export default function DetallePedidoPage({ params }: { params: { id: string } }) {
@@ -19,6 +20,11 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
   const [guardando, setGuardando] = useState(false);
   const [notasAdmin, setNotasAdmin] = useState('');
   const [mostrarSelectorLocal, setMostrarSelectorLocal] = useState(false);
+  
+  // Estados para medios de pago
+  const [mediosPago, setMediosPago] = useState<MedioPago[]>([]);
+  const [medioPagoSeleccionado, setMedioPagoSeleccionado] = useState<number | null>(null);
+  const [guardandoMedioPago, setGuardandoMedioPago] = useState(false);
 
   // Estados para cheques
   const [pedidoConCheques, setPedidoConCheques] = useState<PedidoConCheques | null>(null);
@@ -44,6 +50,7 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
     cargarLocales();
     cargarInventarios();
     cargarEstadosCheque();
+    cargarMediosPago();
   }, [params.id]);
 
   const cargarEstadosCheque = async () => {
@@ -52,6 +59,15 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
       setEstadosCheque(data);
     } catch (err) {
       console.error('Error al cargar estados de cheque:', err);
+    }
+  };
+  
+  const cargarMediosPago = async () => {
+    try {
+      const data = await getMediosPago();
+      setMediosPago(data.filter(m => m.activo));
+    } catch (err) {
+      console.error('Error al cargar medios de pago:', err);
     }
   };
 
@@ -89,15 +105,60 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
 
     setCargandoCajas(true);
     try {
-      const cajasPorItem = [];
-      let totalPrecioEstimado = 0;
-      let totalPrecioReal = 0;
-
       const token = AuthService.getToken();
       const headers = {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       };
+
+      // Si el pedido está PENDIENTE, obtener los lotes YA ASIGNADOS
+      if (pedido.estado === 'PENDIENTE') {
+        try {
+          const response = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/api/stock-cajas/lotes-asignados-pedido/${pedido.id}`,
+            { headers }
+          );
+
+          if (response.ok) {
+            const data = await response.json();
+            
+            if (data.tiene_lotes_asignados && data.items.length > 0) {
+              // Formatear lotes asignados para el modal
+              const cajasPorItem = data.items.map((item: any) => ({
+                producto: item.producto_nombre,
+                cantidad_requerida: item.lotes.length,
+                lotes_disponibles: item.lotes.length,
+                lotes_especificos: item.lotes.map((lote: any) => ({
+                  codigo_lote: lote.lote_codigo,
+                  peso_kg: lote.peso_kg,
+                  precio_kg: lote.precio_kg,
+                  precio_total: lote.precio_total,
+                  fecha_vencimiento: lote.fecha_vencimiento,
+                  proveedor_nombre: item.proveedor_nombre,
+                  estado: lote.vendido ? 'Vendido' : (lote.disponible_venta ? 'Disponible' : 'Reservado')
+                })),
+                proveedor: item.proveedor_nombre,
+                precio_estimado: item.lotes.reduce((sum: number, l: any) => sum + l.precio_total, 0),
+                precio_real: item.lotes.reduce((sum: number, l: any) => sum + l.precio_total, 0)
+              }));
+
+              (cajasPorItem as any).totalPrecioEstimado = data.total_precio;
+              (cajasPorItem as any).totalPrecioReal = data.total_precio;
+              (cajasPorItem as any).diferenciaPrecio = 0; // Ya están asignados
+              (cajasPorItem as any).lotesYaAsignados = true;
+
+              return cajasPorItem;
+            }
+          }
+        } catch (error) {
+          console.error('Error al obtener lotes asignados:', error);
+        }
+      }
+
+      // Si no está PENDIENTE o no tiene lotes asignados, buscar lotes disponibles (flujo original)
+      const cajasPorItem = [];
+      let totalPrecioEstimado = 0;
+      let totalPrecioReal = 0;
 
       for (const item of pedido.items) {
         const precioEstimadoItem = item.precio_unitario_venta * item.cantidad;
@@ -171,6 +232,7 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
       (cajasPorItem as any).totalPrecioEstimado = totalPrecioEstimado;
       (cajasPorItem as any).totalPrecioReal = totalPrecioReal;
       (cajasPorItem as any).diferenciaPrecio = totalPrecioReal - totalPrecioEstimado;
+      (cajasPorItem as any).lotesYaAsignados = false;
 
       return cajasPorItem;
     } catch (error) {
@@ -319,6 +381,22 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
       console.error(err);
     } finally {
       setGuardando(false);
+    }
+  };
+  
+  const guardarMedioPago = async () => {
+    if (!pedido || !medioPagoSeleccionado) return;
+
+    try {
+      setGuardandoMedioPago(true);
+      const actualizado = await actualizarPedido(pedido.id, { medio_pago_id: medioPagoSeleccionado });
+      setPedido(actualizado);
+      setMedioPagoSeleccionado(null); // Limpiar selección después de guardar
+    } catch (err) {
+      setError('Error al guardar el medio de pago');
+      console.error(err);
+    } finally {
+      setGuardandoMedioPago(false);
     }
   };
 
@@ -653,7 +731,7 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
                                   </div>
                                   <div>
                                     <span className="text-gray-400">$/kg:</span>
-                                    <span className="text-white ml-2">${lote.precio_por_kg?.toLocaleString('es-CL')}</span>
+                                    <span className="text-white ml-2">${lote.precio_kg?.toLocaleString('es-CL')}</span>
                                   </div>
                                   <div>
                                     <span className="text-gray-400">Total:</span>
@@ -959,6 +1037,69 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
                 </div>
               )}
             </div>
+          </div>
+          
+          {/* Medio de Pago */}
+          <div className="bg-slate-800 rounded-lg p-6">
+            <h2 className="text-xl font-bold text-white mb-4">Medio de Pago</h2>
+            
+            {pedido.medio_pago_id ? (
+              // Mostrar medio de pago asignado
+              <div className="bg-slate-700 rounded-lg p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-white font-semibold">{pedido.medio_pago_nombre}</p>
+                    <p className="text-sm text-gray-400">Código: {pedido.medio_pago_codigo}</p>
+                  </div>
+                  <div className="text-green-400">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              // Mostrar selector para asignar medio de pago
+              <div className="space-y-3">
+                <div className="bg-yellow-500/10 border border-yellow-500 rounded-lg p-4">
+                  <p className="text-yellow-500 font-semibold mb-1">⚠️ Sin medio de pago asignado</p>
+                  <p className="text-sm text-gray-400">
+                    Este pedido fue creado sin pago. Asigna el medio de pago cuando el cliente realice el pago.
+                  </p>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Seleccionar medio de pago
+                  </label>
+                  <select
+                    value={medioPagoSeleccionado || ''}
+                    onChange={(e) => setMedioPagoSeleccionado(Number(e.target.value))}
+                    className="w-full bg-slate-700 border border-slate-600 text-white rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="">Seleccionar...</option>
+                    {mediosPago.map(medio => (
+                      <option key={medio.id} value={medio.id}>
+                        {medio.nombre} {medio.permite_cheque && '(Permite cheques)'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <button
+                  onClick={guardarMedioPago}
+                  disabled={!medioPagoSeleccionado || guardandoMedioPago}
+                  className="w-full bg-primary hover:bg-primary-light text-white px-6 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {guardandoMedioPago ? 'Guardando...' : 'Asignar Medio de Pago'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

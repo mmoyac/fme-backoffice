@@ -3,9 +3,13 @@
 import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { AuthService } from '@/lib/auth';
+import { useTenant } from '@/lib/TenantContext';
+import { useAuth } from '@/lib/AuthProvider';
 
 export default function LoginPage() {
     const router = useRouter();
+    const { config, loading: tenantLoading } = useTenant();
+    const { loading: authLoading } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -16,15 +20,25 @@ export default function LoginPage() {
         setError('');
         setLoading(true);
 
+        console.log('🔑 Login: Iniciando sesión con:', email);
+
         try {
             await AuthService.login({ username: email, password });
+            console.log('✅ Login: Token obtenido exitosamente');
+            
+            // Esperar un momento para que el AuthProvider actualice el estado
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
             router.push('/admin/dashboard');
         } catch (err: any) {
+            console.error('❌ Login: Error en autenticación:', err.message);
             setError(err.message || 'Error al iniciar sesión');
-        } finally {
             setLoading(false);
         }
     };
+
+    // Detectar si es un error de cuenta suspendida
+    const isSuspendedError = error.toLowerCase().includes('suspend') || error.toLowerCase().includes('suspendida');
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
@@ -39,14 +53,36 @@ export default function LoginPage() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
                             </svg>
                         </div>
-                        <h1 className="text-3xl font-bold text-white mb-2">Masas Estación</h1>
+                        <h1 className="text-3xl font-bold text-white mb-2">
+                            {tenantLoading ? 'Cargando...' : (config?.branding.nombre_comercial || config?.tenant.nombre || 'Backoffice')}
+                        </h1>
                         <p className="text-slate-400">Panel de Administración</p>
                     </div>
 
                     {/* Error Message */}
                     {error && (
-                        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/50 rounded-lg">
-                            <p className="text-red-400 text-sm text-center">{error}</p>
+                        <div className={`mb-6 p-4 rounded-lg border ${
+                            isSuspendedError 
+                                ? 'bg-red-900/30 border-red-600/50' 
+                                : 'bg-red-500/10 border-red-500/50'
+                        }`}>
+                            <div className="flex items-start space-x-3">
+                                {isSuspendedError && (
+                                    <div className="flex-shrink-0 text-3xl">🚫</div>
+                                )}
+                                <div className="flex-1">
+                                    <p className={`text-sm ${
+                                        isSuspendedError ? 'text-red-200 font-semibold' : 'text-red-400'
+                                    }`}>
+                                        {error}
+                                    </p>
+                                    {isSuspendedError && (
+                                        <p className="text-xs text-red-300 mt-2">
+                                            Esta cuenta ha sido desactivada. Por favor contacta con el administrador del sistema.
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     )}
 

@@ -18,19 +18,23 @@ interface PickingItem {
   id: number;
   producto_nombre: string;
   producto_sku: string;
-  cantidad_solicitada: number;
-  cantidad_recogida: number;
+  cantidad_solicitada: number | null;
+  cantidad_pickeada: number | null;
+  peso_solicitado: number | null;
+  peso_real: number | null;
+  lote_codigo: string | null;
+  fecha_vencimiento: string | null;
   completado: boolean;
-  notas?: string;
+  notas_picking?: string;
 }
 
 interface Despacho {
   id: number;
   pedido_id: number;
-  estado: string;
+  estado_despacho: string;
   cliente_nombre: string;
   despachador_nombre: string;
-  fecha_creacion: string;
+  fecha_asignacion: string;
   hora_estimada_entrega: string | null;
   notas_despacho: string | null;
   picking_items: PickingItem[];
@@ -43,6 +47,10 @@ export default function Picking() {
   const [loading, setLoading] = useState(true);
   const [procesando, setProcesando] = useState(false);
   const [mensaje, setMensaje] = useState<{tipo: 'success' | 'error', texto: string} | null>(null);
+  
+  // Estados para escaneo de QR
+  const [escaneandoItem, setEscaneandoItem] = useState<number | null>(null);
+  const [qrInput, setQrInput] = useState('');
 
   useEffect(() => {
     if (user?.access_token) {
@@ -85,21 +93,46 @@ export default function Picking() {
           headers: {
             'Authorization': `Bearer ${user?.access_token}`,
             'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({})
+        }
+      );
+
+      if (response.ok) {
+        const updatedDespacho = await response.json();
+        setMensaje({tipo: 'success', texto: 'Picking iniciado correctamente'});
+        setSelectedDespacho(updatedDespacho);
+        fetchDespachosEnPicking();
+      } else {
+        const error = await response.json();
+        setMensaje({tipo: 'error', texto: error.detail || 'Error al iniciar picking'});
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      setMensaje({tipo: 'error', texto: 'Error de conexión'});
+    } finally {
+      setProcesando(false);
+    }
+  };
+
+  const cargarDespacho = async (despachoId: number) => {
+    try {
+      setProcesando(true);
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/despachos/${despachoId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${user?.access_token}`,
+            'Content-Type': 'application/json'
           }
         }
       );
 
       if (response.ok) {
-        setMensaje({tipo: 'success', texto: 'Picking iniciado correctamente'});
-        fetchDespachosEnPicking();
-        // Recargar el despacho seleccionado si es el mismo
-        if (selectedDespacho?.id === despachoId) {
-          const updatedDespacho = await response.json();
-          setSelectedDespacho(updatedDespacho);
-        }
+        const despacho = await response.json();
+        setSelectedDespacho(despacho);
       } else {
-        const error = await response.json();
-        setMensaje({tipo: 'error', texto: error.detail || 'Error al iniciar picking'});
+        setMensaje({tipo: 'error', texto: 'Error al cargar despacho'});
       }
     } catch (error) {
       console.error('Error:', error);
@@ -121,7 +154,10 @@ export default function Picking() {
             'Authorization': `Bearer ${user?.access_token}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ cantidad_recogida: cantidadRecogida })
+          body: JSON.stringify({ 
+            cantidad_pickeada: cantidadRecogida,
+            peso_real: cantidadRecogida // Para cajas variables
+          })
         }
       );
 
@@ -131,11 +167,18 @@ export default function Picking() {
           if (!prev) return null;
           return {
             ...prev,
-            picking_items: prev.picking_items.map(item => 
-              item.id === itemId 
-                ? { ...item, cantidad_recogida: cantidadRecogida, completado: cantidadRecogida >= item.cantidad_solicitada }
-                : item
-            )
+            picking_items: prev.picking_items?.map(item => {
+              if (item.id === itemId) {
+                const solicitado = item.cantidad_solicitada || item.peso_solicitado || 0;
+                return {
+                  ...item,
+                  cantidad_pickeada: item.cantidad_solicitada ? cantidadRecogida : item.cantidad_pickeada,
+                  peso_real: item.peso_solicitado ? cantidadRecogida : item.peso_real,
+                  completado: cantidadRecogida >= solicitado
+                };
+              }
+              return item;
+            }) || []
           };
         });
       } else {
@@ -145,6 +188,52 @@ export default function Picking() {
     } catch (error) {
       console.error('Error:', error);
       setMensaje({tipo: 'error', texto: 'Error de conexión'});
+    }
+  };
+
+  const escanearQR = async (itemId: number, qrCode: string) => {
+    if (!selectedDespacho || !qrCode.trim()) return;
+
+    try {
+      setProcesando(true);
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/despachos/escanear-qr?picking_item_id=${itemId}&qr_code=${encodeURIComponent(qrCode)}`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${user?.access_token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (response.ok) {
+        const updatedItem = await response.json();
+        setMensaje({tipo: 'success', texto: '✅ QR escaneado correctamente - Item completado'});
+        
+        // Actualizar el item en el estado local
+        setSelectedDespacho(prev => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            picking_items: prev.picking_items?.map(item => 
+              item.id === itemId ? updatedItem : item
+            ) || []
+          };
+        });
+        
+        // Cerrar el input de escaneo
+        setEscaneandoItem(null);
+        setQrInput('');
+      } else {
+        const error = await response.json();
+        setMensaje({tipo: 'error', texto: error.detail || 'Error al escanear QR'});
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      setMensaje({tipo: 'error', texto: 'Error de conexión al escanear QR'});
+    } finally {
+      setProcesando(false);
     }
   };
 
@@ -203,7 +292,7 @@ export default function Picking() {
     }
   };
 
-  const todosLosItemsCompletos = selectedDespacho?.picking_items.every(item => item.completado) || false;
+  const todosLosItemsCompletos = selectedDespacho?.picking_items?.every(item => item.completado) || false;
 
   if (loading) {
     return (
@@ -323,26 +412,26 @@ export default function Picking() {
                         <div className="text-sm text-gray-900 dark:text-white">{despacho.despachador_nombre}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${obtenerColorEstado(despacho.estado)}`}>
-                          {despacho.estado.replace('_', ' ')}
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${obtenerColorEstado(despacho.estado_despacho)}`}>
+                          {despacho.estado_despacho.replace('_', ' ')}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {formatearFecha(despacho.fecha_creacion)}
+                        {formatearFecha(despacho.fecha_asignacion)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                        {despacho.estado === 'ASIGNADO' ? (
+                        {despacho.estado_despacho === 'ASIGNADO' ? (
                           <button
-                            onClick={() => iniciarPicking(despacho.id)}
+                            onClick={() => cargarDespacho(despacho.id)}
                             disabled={procesando}
                             className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-3 py-1 rounded text-xs flex items-center space-x-1"
                           >
                             <Play className="h-3 w-3" />
-                            <span>Iniciar Picking</span>
+                            <span>Ver / Iniciar</span>
                           </button>
                         ) : (
                           <button
-                            onClick={() => setSelectedDespacho(despacho)}
+                            onClick={() => cargarDespacho(despacho.id)}
                             className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs flex items-center space-x-1"
                           >
                             <ShoppingCart className="h-3 w-3" />
@@ -378,8 +467,8 @@ export default function Picking() {
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Estado</label>
-                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${obtenerColorEstado(selectedDespacho.estado)}`}>
-                  {selectedDespacho.estado.replace('_', ' ')}
+                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${obtenerColorEstado(selectedDespacho.estado_despacho)}`}>
+                  {selectedDespacho.estado_despacho.replace('_', ' ')}
                 </span>
               </div>
               {selectedDespacho.hora_estimada_entrega && (
@@ -405,7 +494,26 @@ export default function Picking() {
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                 Items para Recoger
               </h3>
-              {selectedDespacho.estado === 'EN_PICKING' && (
+              {selectedDespacho.estado_despacho === 'ASIGNADO' && (
+                <button
+                  onClick={() => iniciarPicking(selectedDespacho.id)}
+                  disabled={procesando}
+                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+                >
+                  {procesando ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Iniciando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Play className="h-4 w-4" />
+                      <span>Iniciar Picking</span>
+                    </>
+                  )}
+                </button>
+              )}
+              {selectedDespacho.estado_despacho === 'EN_PICKING' && (
                 <button
                   onClick={completarPicking}
                   disabled={!todosLosItemsCompletos || procesando}
@@ -428,7 +536,8 @@ export default function Picking() {
             
             <div className="p-4">
               <div className="space-y-4">
-                {selectedDespacho.picking_items.map((item) => (
+                {selectedDespacho.picking_items && selectedDespacho.picking_items.length > 0 ? (
+                  selectedDespacho.picking_items.map((item) => (
                   <div
                     key={item.id}
                     className={`p-4 rounded-lg border-2 ${
@@ -452,6 +561,11 @@ export default function Picking() {
                             <p className="text-sm text-gray-500 dark:text-gray-400">
                               SKU: {item.producto_sku}
                             </p>
+                            {item.lote_codigo && (
+                              <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">
+                                🏷️ Lote: {item.lote_codigo}
+                              </p>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -462,7 +576,7 @@ export default function Picking() {
                             Solicitado
                           </label>
                           <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                            {item.cantidad_solicitada}
+                            {item.peso_solicitado ? `${item.peso_solicitado} kg` : `${item.cantidad_solicitada || 0} un`}
                           </span>
                         </div>
                         
@@ -474,22 +588,92 @@ export default function Picking() {
                             id={`cantidad-${item.id}`}
                             type="number"
                             min="0"
-                            max={item.cantidad_solicitada}
-                            value={item.cantidad_recogida}
-                            onChange={(e) => actualizarPickingItem(item.id, parseInt(e.target.value) || 0)}
-                            className="w-16 px-2 py-1 text-center border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                            disabled={selectedDespacho.estado !== 'EN_PICKING'}
+                            step={item.peso_solicitado ? "0.1" : "1"}
+                            max={item.cantidad_solicitada || item.peso_solicitado || 100}
+                            value={item.cantidad_pickeada || item.peso_real || 0}
+                            onChange={(e) => actualizarPickingItem(item.id, parseFloat(e.target.value) || 0)}
+                            className="w-20 px-2 py-1 text-center border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                            disabled={selectedDespacho.estado_despacho !== 'EN_PICKING' || item.completado}
                           />
                         </div>
 
-                        <QrCode className="h-5 w-5 text-gray-400" />
+                        {/* Botón de escaneo QR */}
+                        <button
+                          onClick={() => {
+                            setEscaneandoItem(item.id);
+                            setQrInput('');
+                          }}
+                          disabled={selectedDespacho.estado_despacho !== 'EN_PICKING' || item.completado}
+                          className="p-2 hover:bg-blue-100 dark:hover:bg-blue-900 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Escanear código QR de la caja"
+                        >
+                          <QrCode className={`h-5 w-5 ${item.completado ? 'text-green-500' : 'text-blue-500'}`} />
+                        </button>
                       </div>
                     </div>
+                    
+                    {/* Input de escaneo QR */}
+                    {escaneandoItem === item.id && (
+                      <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 rounded-lg">
+                        <label className="block text-sm font-medium text-blue-900 dark:text-blue-200 mb-2">
+                          📱 Escanea o ingresa el código QR de la caja:
+                        </label>
+                        <div className="flex space-x-2">
+                          <input
+                            type="text"
+                            value={qrInput}
+                            onChange={(e) => setQrInput(e.target.value)}
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter' && qrInput.trim()) {
+                                escanearQR(item.id, qrInput);
+                              }
+                            }}
+                            placeholder="LOTE-ABC123..."
+                            className="flex-1 px-3 py-2 border border-blue-300 dark:border-blue-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                            autoFocus
+                          />
+                          <button
+                            onClick={() => escanearQR(item.id, qrInput)}
+                            disabled={!qrInput.trim() || procesando}
+                            className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
+                          >
+                            {procesando ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                <span>Procesando...</span>
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle className="h-4 w-4" />
+                                <span>Confirmar</span>
+                              </>
+                            )}
+                          </button>
+                          <button
+                            onClick={() => {
+                              setEscaneandoItem(null);
+                              setQrInput('');
+                            }}
+                            className="bg-gray-500 hover:bg-gray-600 text-white px-3 py-2 rounded-lg"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                        <p className="mt-2 text-xs text-blue-700 dark:text-blue-300">
+                          💡 Tip: Usa un lector de QR o ingresa manualmente el código del lote
+                        </p>
+                      </div>
+                    )}
                   </div>
-                ))}
+                ))
+                ) : (
+                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                    No hay items para picking
+                  </div>
+                )}
               </div>
               
-              {!todosLosItemsCompletos && selectedDespacho.estado === 'EN_PICKING' && (
+              {!todosLosItemsCompletos && selectedDespacho.estado_despacho === 'EN_PICKING' && (
                 <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 rounded-lg">
                   <p className="text-sm text-yellow-800 dark:text-yellow-200">
                     Complete todos los items para finalizar el picking

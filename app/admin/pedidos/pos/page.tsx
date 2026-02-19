@@ -6,12 +6,20 @@ import { getProductos, type Producto } from '@/lib/api/productos';
 import { getClientes, type Cliente } from '@/lib/api/clientes';
 import { getLocales, type Local } from '@/lib/api/locales';
 import { getMediosPago, type MedioPago } from '@/lib/api/maestras';
+import { getUnidadesMedida, type UnidadMedida } from '@/lib/api/maestras';
 import { crearPedido, type PedidoCreate, type ItemPedidoCreate } from '@/lib/api/pedidos';
 import { getPrecioProductoLocal } from '@/lib/api/precios';
 import { estimarPuntosPorItems, type ItemParaPuntos } from '@/lib/api/puntos';
 import { AuthService } from '@/lib/auth';
 import { CheckCircleIcon, XMarkIcon, PlusIcon, MinusIcon } from '@heroicons/react/24/outline';
 import { BoletaTermica } from '@/components/pos/BoletaTermica';
+import { useTenant } from '@/lib/TenantContext';
+
+// ⚙️ CONFIGURACIÓN: Tipo de documento por defecto para el POS
+// Según tu base de datos:
+// - 'BOL' = Boleta Electrónica (ID 2)
+// - 'FAC' = Factura Electrónica (ID 1)
+const CODIGO_DOCUMENTO_POS_DEFAULT = 'BOL'; // Boleta Electrónica para POS
 
 // Función para obtener catálogo con stock
 async function getCatalogoProductos() {
@@ -24,6 +32,9 @@ async function getCatalogoProductos() {
 
 // Función para obtener productos con datos específicos del local
 async function getProductosConDatosLocal(localId: number) {
+  // Primero, cargar las unidades de medida
+  const unidadesMedida = await getUnidadesMedida();
+  
   // Obtener productos base
   const productos = await getProductos();
   
@@ -31,8 +42,23 @@ async function getProductosConDatosLocal(localId: number) {
   const productosConDatos = await Promise.all(
     productos.map(async (producto) => {
       try {
-        // Obtener precio del local
-        const precio = await getPrecioProductoLocal(producto.id, localId);
+        // Obtener precios del local (ahora devuelve array)
+        const precios = await getPrecioProductoLocal(producto.id, localId);
+        
+        // Buscar el precio con el factor de conversión más bajo (unidad base)
+        let precioBase = null;
+        if (Array.isArray(precios) && precios.length > 0) {
+          // Ordenar por factor de conversión (menor a mayor)
+          const preciosOrdenados = [...precios].sort((a: any, b: any) => {
+            const unidadA = unidadesMedida.find((u: any) => u.id === a.unidad_medida_id);
+            const unidadB = unidadesMedida.find((u: any) => u.id === b.unidad_medida_id);
+            const factorA = unidadA?.factor_conversion || 1;
+            const factorB = unidadB?.factor_conversion || 1;
+            return factorA - factorB; // Menor factor primero (unitario < media docena < docena)
+          });
+          // Tomar el primer precio (menor factor = unidad base)
+          precioBase = preciosOrdenados[0];
+        }
         
         // Obtener stock del local específico
         const responseStock = await fetch(
@@ -48,7 +74,7 @@ async function getProductosConDatosLocal(localId: number) {
         
         return {
           ...producto,
-          precio_local: precio?.monto_precio || 0,
+          precio_local: precioBase?.monto_precio || 0,
           stock_local: stockLocal,
           // Mantener compatibilidad con código existente
           stock_total: stockLocal
@@ -86,6 +112,7 @@ interface ItemCarrito {
 }
 
 interface ClienteFormulario {
+  id?: number;  // Opcional: se usa cuando el cliente es seleccionado de la búsqueda
   nombre: string;
   email: string;
   telefono: string;
@@ -101,6 +128,9 @@ interface ClienteFormulario {
 type EtapaPOS = 'productos' | 'carrito' | 'finalizacion';
 
 export default function POSPedidoPage() {
+  // Contexto de tenant
+  const { config: tenantConfig } = useTenant();
+  
   // Estados principales
   const [etapaActual, setEtapaActual] = useState<EtapaPOS>('productos');
   const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
@@ -108,6 +138,7 @@ export default function POSPedidoPage() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [locales, setLocales] = useState<Local[]>([]);
   const [mediosPago, setMediosPago] = useState<MedioPago[]>([]);
+  const [unidadesMedida, setUnidadesMedida] = useState<UnidadMedida[]>([]);
   
   // Estados del producto seleccionado
   const [productoSeleccionado, setProductoSeleccionado] = useState<Producto | null>(null);
@@ -140,8 +171,59 @@ export default function POSPedidoPage() {
   
   // Estado para puntos
   const [puntosEstimados, setPuntosEstimados] = useState<any>(null);
+  
+  // Estados para validación de caja
+  const [cajaAbierta, setCajaAbierta] = useState<boolean>(false);
+  const [infoCaja, setInfoCaja] = useState<any>(null);
+  const [errorCaja, setErrorCaja] = useState<string>('');
 
   const router = useRouter();
+  
+  // Función para recargar lista de clientes
+  const recargarClientes = async () => {
+    try {
+      console.log('🔄 Recargando lista de clientes...');
+      const clientesData = await getClientes();
+      setClientes(clientesData);
+      console.log('✅ Clientes actualizados:', clientesData.length);
+    } catch (error) {
+      console.error('❌ Error recargando clientes:', error);
+    }
+  };
+  
+  // Función para verificar si hay caja abierta en un local
+  const verificarCajaAbierta = async (localIdParam: number) => {
+    try {
+      console.log(`🔍 Verificando caja abierta en local ${localIdParam}...`);
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/caja/local/${localIdParam}/caja-abierta`,
+        { headers: AuthService.getAuthHeaders() }
+      );
+      
+      if (!response.ok) {
+        throw new Error('Error al verificar caja');
+      }
+      
+      const data = await response.json();
+      console.log('📊 Estado de caja:', data);
+      
+      setCajaAbierta(data.tiene_caja_abierta);
+      setInfoCaja(data);
+      
+      if (!data.tiene_caja_abierta) {
+        setErrorCaja(data.mensaje || `No hay caja abierta en '${data.local_nombre}'.`);
+      } else {
+        setErrorCaja('');
+      }
+      
+      return data.tiene_caja_abierta;
+    } catch (error) {
+      console.error('❌ Error verificando caja:', error);
+      setCajaAbierta(false);
+      setErrorCaja('Error al verificar el estado de la caja');
+      return false;
+    }
+  };
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -154,11 +236,12 @@ export default function POSPedidoPage() {
         setUsuarioActual(usuario);
         console.log('👤 Usuario autenticado:', usuario);
         
-        const [productosData, clientesData, localesData, mediosData] = await Promise.all([
+        const [productosData, clientesData, localesData, mediosData, unidadesData] = await Promise.all([
           getCatalogoProductos(), // Usar catálogo que incluye stock_total
           getClientes(),
           getLocales(),
-          getMediosPago()
+          getMediosPago(),
+          getUnidadesMedida()
         ]);
         
         console.log('📦 Productos obtenidos:', productosData.length);
@@ -167,20 +250,26 @@ export default function POSPedidoPage() {
         setClientes(clientesData);
         setLocales(localesData);  // Usar todos los locales temporalmente
         setMediosPago(mediosData);
+        setUnidadesMedida(unidadesData);
         
         console.log('🏪 Todos los locales:', localesData);
         
         // Seleccionar local por defecto del usuario
         const localesVenta = localesData; // Usar todos los locales disponibles
         
+        let localSeleccionado = null;
         if (usuario?.local_defecto_id) {
-          setLocalId(usuario.local_defecto_id);
+          localSeleccionado = usuario.local_defecto_id;
         } else if (localesVenta.length > 0) {
-          // Si el usuario no tiene local por defecto, usar el primer local de venta
-          setLocalId(localesVenta[0].id);
+          localSeleccionado = localesVenta[0].id;
         } else if (localesData.length > 0) {
-          // Fallback: usar cualquier local disponible
-          setLocalId(localesData[0].id);
+          localSeleccionado = localesData[0].id;
+        }
+        
+        if (localSeleccionado) {
+          setLocalId(localSeleccionado);
+          // Verificar si hay caja abierta en el local seleccionado
+          await verificarCajaAbierta(localSeleccionado);
         } else {
           console.warn('⚠️ No hay locales disponibles en absoluto');
         }
@@ -198,6 +287,8 @@ export default function POSPedidoPage() {
   useEffect(() => {
     if (localId && locales.length > 0) {
       cargarProductosLocal(localId);
+      // Verificar caja cuando cambia el local
+      verificarCajaAbierta(localId);
     }
   }, [localId]);
 
@@ -217,6 +308,54 @@ export default function POSPedidoPage() {
     }
   };
 
+  // Función para calcular el precio correcto según la cantidad
+  const calcularPrecioSegunCantidad = (precios: any[], cantidad: number) => {
+    if (!precios || precios.length === 0) return null;
+    
+    // Ordenar precios por factor de conversión (mayor a menor)
+    const preciosOrdenados = [...precios].sort((a, b) => {
+      const factorA = getFactorUnidad(a.unidad_medida_id);
+      const factorB = getFactorUnidad(b.unidad_medida_id);
+      return factorB - factorA; // Mayor factor primero (docena > media docena > unitario)
+    });
+    
+    // Buscar el precio más conveniente según la cantidad
+    for (const precio of preciosOrdenados) {
+      const factor = getFactorUnidad(precio.unidad_medida_id);
+      if (cantidad >= factor) {
+        // Este precio aplica - el monto_precio es el precio UNITARIO para este tier
+        return {
+          precio: precio.monto_precio, // Precio unitario
+          unidad_medida_id: precio.unidad_medida_id,
+          factor: factor,
+          precio_total_unidad: precio.monto_precio
+        };
+      }
+    }
+    
+    // Si no hay precio que aplique, usar el de menor factor (unitario)
+    const precioUnitario = preciosOrdenados[preciosOrdenados.length - 1];
+    const factor = getFactorUnidad(precioUnitario.unidad_medida_id);
+    return {
+      precio: precioUnitario.monto_precio, // Precio unitario
+      unidad_medida_id: precioUnitario.unidad_medida_id,
+      factor: factor,
+      precio_total_unidad: precioUnitario.monto_precio
+    };
+  };
+  
+  // Función auxiliar para obtener prioridad de unidad (factor de conversión)
+  const getPrioridadUnidad = (unidadId: number) => {
+    const unidad = unidadesMedida.find(u => u.id === unidadId);
+    return unidad?.factor_conversion || 1;
+  };
+  
+  // Función auxiliar para obtener factor de conversión
+  const getFactorUnidad = (unidadId: number) => {
+    const unidad = unidadesMedida.find(u => u.id === unidadId);
+    return unidad?.factor_conversion || 1;
+  };
+
   // Función para agregar producto al carrito
   const agregarAlCarrito = async () => {
     if (!productoSeleccionado || !cantidadInput || !localId) {
@@ -233,32 +372,53 @@ export default function POSPedidoPage() {
     }
     
     try {
-      // Obtener precio del producto
-      const precio = await getPrecioProductoLocal(productoSeleccionado.id, localId);
+      // Obtener TODOS los precios del producto
+      const precios = await getPrecioProductoLocal(productoSeleccionado.id, localId);
       
-      if (!precio || !precio.monto_precio) {
+      if (!precios || precios.length === 0) {
         alert(`No se encontró precio para "${productoSeleccionado.nombre}" en este local`);
         return;
       }
       
-      const precioUnitario = precio.monto_precio;
+      // Calcular el precio correcto según la cantidad
+      const precioCalculado = calcularPrecioSegunCantidad(precios, cantidad);
+      
+      if (!precioCalculado) {
+        alert(`No se pudo calcular el precio para la cantidad especificada`);
+        return;
+      }
+      
+      const precioUnitario = precioCalculado.precio;
+      const factor = precioCalculado.factor;
+      
+      console.log(`💰 Precio calculado para ${cantidad} unidades:`, {
+        precio_unitario: precioUnitario,
+        factor: factor,
+        unidad: precioCalculado.unidad_medida_id,
+        subtotal: Math.round(cantidad * precioUnitario)
+      });
       
       // Verificar si ya existe en el carrito
       const itemExistente = carrito.find(item => item.producto_id === productoSeleccionado.id);
       
       if (itemExistente) {
-        // Actualizar cantidad
+        // Actualizar cantidad y recalcular precio
         const nuevosItems = carrito.map(item => {
           if (item.producto_id === productoSeleccionado.id) {
             const nuevaCantidadFloat = item.cantidad + cantidad;
-            // Mantener lógica según tipo de producto
             const nuevaCantidad = item.tipo_venta_codigo === 'UNITARIO' 
               ? Math.round(nuevaCantidadFloat) 
               : nuevaCantidadFloat;
+            
+            // Recalcular precio con la nueva cantidad
+            const nuevoPrecioCalculado = calcularPrecioSegunCantidad(precios, nuevaCantidad);
+            const nuevoPrecioUnitario = nuevoPrecioCalculado ? nuevoPrecioCalculado.precio : precioUnitario;
+            
             return {
               ...item,
               cantidad: nuevaCantidad,
-              subtotal: nuevaCantidad * precioUnitario
+              precio_unitario: nuevoPrecioUnitario,
+              subtotal: Math.round(nuevaCantidad * nuevoPrecioUnitario)
             };
           }
           return item;
@@ -273,9 +433,9 @@ export default function POSPedidoPage() {
           sku: productoSeleccionado.sku,
           nombre: productoSeleccionado.nombre,
           tipo_venta_codigo: productoSeleccionado.tipo_venta_codigo || 'UNITARIO',
-          cantidad: cantidad, // Ya procesada según el tipo de producto
+          cantidad: cantidad,
           precio_unitario: precioUnitario,
-          subtotal: cantidad * precioUnitario
+          subtotal: Math.round(cantidad * precioUnitario)
         };
         console.log('➕ Agregando nuevo item:', nuevoItem);
         setCarrito([...carrito, nuevoItem]);
@@ -356,9 +516,10 @@ export default function POSPedidoPage() {
     try {
       // 1. Crear/obtener cliente
       let clienteId: number;
+      const EMAIL_ANONIMO = 'anonimo@pos.local';
       let datosCliente = {
         nombre: cliente.es_anonimo ? 'Cliente Anónimo' : cliente.nombre || 'Sin nombre',
-        email: cliente.es_anonimo ? `anonimo${Date.now()}@pos.local` : cliente.email || '',
+        email: cliente.es_anonimo ? EMAIL_ANONIMO : cliente.email || '',
         telefono: cliente.es_anonimo ? '000000000' : cliente.telefono || '',
         direccion: cliente.es_anonimo ? 'Dirección no especificada' : cliente.direccion || '',
         // Campos tributarios
@@ -368,27 +529,56 @@ export default function POSPedidoPage() {
         es_empresa: cliente.es_empresa || false
       };
 
-      if (cliente.es_anonimo) {
-        // Para clientes anónimos, usar un email único temporal
-        datosCliente.email = `anonimo${Date.now()}@pos.local`;
+      // Si el cliente ya tiene ID, significa que fue seleccionado de la búsqueda
+      if (cliente.id) {
+        clienteId = cliente.id;
+        console.log('✅ Usando cliente existente (seleccionado):', clienteId, cliente.nombre);
+      } else {
+        // Antes de crear, verificar si el email ya existe en la lista de clientes
+        let clienteExistente = null;
+        
+        if (cliente.es_anonimo) {
+          // Buscar cliente anónimo existente
+          clienteExistente = clientes.find(c => c.email === EMAIL_ANONIMO);
+          if (clienteExistente) {
+            console.log('✅ Reutilizando cliente anónimo existente (ID:', clienteExistente.id, ')');
+          }
+        } else if (datosCliente.email && datosCliente.email.trim() !== '') {
+          clienteExistente = clientes.find(c => 
+            c.email && c.email.toLowerCase() === datosCliente.email.toLowerCase()
+          );
+        }
+        
+        if (clienteExistente) {
+          // Cliente encontrado en la lista - usar ese cliente
+          clienteId = clienteExistente.id;
+          console.log('✅ Cliente encontrado por email:', clienteExistente.nombre, '(ID:', clienteId, ')');
+          console.log('📧 Email coincidente:', datosCliente.email);
+        } else {
+          // Crear nuevo cliente
+
+          console.log('📝 Creando nuevo cliente:', datosCliente);
+          
+          const nuevoCliente = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/clientes/`, {
+            method: 'POST',
+            headers: AuthService.getAuthHeaders(),
+            body: JSON.stringify(datosCliente)
+          });
+
+          if (!nuevoCliente.ok) {
+            const errorCliente = await nuevoCliente.json();
+            throw new Error(`Error creando cliente: ${errorCliente.detail}`);
+          }
+
+          const clienteCreado = await nuevoCliente.json();
+          clienteId = clienteCreado.id;
+
+          console.log('✅ Cliente nuevo creado:', clienteCreado);
+          
+          // Recargar lista de clientes para operaciones futuras
+          await recargarClientes();
+        }
       }
-
-      // Crear cliente
-      const nuevoCliente = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/clientes/`, {
-        method: 'POST',
-        headers: AuthService.getAuthHeaders(),
-        body: JSON.stringify(datosCliente)
-      });
-
-      if (!nuevoCliente.ok) {
-        const errorCliente = await nuevoCliente.json();
-        throw new Error(`Error creando cliente: ${errorCliente.detail}`);
-      }
-
-      const clienteCreado = await nuevoCliente.json();
-      clienteId = clienteCreado.id;
-
-      console.log('✅ Cliente creado:', clienteCreado);
 
       // 2. Crear pedido
       const itemsPedido = carrito.map(item => ({
@@ -397,6 +587,49 @@ export default function POSPedidoPage() {
         cantidad: item.cantidad, // Respetar cantidad según tipo de producto
         precio_unitario_venta: item.precio_unitario
       }));
+      
+      // Obtener BOLETA por defecto si no hay tipo documento seleccionado
+      let tipoDocFinal = tipoDocumentoId;
+      
+      // IMPORTANTE: Siempre validar que el ID corresponda al tipo correcto
+      console.log('🔍 Validando tipo de documento antes de crear pedido...');
+      const tiposResp = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/config/tipos-documento`);
+      const tiposDoc = await tiposResp.json();
+      
+      console.log('📋 Tipos de documento disponibles:', tiposDoc);
+      
+      const documentoDefault = tiposDoc.find((t: any) => t.codigo === CODIGO_DOCUMENTO_POS_DEFAULT);
+      const factura = tiposDoc.find((t: any) => t.codigo === 'FAC');
+      
+      console.log('🧾 IDs en base de datos:', {
+        [`Documento POS (${CODIGO_DOCUMENTO_POS_DEFAULT})`]: documentoDefault?.id,
+        'FACTURA (FAC)': factura?.id,
+        'Todos los tipos': tiposDoc.map((t: any) => `${t.codigo}=${t.id} (${t.nombre})`)
+      });
+      
+      if (!documentoDefault) {
+        console.error('❌ ERROR: No se encontró el tipo de documento configurado:', CODIGO_DOCUMENTO_POS_DEFAULT);
+        console.error('Tipos disponibles:', tiposDoc.map((t: any) => t.codigo).join(', '));
+        throw new Error(`No se encontró el tipo de documento '${CODIGO_DOCUMENTO_POS_DEFAULT}'. Verifica la configuración en el código.`);
+      }
+      
+      if (!tipoDocFinal) {
+        console.warn('⚠️ No hay tipoDocumentoId, usando documento por defecto:', documentoDefault.nombre);
+        tipoDocFinal = documentoDefault.id;
+      } else {
+        // Verificar que el ID seleccionado sea el correcto
+        const tipoSeleccionado = tiposDoc.find((t: any) => t.id === tipoDocFinal);
+        console.log('🔎 Tipo seleccionado:', tipoSeleccionado);
+        
+        if (tipoSeleccionado?.codigo === 'FAC') {
+          console.warn('⚠️⚠️⚠️ ADVERTENCIA: El tipo seleccionado es FACTURA');
+          console.warn('Si no quieres factura, cámbialo manualmente en la pantalla');
+        } else if (tipoSeleccionado?.codigo !== CODIGO_DOCUMENTO_POS_DEFAULT && tipoSeleccionado?.codigo !== 'FAC') {
+          console.warn('⚠️ Tipo inesperado:', tipoSeleccionado?.codigo);
+        }
+      }
+      
+      console.log('🧾 Tipo documento FINAL a usar:', tipoDocFinal, `(${tiposDoc.find((t: any) => t.id === tipoDocFinal)?.nombre})`);
       
       const pedidoData = {
         cliente_id: clienteId,
@@ -407,7 +640,7 @@ export default function POSPedidoPage() {
         local_id: localId,
         medio_pago_id: medioPagoId,
         tipo_pedido_id: 1, // PRODUCTOS
-        tipo_documento_tributario_id: tipoDocumentoId || 2, // Por defecto BOLETA (BOL)
+        tipo_documento_tributario_id: tipoDocFinal,
         // Campos tributarios del cliente
         cliente_rut: datosCliente.rut,
         cliente_razon_social: datosCliente.razon_social,
@@ -464,7 +697,10 @@ export default function POSPedidoPage() {
         total: totalCarrito,
         medio_pago: medioPagoSeleccionado?.nombre || 'Efectivo',
         vendedor: usuarioActual?.nombre_completo || 'Sistema POS',
-        puntos_ganados: puntosEstimados?.total_puntos || 0
+        puntos_ganados: puntosEstimados?.total_puntos || 0,
+        // Información del tenant para el footer
+        tenant_nombre: tenantConfig?.branding.nombre_comercial || tenantConfig?.tenant.nombre || 'Tienda',
+        tenant_sitio: tenantConfig?.tenant.dominio_principal || tenantConfig?.footer?.email || undefined
       };
       
       console.log('🧾 Datos boleta construidos:', datosBoleta);
@@ -596,6 +832,89 @@ export default function POSPedidoPage() {
           </div>
         </div>
       )}
+      
+      {/* Banner de advertencia - Caja no abierta */}
+      {!cajaAbierta && errorCaja && (
+        <div className="bg-red-900/30 border-b-4 border-red-500 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="flex-shrink-0">
+                <svg className="h-8 w-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-red-200">⚠️ Caja no abierta</h3>
+                <p className="text-red-300 mt-1">{errorCaja}</p>
+                <p className="text-sm text-red-200 mt-2">
+                  Para crear pedidos, primero debes abrir un turno de caja.
+                </p>
+              </div>
+            </div>
+            
+            {/* Botón para ir a abrir caja */}
+            <a
+              href="/admin/caja"
+              className="flex-shrink-0 inline-flex items-center space-x-2 px-4 py-2 bg-red-700 hover:bg-red-800 text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+              <span>Abrir Caja</span>
+            </a>
+          </div>
+        </div>
+      )}
+      
+      {/* Banner de información - Caja abierta */}
+      {cajaAbierta && infoCaja?.turno && (
+        <div className="bg-green-900/30 border-b-4 border-green-500 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="flex-shrink-0">
+                <svg className="h-8 w-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-green-200">✅ Caja abierta</h3>
+                <div className="mt-1 space-y-1">
+                  <p className="text-green-300 text-sm">
+                    <span className="font-medium">Local:</span> {infoCaja.local_nombre}
+                  </p>
+                  <p className="text-green-300 text-sm">
+                    <span className="font-medium">Operador:</span> {infoCaja.turno.vendedor_nombre}
+                  </p>
+                  <p className="text-green-300 text-sm">
+                    <span className="font-medium">Apertura:</span> {new Date(infoCaja.turno.fecha_apertura).toLocaleString('es-CL', {
+                      day: '2-digit',
+                      month: '2-digit', 
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                  <p className="text-green-300 text-sm">
+                    <span className="font-medium">Monto inicial:</span> ${infoCaja.turno.monto_inicial.toLocaleString('es-CL')}
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            {/* Botón para ir a gestión de caja */}
+            <a
+              href="/admin/caja"
+              className="flex-shrink-0 inline-flex items-center space-x-2 px-4 py-2 bg-green-700 hover:bg-green-800 text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <span>Gestionar Caja</span>
+            </a>
+          </div>
+        </div>
+      )}
 
       {/* Advertencia si no hay local asignado */}
       {!localId && !loading && locales.length > 0 && (
@@ -621,6 +940,8 @@ export default function POSPedidoPage() {
             onSiguiente={() => setEtapaActual('carrito')}
             localId={localId}
             loadingProductos={loadingProductos}
+            cajaAbierta={cajaAbierta}
+            unidadesMedida={unidadesMedida}
           />
         )}
         
@@ -638,6 +959,7 @@ export default function POSPedidoPage() {
           <EtapaFinalizacion 
             cliente={cliente}
             setCliente={setCliente}
+            clientes={clientes}
             locales={locales}
             localId={localId}
             setLocalId={setLocalId}
@@ -655,6 +977,7 @@ export default function POSPedidoPage() {
             carrito={carrito}
             usuarioActual={usuarioActual}
             puntosEstimados={puntosEstimados}
+            onClienteCreado={recargarClientes}
           />
         )}
       </div>

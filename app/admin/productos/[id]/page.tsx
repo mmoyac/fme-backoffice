@@ -5,6 +5,7 @@ import { getProducto, updateProducto, uploadImagen, type Producto, type Producto
 import { useRouter } from 'next/navigation';
 import { getCategorias, getTipos, getUnidades, type CategoriaProducto, type TipoProducto, type UnidadMedida } from '@/lib/api/maestras';
 import { AuthService } from '@/lib/auth';
+import TabEtiquetas from '@/components/TabEtiquetas';
 
 export default function EditarProductoPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -13,6 +14,7 @@ export default function EditarProductoPage({ params }: { params: { id: string } 
   const [producto, setProducto] = useState<Producto | null>(null);
   const [formData, setFormData] = useState<ProductoUpdate>({});
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [activeTab, setActiveTab] = useState<'info' | 'etiquetas'>('info');
 
   // Maestras
   const [categorias, setCategorias] = useState<CategoriaProducto[]>([]);
@@ -43,6 +45,7 @@ export default function EditarProductoPage({ params }: { params: { id: string } 
         nombre: productoData.nombre,
         descripcion: productoData.descripcion ?? undefined,
         sku: productoData.sku,
+        codigo_barra: productoData.codigo_barra ?? undefined,
         categoria_id: productoData.categoria_id,
         tipo_producto_id: productoData.tipo_producto_id,
         unidad_medida_id: productoData.unidad_medida_id,
@@ -66,22 +69,55 @@ export default function EditarProductoPage({ params }: { params: { id: string } 
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    
+    console.log('=== Iniciando actualización de producto ===');
+    console.log('Producto ID:', params.id);
+    console.log('Form Data completo:', formData);
+    console.log('codigo_barra específico:', formData.codigo_barra);
+    console.log('codigo_barra tipo:', typeof formData.codigo_barra);
+    console.log('Selected File:', selectedFile?.name);
+    
+    // Asegurarse de que codigo_barra se envíe (incluso si está vacío)
+    const dataToSend = {
+      ...formData,
+      codigo_barra: formData.codigo_barra || undefined
+    };
+    
+    console.log('Data a enviar al backend:', dataToSend);
+    
     setSaving(true);
 
     try {
-      await updateProducto(Number(params.id), formData);
+      console.log('1. Actualizando datos del producto...');
+      const result = await updateProducto(Number(params.id), dataToSend);
+      console.log('✓ Producto actualizado:', result);
+      console.log('✓ codigo_barra en respuesta:', result.codigo_barra);
 
       if (selectedFile) {
-        await uploadImagen(Number(params.id), selectedFile);
+        console.log('2. Subiendo nueva imagen...');
+        const imageResult = await uploadImagen(Number(params.id), selectedFile);
+        console.log('✓ Imagen subida:', imageResult);
+        
+        // Recargar producto para obtener la URL actualizada
+        console.log('2.1. Recargando datos del producto...');
+        const productoActualizado = await getProducto(Number(params.id));
+        setProducto(productoActualizado);
+        console.log('✓ Producto recargado con nueva imagen');
       }
 
+      console.log('3. Mostrando mensaje de éxito...');
       alert('Producto actualizado exitosamente');
+      
+      console.log('4. Redirigiendo a lista de productos...');
       router.push('/admin/productos');
-    } catch (err) {
-      alert('Error al actualizar producto');
-      console.error(err);
+      router.refresh(); // Forzar refresh del cache de Next.js
+    } catch (err: any) {
+      console.error('❌ Error en handleSubmit:', err);
+      const errorMessage = err?.message || 'Error desconocido al actualizar producto';
+      alert(`Error: ${errorMessage}`);
     } finally {
       setSaving(false);
+      console.log('=== Fin actualización ===');
     }
   }
 
@@ -105,7 +141,33 @@ export default function EditarProductoPage({ params }: { params: { id: string } 
     <div className="max-w-4xl">
       <h1 className="text-3xl font-bold text-white mb-6">Editar Producto</h1>
 
-      <form onSubmit={handleSubmit} className="bg-slate-800 rounded-lg p-6 space-y-6">
+      {/* Tabs de navegación */}
+      <div className="flex gap-2 mb-6 border-b border-slate-700">
+        <button
+          onClick={() => setActiveTab('info')}
+          className={`px-6 py-3 font-medium transition-colors ${
+            activeTab === 'info'
+              ? 'text-primary border-b-2 border-primary'
+              : 'text-gray-400 hover:text-gray-300'
+          }`}
+        >
+          📦 Información del Producto
+        </button>
+        <button
+          onClick={() => setActiveTab('etiquetas')}
+          className={`px-6 py-3 font-medium transition-colors ${
+            activeTab === 'etiquetas'
+              ? 'text-primary border-b-2 border-primary'
+              : 'text-gray-400 hover:text-gray-300'
+          }`}
+        >
+          🏷️ Etiquetas y Nutrición
+        </button>
+      </div>
+
+      {/* Tab: Información del Producto */}
+      {activeTab === 'info' && (
+        <form onSubmit={handleSubmit} className="bg-slate-800 rounded-lg p-6 space-y-6">
         {/* Información Básica */}
         <div className="border-b border-slate-700 pb-4">
           <h2 className="text-xl font-semibold text-white mb-4">Información Básica</h2>
@@ -135,6 +197,21 @@ export default function EditarProductoPage({ params }: { params: { id: string } 
                 onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
                 className="w-full bg-slate-700 text-white px-4 py-2 rounded-lg border border-slate-600 focus:border-primary focus:outline-none"
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Código de Barra
+              </label>
+              <input
+                type="text"
+                value={formData.codigo_barra || ''}
+                onChange={(e) => setFormData({ ...formData, codigo_barra: e.target.value })}
+                className="w-full bg-slate-700 text-white px-4 py-2 rounded-lg border border-slate-600 focus:border-primary focus:outline-none"
+                placeholder="Ej: 7891234567890"
+                maxLength={50}
+              />
+              <p className="text-xs text-gray-500 mt-1">Número para generar código de barras</p>
             </div>
           </div>
 
@@ -346,7 +423,7 @@ export default function EditarProductoPage({ params }: { params: { id: string } 
           {producto.imagen_url ? (
             <div className="mb-2">
               <img
-                src={`${API_URL}${producto.imagen_url}`}
+                src={`${API_URL}${producto.imagen_url}?t=${Date.now()}`}
                 alt={producto.nombre}
                 className="h-32 w-auto rounded-lg border border-slate-600"
               />
@@ -382,7 +459,16 @@ export default function EditarProductoPage({ params }: { params: { id: string } 
             Cancelar
           </button>
         </div>
-      </form >
-    </div >
+      </form>
+      )}
+
+      {/* Tab: Etiquetas y Nutrición */}
+      {activeTab === 'etiquetas' && (
+        <TabEtiquetas
+          productoId={Number(params.id)}
+          productoNombre={producto.nombre}
+        />
+      )}
+    </div>
   );
 }

@@ -90,7 +90,22 @@ export default function ProveedoresList() {
             await loadData();
             setModalOpen(false);
         } catch (err: any) {
-            alert(err.message);
+            let errorMessage = err.message;
+            
+            // Detectar errores específicos y mostrar mensajes amigables
+            if (errorMessage.includes('ix_proveedores_rut') || errorMessage.includes('duplicate key value violates unique constraint')) {
+                if (errorMessage.includes('rut')) {
+                    errorMessage = `El RUT "${formData.rut}" ya está registrado en el sistema. Por favor, verifica o usa otro RUT.`;
+                } else if (errorMessage.includes('email')) {
+                    errorMessage = `El email "${formData.email}" ya está registrado. Por favor, usa otro email.`;
+                }
+            } else if (errorMessage.includes('CORS')) {
+                errorMessage = 'Error de conexión con el servidor. Verifica que el backend esté funcionando.';
+            } else if (errorMessage.includes('500')) {
+                errorMessage = 'Error interno del servidor. Por favor, contacta al administrador.';
+            }
+            
+            alert(errorMessage);
         }
     }
 

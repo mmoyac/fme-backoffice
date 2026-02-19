@@ -58,6 +58,7 @@ export default function PedidoCajasPage() {
   
   // Datos para formularios
   const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [currentUser, setCurrentUser] = useState<{ local_defecto_id?: number } | null>(null);
   const [productosAgrupados, setProductosAgrupados] = useState<ProductoAgrupado[]>([]);
   
   // Estado del pedido simplificado
@@ -91,8 +92,9 @@ export default function PedidoCajasPage() {
       
       const headers = AuthService.getAuthHeaders();
 
-      // Cargar clientes, precios, stock, pesos promedio y medios de pago
-      const [clientesRes, preciosRes, stockRes, pesoPromedioRes, mediosData, bancosData, estadosData] = await Promise.all([
+      // Cargar perfil del usuario, clientes, precios, stock, pesos promedio y medios de pago
+      const [userRes, clientesRes, preciosRes, stockRes, pesoPromedioRes, mediosData, bancosData, estadosData] = await Promise.all([
+        fetch(`${API_URL}/api/auth/users/me`, { headers }),
         fetch(`${API_URL}/api/clientes/`, { headers }),
         fetch(`${API_URL}/api/precios-proveedor/`, { headers }),
         fetch(`${API_URL}/api/stock-cajas/resumen`, { headers }),
@@ -102,11 +104,12 @@ export default function PedidoCajasPage() {
         getEstadosCheque()
       ]);
 
-      if (!clientesRes.ok || !preciosRes.ok || !stockRes.ok || !pesoPromedioRes.ok) {
+      if (!userRes.ok || !clientesRes.ok || !preciosRes.ok || !stockRes.ok || !pesoPromedioRes.ok) {
         throw new Error('Error al cargar datos');
       }
 
-      const [clientesData, preciosData, stockData, pesoPromedioData] = await Promise.all([
+      const [userData, clientesData, preciosData, stockData, pesoPromedioData] = await Promise.all([
+        userRes.json(),
         clientesRes.json(),
         preciosRes.json(),
         stockRes.json(),
@@ -157,6 +160,7 @@ export default function PedidoCajasPage() {
       
       const productosAgrupadosData = Array.from(productosMap.values());
 
+      setCurrentUser(userData);
       setClientes(clientesData);
       setProductosAgrupados(productosAgrupadosData);
       setMediosPago(mediosData);
@@ -283,10 +287,27 @@ export default function PedidoCajasPage() {
         precio_unitario_venta: producto.peso_promedio_kg * producto.precio_kg // Precio por caja basado en peso promedio
       }));
 
+      // Obtener headers de autenticación primero
+      const headers = AuthService.getAuthHeaders();
+      
       // Obtener datos del cliente seleccionado
       const cliente = clientes.find(c => c.id === clienteId);
       if (!cliente) {
         throw new Error('Cliente no encontrado');
+      }
+
+      // Para pedidos de backoffice, usar el local WEB (Tienda Online)
+      // Esto permite confirmar pedidos sin tener caja abierta
+      // Buscar el local WEB del tenant actual
+      const localesResponse = await fetch(`${API_URL}/api/locales/`, { headers });
+      if (!localesResponse.ok) {
+        throw new Error('Error al cargar locales');
+      }
+      const locales = await localesResponse.json();
+      const localWeb = locales.find((l: any) => l.codigo === 'WEB');
+      
+      if (!localWeb) {
+        throw new Error('No se encontró el local WEB. Contacte al administrador.');
       }
 
       const pedidoData = {
@@ -295,14 +316,13 @@ export default function PedidoCajasPage() {
         cliente_email: cliente.email,
         cliente_telefono: cliente.telefono || '',
         direccion_entrega: cliente.direccion || '',
-        local_id: 1, // Local por defecto, ajustar según necesidad
+        local_id: localWeb.id, // Usar local WEB en lugar de local físico
         medio_pago_id: medioPagoId,
         tipo_pedido_id: 2, // CAJAS_VARIABLES - Pedido de cajas de carne
         items: items,
         notas: notas || `Pedido de cajas variables - ${new Date().toLocaleDateString()}`
       };
 
-      const headers = AuthService.getAuthHeaders();
       const response = await fetch(`${API_URL}/api/pedidos/backoffice`, {
         method: 'POST',
         headers: headers,
@@ -333,7 +353,7 @@ export default function PedidoCajasPage() {
             librador_nombre: cheque.librador_nombre,
             librador_rut: cheque.librador_rut || undefined,
             observaciones: cheque.observaciones || undefined,
-            pedido_id: pedidoCreado.id,
+            pedido_id: pedidoCreado.pedido_id,
             estado_id: estadoPendiente.id
           };
           
@@ -342,7 +362,7 @@ export default function PedidoCajasPage() {
         
         await Promise.all(promesasCheques);
       }
-      alert(`Pedido creado exitosamente. ID: ${pedidoCreado.id}`);
+      alert(`✅ Pedido creado exitosamente\n\nID: ${pedidoCreado.pedido_id}\nNúmero: ${pedidoCreado.numero_pedido}\nTotal: $${pedidoCreado.monto_total?.toLocaleString('es-CL') || 0}`);
       
       // Limpiar formulario
       setClienteId(0);

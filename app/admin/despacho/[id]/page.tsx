@@ -30,22 +30,24 @@ interface PickingItem {
 interface Despacho {
   id: number;
   pedido_id: number;
-  estado: string;
+  pedido_numero?: string;
+  estado_despacho: string;  // Corregido: era 'estado'
   cliente_nombre: string;
   cliente_telefono?: string;
   cliente_email?: string;
   direccion_entrega: string;
   despachador_nombre: string;
   despachador_email: string;
-  fecha_creacion: string;
-  fecha_asignacion?: string;
+  fecha_asignacion: string;  // Corregido: era 'fecha_creacion'
   fecha_inicio_picking?: string;
   fecha_fin_picking?: string;
+  fecha_inicio_ruta?: string;  // Agregado
   fecha_entrega?: string;
   hora_estimada_entrega?: string;
   notas_despacho?: string;
   picking_items: PickingItem[];
   pedido_monto_total: number;
+  pedido_total?: number;  // Alias
   pedido_notas?: string;
 }
 
@@ -92,7 +94,7 @@ export default function DetalleDespacho() {
         const data = await response.json();
         setDespacho(data);
         setFormData({
-          estado: data.estado,
+          estado: data.estado_despacho,  // Corregido: era data.estado
           hora_estimada_entrega: data.hora_estimada_entrega 
             ? new Date(data.hora_estimada_entrega).toISOString().slice(0, 16)
             : '',
@@ -124,7 +126,7 @@ export default function DetalleDespacho() {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            estado: formData.estado,
+            estado_despacho: formData.estado,  // Corregido: enviar como estado_despacho
             hora_estimada_entrega: formData.hora_estimada_entrega 
               ? new Date(formData.hora_estimada_entrega).toISOString()
               : null,
@@ -332,8 +334,8 @@ export default function DetalleDespacho() {
                       <option value="ENTREGADO">Entregado</option>
                     </select>
                   ) : (
-                    <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full border ${obtenerColorEstado(despacho.estado)}`}>
-                      {despacho.estado.replace('_', ' ')}
+                    <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full border ${obtenerColorEstado(despacho.estado_despacho)}`}>
+                      {despacho.estado_despacho.replace('_', ' ')}
                     </span>
                   )}
                 </div>
@@ -366,8 +368,8 @@ export default function DetalleDespacho() {
                     <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">Creado</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{formatearFecha(despacho.fecha_creacion)}</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">Asignado</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{formatearFecha(despacho.fecha_asignacion)}</p>
                   </div>
                 </div>
 

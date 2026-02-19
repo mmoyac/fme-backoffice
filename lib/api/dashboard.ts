@@ -16,6 +16,23 @@ export interface EstadisticasDashboard {
       ENTREGADO: number;
       CANCELADO: number;
     };
+    por_canal: {
+      web: {
+        cantidad: number;
+        ventas: number;
+      };
+      tienda: {
+        cantidad: number;
+        ventas: number;
+        locales_detalle: Array<{
+          local_id: number;
+          nombre: string;
+          codigo: string;
+          cantidad_pedidos: number;
+          total_ventas: number;
+        }>;
+      };
+    };
   };
   por_cobrar: {
     monto: number;
@@ -37,6 +54,20 @@ export interface EstadisticasDashboard {
     fecha: string;
     dia: string;
     ventas: number;
+  }>;
+  ventas_por_vendedor: Array<{
+    usuario_id: number;
+    nombre: string;
+    email: string;
+    cantidad_pedidos: number;
+    total_ventas: number;
+  }>;
+  ventas_por_medio_pago: Array<{
+    medio_pago_id: number;
+    nombre: string;
+    codigo: string;
+    cantidad_pedidos: number;
+    total_ventas: number;
   }>;
   ultimos_pedidos: Array<{
     id: number;

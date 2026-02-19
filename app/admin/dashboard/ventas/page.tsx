@@ -160,6 +160,314 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Pedidos por Canal: Web vs Tiendas */}
+      <div className="bg-slate-800 rounded-lg p-6">
+        <h2 className="text-xl font-bold text-white mb-4">📊 Pedidos por Canal de Venta</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Pedidos Web (Landing) */}
+          <div className="bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 rounded-lg p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-cyan-500 rounded-lg flex items-center justify-center text-2xl">
+                🌐
+              </div>
+              <div>
+                <h3 className="text-cyan-400 font-semibold text-lg">Landing Web</h3>
+                <p className="text-gray-400 text-sm">Pedidos desde internet</p>
+              </div>
+            </div>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-300">Cantidad de Pedidos:</span>
+                <span className="text-white text-2xl font-bold">{stats.pedidos.por_canal.web.cantidad}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-300">Total Ventas:</span>
+                <span className="text-cyan-400 text-2xl font-bold">{formatCurrency(stats.pedidos.por_canal.web.ventas)}</span>
+              </div>
+              {stats.pedidos.por_canal.web.cantidad > 0 && (
+                <div className="pt-3 border-t border-slate-700">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-400">Ticket Promedio Web:</span>
+                    <span className="text-cyan-300 font-semibold">
+                      {formatCurrency(stats.pedidos.por_canal.web.ventas / stats.pedidos.por_canal.web.cantidad)}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Pedidos Tiendas (POS) */}
+          <div className="bg-gradient-to-br from-emerald-500/20 to-green-500/20 border border-emerald-500/30 rounded-lg p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-emerald-500 rounded-lg flex items-center justify-center text-2xl">
+                🏪
+              </div>
+              <div>
+                <h3 className="text-emerald-400 font-semibold text-lg">Tiendas Físicas</h3>
+                <p className="text-gray-400 text-sm">Pedidos desde POS</p>
+              </div>
+            </div>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-300">Cantidad de Pedidos:</span>
+                <span className="text-white text-2xl font-bold">{stats.pedidos.por_canal.tienda.cantidad}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-300">Total Ventas:</span>
+                <span className="text-emerald-400 text-2xl font-bold">{formatCurrency(stats.pedidos.por_canal.tienda.ventas)}</span>
+              </div>
+              {stats.pedidos.por_canal.tienda.cantidad > 0 && (
+                <div className="pt-3 border-t border-slate-700">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-400">Ticket Promedio Tienda:</span>
+                    <span className="text-emerald-300 font-semibold">
+                      {formatCurrency(stats.pedidos.por_canal.tienda.ventas / stats.pedidos.por_canal.tienda.cantidad)}
+                    </span>
+                  </div>
+                </div>
+              )}
+              
+              {/* Desglose por local */}
+              {stats.pedidos.por_canal.tienda.locales_detalle && stats.pedidos.por_canal.tienda.locales_detalle.length > 0 && (
+                <div className="pt-4 border-t border-slate-700 mt-4">
+                  <h4 className="text-emerald-300 font-semibold text-sm mb-3">📍 Desglose por Local:</h4>
+                  <div className="space-y-2">
+                    {stats.pedidos.por_canal.tienda.locales_detalle.map((local) => (
+                      <div key={local.local_id} className="bg-slate-900/50 rounded-lg p-3 border border-slate-700">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-white font-semibold">{local.nombre}</span>
+                          <span className="text-xs bg-emerald-600 text-white px-2 py-1 rounded-full">
+                            {local.codigo}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div>
+                            <div className="text-gray-400">Pedidos:</div>
+                            <div className="text-white font-bold">{local.cantidad_pedidos}</div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-gray-400">Ventas:</div>
+                            <div className="text-emerald-300 font-bold">{formatCurrency(local.total_ventas)}</div>
+                          </div>
+                        </div>
+                        {local.cantidad_pedidos > 0 && (
+                          <div className="mt-2 pt-2 border-t border-slate-700 text-xs">
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Ticket Promedio:</span>
+                              <span className="text-emerald-200 font-semibold">
+                                {formatCurrency(local.total_ventas / local.cantidad_pedidos)}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Barra comparativa */}
+        <div className="mt-6">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-gray-400 text-sm">Distribución de Ventas</span>
+            <span className="text-gray-400 text-sm">
+              Total: {formatCurrency(stats.pedidos.por_canal.web.ventas + stats.pedidos.por_canal.tienda.ventas)}
+            </span>
+          </div>
+          <div className="flex h-6 rounded-full overflow-hidden">
+            {stats.pedidos.por_canal.web.ventas + stats.pedidos.por_canal.tienda.ventas > 0 ? (
+              <>
+                <div
+                  className="bg-cyan-500 flex items-center justify-center text-xs font-semibold text-white"
+                  style={{
+                    width: `${(stats.pedidos.por_canal.web.ventas / (stats.pedidos.por_canal.web.ventas + stats.pedidos.por_canal.tienda.ventas)) * 100}%`
+                  }}
+                >
+                  {((stats.pedidos.por_canal.web.ventas / (stats.pedidos.por_canal.web.ventas + stats.pedidos.por_canal.tienda.ventas)) * 100).toFixed(0)}%
+                </div>
+                <div
+                  className="bg-emerald-500 flex items-center justify-center text-xs font-semibold text-white"
+                  style={{
+                    width: `${(stats.pedidos.por_canal.tienda.ventas / (stats.pedidos.por_canal.web.ventas + stats.pedidos.por_canal.tienda.ventas)) * 100}%`
+                  }}
+                >
+                  {((stats.pedidos.por_canal.tienda.ventas / (stats.pedidos.por_canal.web.ventas + stats.pedidos.por_canal.tienda.ventas)) * 100).toFixed(0)}%
+                </div>
+              </>
+            ) : (
+              <div className="bg-slate-700 flex-1 flex items-center justify-center text-xs text-gray-400">
+                Sin ventas
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Ventas por Vendedor */}
+      {stats.ventas_por_vendedor && stats.ventas_por_vendedor.length > 0 && (
+        <div className="bg-slate-800 rounded-lg p-6">
+          <h2 className="text-xl font-bold text-white mb-4">👥 Ranking de Vendedores</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {stats.ventas_por_vendedor.map((vendedor, index) => (
+              <div 
+                key={vendedor.usuario_id} 
+                className="bg-gradient-to-br from-slate-700 to-slate-800 rounded-lg p-4 border border-slate-600 hover:border-primary transition-all"
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg ${
+                      index === 0 ? 'bg-yellow-500 text-yellow-900' :
+                      index === 1 ? 'bg-gray-400 text-gray-900' :
+                      index === 2 ? 'bg-amber-700 text-amber-100' :
+                      'bg-primary text-white'
+                    }`}>
+                      {index + 1}
+                    </div>
+                    <div>
+                      <h3 className="text-white font-semibold text-sm">
+                        {vendedor.nombre}
+                      </h3>
+                      <p className="text-gray-400 text-xs">{vendedor.email}</p>
+                    </div>
+                  </div>
+                  {index < 3 && (
+                    <span className="text-2xl">
+                      {index === 0 ? '🏆' : index === 1 ? '🥈' : '🥉'}
+                    </span>
+                  )}
+                </div>
+                <div className="space-y-2 pt-3 border-t border-slate-600">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400 text-sm">Pedidos:</span>
+                    <span className="text-white font-bold">{vendedor.cantidad_pedidos}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400 text-sm">Ventas:</span>
+                    <span className="text-primary font-bold text-lg">
+                      {formatCurrency(vendedor.total_ventas)}
+                    </span>
+                  </div>
+                  {vendedor.cantidad_pedidos > 0 && (
+                    <div className="flex justify-between items-center pt-2 border-t border-slate-700">
+                      <span className="text-gray-400 text-xs">Ticket Promedio:</span>
+                      <span className="text-emerald-400 font-semibold text-sm">
+                        {formatCurrency(vendedor.total_ventas / vendedor.cantidad_pedidos)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Ventas por Medio de Pago */}
+      {stats.ventas_por_medio_pago && stats.ventas_por_medio_pago.length > 0 && (
+        <div className="bg-slate-800 rounded-lg p-6">
+          <h2 className="text-xl font-bold text-white mb-4">💳 Ventas por Medio de Pago</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {stats.ventas_por_medio_pago.map((medio) => {
+              // Determinar icono y color según el medio de pago
+              let icon = '💵';
+              let colorClass = 'from-gray-500 to-gray-600';
+              
+              if (medio.codigo.includes('EFECTIVO')) {
+                icon = '💵';
+                colorClass = 'from-green-500 to-green-600';
+              } else if (medio.codigo.includes('DEBITO') || medio.codigo.includes('CREDITO')) {
+                icon = '💳';
+                colorClass = 'from-blue-500 to-blue-600';
+              } else if (medio.codigo.includes('TRANSFERENCIA')) {
+                icon = '🏦';
+                colorClass = 'from-purple-500 to-purple-600';
+              } else if (medio.codigo.includes('CHEQUE')) {
+                icon = '📝';
+                colorClass = 'from-orange-500 to-orange-600';
+              } else if (medio.codigo.includes('MERCADOPAGO') || medio.codigo.includes('WEBPAY')) {
+                icon = '🛒';
+                colorClass = 'from-cyan-500 to-cyan-600';
+              }
+
+              return (
+                <div 
+                  key={medio.medio_pago_id} 
+                  className={`bg-gradient-to-br ${colorClass} rounded-lg p-5 text-white shadow-lg hover:shadow-xl transition-all`}
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="text-3xl">{icon}</div>
+                    <div className="text-xs opacity-80 bg-white/20 px-2 py-1 rounded">
+                      {medio.codigo}
+                    </div>
+                  </div>
+                  <h3 className="font-semibold text-lg mb-3">{medio.nombre}</h3>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm opacity-90">Pedidos:</span>
+                      <span className="font-bold text-lg">{medio.cantidad_pedidos}</span>
+                    </div>
+                    <div className="pt-2 border-t border-white/20">
+                      <div className="text-xs opacity-80">Total Ventas</div>
+                      <div className="font-bold text-2xl">
+                        {formatCurrency(medio.total_ventas)}
+                      </div>
+                    </div>
+                    {medio.cantidad_pedidos > 0 && (
+                      <div className="pt-2 border-t border-white/20">
+                        <div className="text-xs opacity-80">Ticket Promedio</div>
+                        <div className="font-semibold text-lg">
+                          {formatCurrency(medio.total_ventas / medio.cantidad_pedidos)}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          
+          {/* Gráfico de distribución */}
+          <div className="mt-6">
+            <h3 className="text-white font-semibold mb-3">Distribución de Ventas</h3>
+            <div className="flex h-8 rounded-lg overflow-hidden shadow-lg">
+              {stats.ventas_por_medio_pago.map((medio, index) => {
+                const totalVentas = stats.ventas_por_medio_pago.reduce((sum, m) => sum + m.total_ventas, 0);
+                const porcentaje = totalVentas > 0 ? (medio.total_ventas / totalVentas) * 100 : 0;
+                
+                // Colores para la barra
+                const colors = [
+                  'bg-green-500',
+                  'bg-blue-500',
+                  'bg-purple-500',
+                  'bg-orange-500',
+                  'bg-cyan-500',
+                  'bg-pink-500',
+                  'bg-yellow-500',
+                  'bg-indigo-500'
+                ];
+                
+                return porcentaje > 0 ? (
+                  <div
+                    key={medio.medio_pago_id}
+                    className={`${colors[index % colors.length]} flex items-center justify-center text-white text-xs font-semibold relative group`}
+                    style={{ width: `${porcentaje}%` }}
+                  >
+                    {porcentaje > 8 && `${porcentaje.toFixed(0)}%`}
+                    <div className="absolute bottom-full mb-2 hidden group-hover:block bg-slate-900 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10">
+                      {medio.nombre}: {formatCurrency(medio.total_ventas)} ({porcentaje.toFixed(1)}%)
+                    </div>
+                  </div>
+                ) : null;
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Pedidos por Estado y Ventas por Día */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Pedidos por Estado */}

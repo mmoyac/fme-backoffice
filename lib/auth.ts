@@ -32,10 +32,13 @@ export class AuthService {
         formData.append('username', credentials.username);
         formData.append('password', credentials.password);
 
+        const currentHostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+
         const response = await fetch(`${API_URL}/api/auth/token`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Forwarded-Host': currentHostname,
             },
             body: formData.toString(),
         });
@@ -56,9 +59,12 @@ export class AuthService {
             throw new Error('No hay sesión activa');
         }
 
+        const currentHostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+
         const response = await fetch(`${API_URL}/api/auth/users/me`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
+                'X-Forwarded-Host': currentHostname,
             },
         });
 
@@ -98,8 +104,11 @@ export class AuthService {
 
     static getAuthHeaders(): HeadersInit {
         const token = this.getToken();
+        const currentHostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+        
         return {
             'Content-Type': 'application/json',
+            'X-Forwarded-Host': currentHostname,
             ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         };
     }

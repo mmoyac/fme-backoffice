@@ -1,6 +1,7 @@
 'use client';
 
 import { useAuth } from '@/lib/AuthProvider';
+import { useTenant } from '@/lib/TenantContext';
 
 interface TopBarProps {
     onMenuClick: () => void;
@@ -8,6 +9,7 @@ interface TopBarProps {
 
 export default function TopBar({ onMenuClick }: TopBarProps) {
     const { user, logout } = useAuth();
+    const { config } = useTenant();
 
     return (
         <header className="bg-slate-800 border-b border-slate-700 h-16 flex items-center justify-between px-4 shrink-0">
@@ -19,8 +21,10 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
                 >
                     <span className="text-2xl">☰</span>
                 </button>
-                {/* Optional: Show title on mobile if sidebar is closed, or always */}
-                <span className="md:hidden text-lg font-bold text-primary">Masas Estación</span>
+                {/* Mostrar nombre del tenant actual */}
+                <span className="md:hidden text-lg font-bold text-primary">
+                    {config?.branding.nombre_comercial || config?.tenant.nombre || 'Backoffice'}
+                </span>
             </div>
 
             {/* Right: User Info & Logout */}

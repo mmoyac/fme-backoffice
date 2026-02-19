@@ -83,12 +83,6 @@ export default function PedidosPage() {
             POS Tablet
           </Link>
           <Link 
-            href="/admin/pedidos/nuevo"
-            className="bg-primary hover:bg-teal-600 text-white px-6 py-2 rounded-lg transition-colors font-semibold"
-          >
-            + Nuevo Pedido
-          </Link>
-          <Link 
             href="/admin/pedidos/cajas"
             className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg transition-colors font-semibold flex items-center"
           >
@@ -187,6 +181,9 @@ export default function PedidosPage() {
                     Medio de Pago
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 uppercase">
+                    Creado Por
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 uppercase">
                     Total
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 uppercase">
@@ -270,6 +267,22 @@ export default function PedidosPage() {
                         <div className="text-sm text-gray-400">
                           {pedido.medio_pago_codigo}
                         </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-4">
+                      {pedido.usuario_nombre || pedido.usuario_email ? (
+                        <div>
+                          <div className="text-white font-medium">
+                            {pedido.usuario_nombre || 'Usuario'}
+                          </div>
+                          {pedido.usuario_email && (
+                            <div className="text-sm text-gray-400">
+                              {pedido.usuario_email}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-gray-500 italic text-sm">Sin registro</span>
                       )}
                     </td>
                     <td className="px-4 py-4 text-white font-semibold">

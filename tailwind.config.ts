@@ -11,8 +11,14 @@ const config: Config = {
     extend: {
       colors: {
         primary: {
-          DEFAULT: 'rgb(94, 200, 242)',
-          dark: 'rgb(69, 162, 154)',
+          DEFAULT: 'var(--color-primario, rgb(94, 200, 242))',
+          dark: 'var(--color-primario-dark, rgb(69, 162, 154))',
+        },
+        secondary: {
+          DEFAULT: 'var(--color-secundario, rgb(69, 162, 154))',
+        },
+        accent: {
+          DEFAULT: 'var(--color-acento, rgb(218, 165, 32))',
         },
       },
     },

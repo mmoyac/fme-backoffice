@@ -6,7 +6,13 @@ import { Package, User, Calendar, AlertCircle, CheckCircle } from 'lucide-react'
 
 interface Pedido {
   id: number;
+  numero_pedido?: string;
   cliente_nombre: string;
+  cliente?: {
+    direccion?: string;
+    comuna?: string;
+    telefono?: string;
+  };
   monto_total: number;
   fecha_pedido: string;
   notas: string;
@@ -231,12 +237,23 @@ export default function AsignarDespacho() {
                         <div className="flex items-center space-x-2">
                           <Package className="h-4 w-4 text-gray-400" />
                           <span className="font-medium text-gray-900 dark:text-white">
-                            Pedido #{pedido.id}
+                            #{pedido.numero_pedido}
                           </span>
                         </div>
                         <p className="text-sm text-gray-600 dark:text-gray-400">
                           Cliente: {pedido.cliente_nombre}
                         </p>
+                        {pedido.cliente?.direccion && (
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            📍 {pedido.cliente.direccion}
+                            {pedido.cliente.comuna && `, ${pedido.cliente.comuna}`}
+                          </p>
+                        )}
+                        {pedido.cliente?.telefono && (
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            📞 {pedido.cliente.telefono}
+                          </p>
+                        )}
                         <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
                           <div className="flex items-center space-x-1">
                             <Calendar className="h-3 w-3" />

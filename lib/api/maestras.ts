@@ -28,6 +28,34 @@ export interface TipoProducto {
     descripcion: string | null;
     activo: boolean;
 }
+
+// ============================================
+// UNIDADES DE MEDIDA
+// ============================================
+
+export async function getUnidadesMedida(activo: boolean = true): Promise<UnidadMedida[]> {
+    const params = new URLSearchParams();
+    if (activo !== undefined) {
+        params.append('activo', activo.toString());
+    }
+    
+    const response = await fetch(`${API_URL}/api/maestras/unidades?${params}`, {
+        headers: AuthService.getAuthHeaders(),
+    });
+    
+    if (!response.ok) throw new Error('Error al obtener unidades de medida');
+    return response.json();
+}
+
+export async function getUnidadMedida(id: number): Promise<UnidadMedida> {
+    const response = await fetch(`${API_URL}/api/maestras/unidades/${id}`, {
+        headers: AuthService.getAuthHeaders(),
+    });
+    
+    if (!response.ok) throw new Error('Error al obtener unidad de medida');
+    return response.json();
+}
+
 // ============================================
 // TIPOS DE DOCUMENTO
 // ============================================

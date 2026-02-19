@@ -73,7 +73,7 @@ export default function PreciosProveedorPage() {
 
       const [preciosRes, productosRes, proveedoresRes] = await Promise.all([
         fetch(`${API_URL}/api/precios-proveedor/`, { headers }),
-        fetch(`${API_URL}/api/productos/`, { headers }),
+        fetch(`${API_URL}/api/maestras/productos-carnes`, { headers }),
         fetch(`${API_URL}/api/enrolamiento/proveedores-carne`, { headers })
       ]);
 

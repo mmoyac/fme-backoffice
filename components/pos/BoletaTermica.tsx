@@ -29,6 +29,9 @@ interface DatosBoleta {
   medio_pago: string;
   vendedor?: string;
   puntos_ganados?: number; // Nuevos puntos ganados
+  // Información del tenant
+  tenant_nombre?: string;
+  tenant_sitio?: string;
 }
 
 interface BoletaTermicaProps {
@@ -319,8 +322,10 @@ export function BoletaTermica({ datos, onImprimir, visible }: BoletaTermicaProps
         {/* Footer */}
         <div className="text-center" style={{ fontSize: '9px', marginTop: '3mm' }}>
           <div style={{ fontWeight: 'bold' }}>¡GRACIAS POR SU COMPRA!</div>
-          <div style={{ marginTop: '1mm' }}>Masas Estación</div>
-          <div style={{ marginTop: '1mm', fontSize: '8px' }}>www.masasestacion.cl</div>
+          <div style={{ marginTop: '1mm' }}>{datos.tenant_nombre || 'Tienda'}</div>
+          {datos.tenant_sitio && (
+            <div style={{ marginTop: '1mm', fontSize: '8px' }}>{datos.tenant_sitio}</div>
+          )}
         </div>
         
         {/* Espaciado final para corte */}

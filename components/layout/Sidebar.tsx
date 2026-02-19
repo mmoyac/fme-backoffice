@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/AuthProvider';
+import { useTenant } from '@/lib/TenantContext';
 import { useState, useEffect } from 'react';
 import { AuthService } from '@/lib/auth';
 
@@ -20,6 +21,7 @@ interface SidebarProps {
 export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
+  const { config } = useTenant();
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -31,11 +33,13 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
         // Usar fetch directo o un helper si existe. 
         // Usaremos el NEXT_PUBLIC_API_URL del environment
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+        const currentHostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
 
         const res = await fetch(`${apiUrl}/api/auth/menu`, {
           headers: {
             'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'X-Forwarded-Host': currentHostname
           }
         });
 
@@ -64,8 +68,10 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
       <div className="p-4 flex flex-col h-full">
         <div className="mb-8 flex justify-between items-start">
           <div>
-            <h1 className="text-2xl font-bold text-primary">Masas Estación</h1>
-            <p className="text-sm text-gray-400">Backoffice</p>
+            <h1 className="text-2xl font-bold text-primary">
+              {config?.branding.nombre_comercial || config?.tenant.nombre || 'Backoffice'}
+            </h1>
+            <p className="text-sm text-gray-400">Panel de Administración</p>
           </div>
           <button
             onClick={onClose}

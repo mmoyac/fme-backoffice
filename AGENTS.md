@@ -33,13 +33,14 @@ La comunicación entre contenedores utiliza el **nombre del servicio Docker** (`
 
 Todas las operaciones CRUD deben estar centralizadas en el directorio **`services/`** o **`lib/api/`**.
 
-| Funcionalidad | Método | Endpoint (Backend) | Propósito en Backoffice |
+| **Funcionalidad** | **Método** | **Endpoint (Backend)** | **Propósito en Backoffice** |
 | :--- | :--- | :--- | :--- |
 | **Listar Productos** | `GET` | `/api/productos/` | Vista de tabla con todos los productos. |
 | **Crear Producto** | `POST` | `/api/productos/` | Formulario de alta de producto. |
 | **Editar Producto** | `PUT` | `/api/productos/{id}` | Formulario de edición. |
 | **Eliminar Producto** | `DELETE` | `/api/productos/{id}` | Borrado lógico o físico. |
 | **Upload Imagen** | `POST` | `/api/productos/{id}/imagen` | Subir imagen de producto. |
+| **Upload Logo/Favicon** | `POST` | `/api/admin/configuracion-landing/upload-imagen` | Subir logo o favicon de la landing. |
 | **Listar Locales** | `GET` | `/api/locales/` | Gestión de sucursales. |
 | **Crear Local** | `POST` | `/api/locales/` | Alta de nueva sucursal. |
 | **Editar Local** | `PUT` | `/api/locales/{id}` | Actualización de datos. |
@@ -380,19 +381,27 @@ npx jest --init
 
 ---
 
-**Última Actualización:** 2026-01-07  
+**Última Actualización:** 2026-02-17  
 **Cambios Recientes:**
-- ✅ **Sistema Completo de Despachos implementado** (NUEVO)
-- ✅ **Frontend completo con 6 páginas:** Principal, Lista, Asignar, Picking, Dashboard, Detalle
-- ✅ **Estados de flujo:** ASIGNADO → EN_PICKING → LISTO_EMPAQUE → EN_RUTA → ENTREGADO
-- ✅ **Interface de Asignación:** Selección de pedidos y despachadores
-- ✅ **Centro de Picking:** Proceso de recolección con cantidades en tiempo real
-- ✅ **Dashboard de Métricas:** Estadísticas completas de despachos
-- ✅ **Vista de Detalle:** Timeline completo con edición de estado
-- ✅ **Integración con Backend:** Todos los endpoints funcionando
-- ✅ **Responsive Design:** Mobile-first con Tailwind CSS
-- ✅ **Autenticación JWT:** Protección en todas las páginas
-- ✅ **Manejo de Estados:** Loading, error, success en todas las operaciones
+- ✅ **Sistema de Upload de Imágenes implementado** (NUEVO)
+- ✅ **Endpoint `/api/admin/configuracion-landing/upload-imagen`** para logo y favicon
+- ✅ **Componente ImageUpload** con preview en tiempo real
+- ✅ **Validaciones de formato y tamaño:** JPG, PNG, WEBP, SVG, ICO (máx. 2MB)
+- ✅ **Nombres únicos con tenant_id** para evitar conflictos
+- ✅ **Almacenamiento en `/static/uploads/landing/`** con acceso público
+- ✅ **Integración completa** en página de configuración de landing
+- ✅ **Documentación completa** en UPLOAD_IMAGES.md
+- ✅ Sistema Completo de Despachos implementado
+- ✅ Frontend completo con 6 páginas: Principal, Lista, Asignar, Picking, Dashboard, Detalle
+- ✅ Estados de flujo: ASIGNADO → EN_PICKING → LISTO_EMPAQUE → EN_RUTA → ENTREGADO
+- ✅ Interface de Asignación: Selección de pedidos y despachadores
+- ✅ Centro de Picking: Proceso de recolección con cantidades en tiempo real
+- ✅ Dashboard de Métricas: Estadísticas completas de despachos
+- ✅ Vista de Detalle: Timeline completo con edición de estado
+- ✅ Integración con Backend: Todos los endpoints funcionando
+- ✅ Responsive Design: Mobile-first con Tailwind CSS
+- ✅ Autenticación JWT: Protección en todas las páginas
+- ✅ Manejo de Estados: Loading, error, success en todas las operaciones
 - ✅ Sistema completo de Cajas Variables implementado
 - ✅ Modal de Confirmación de Lotes Específicos en pedidos tipo 2
 - ✅ Visualización detallada de lotes: código, peso, precio/kg, vencimiento
@@ -415,3 +424,4 @@ npx jest --init
 
 **Docker Hub:** `https://hub.docker.com/r/mmoyac/masas-estacion-backoffice`  
 **Estado MVP:** ✅ **Desplegado y operativo en producción**
+

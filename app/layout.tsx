@@ -2,12 +2,13 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/lib/AuthProvider'
+import { TenantProvider } from '@/lib/TenantContext'
 
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Masas Estación - Backoffice',
-  description: 'Panel de administración para Masas Estación',
+  title: 'Backoffice - Multi-tenant',
+  description: 'Panel de administración multi-tenant',
 }
 
 export default function RootLayout({
@@ -18,9 +19,11 @@ export default function RootLayout({
   return (
     <html lang="es" className="dark">
       <body className={inter.className}>
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+        <TenantProvider>
+          <AuthProvider>
+            {children}
+          </AuthProvider>
+        </TenantProvider>
       </body>
     </html>
   )

@@ -1,7 +1,8 @@
 // Componentes de las etapas del POS
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { PlusIcon, MinusIcon, XMarkIcon, ShoppingCartIcon } from '@heroicons/react/24/outline';
+import { getPrecioProductoLocal } from '@/lib/api/precios';
 
 // ============= ETAPA 1: SELECCIÓN DE PRODUCTOS =============
 
@@ -16,6 +17,8 @@ interface EtapaProductosProps {
   onSiguiente: () => void;
   localId: number | null;
   loadingProductos?: boolean;
+  cajaAbierta?: boolean;
+  unidadesMedida?: any[];
 }
 
 export function EtapaProductos({
@@ -28,10 +31,86 @@ export function EtapaProductos({
   carrito,
   onSiguiente,
   localId,
-  loadingProductos = false
+  loadingProductos = false,
+  cajaAbierta = true,
+  unidadesMedida = []
 }: EtapaProductosProps) {
   const [filtroCategoria, setFiltroCategoria] = useState<string>('');
   const [busqueda, setBusqueda] = useState<string>('');
+  const [preciosProducto, setPreciosProducto] = useState<any[]>([]);
+  const [loadingPrecios, setLoadingPrecios] = useState(false);
+  
+  // Cargar precios cuando se selecciona un producto
+  useEffect(() => {
+    if (productoSeleccionado && localId) {
+      cargarPreciosProducto();
+    } else {
+      setPreciosProducto([]);
+    }
+  }, [productoSeleccionado?.id, localId]);
+  
+  const cargarPreciosProducto = async () => {
+    if (!productoSeleccionado || !localId) return;
+    
+    setLoadingPrecios(true);
+    try {
+      const precios = await getPrecioProductoLocal(productoSeleccionado.id, localId);
+      setPreciosProducto(precios || []);
+    } catch (error) {
+      console.error('Error cargando precios:', error);
+      setPreciosProducto([]);
+    } finally {
+      setLoadingPrecios(false);
+    }
+  };
+  
+  // Obtener nombre de unidad
+  const getNombreUnidad = (unidadId: number) => {
+    const unidad = unidadesMedida.find(u => u.id === unidadId);
+    return unidad?.nombre || 'Unidad';
+  };
+  
+  // Obtener factor de unidad
+  const getFactorUnidad = (unidadId: number) => {
+    const unidad = unidadesMedida.find(u => u.id === unidadId);
+    return unidad?.factor_conversion || 1;
+  };
+  
+  // Calcular precio y subtotal según cantidad
+  const calcularPrecioYSubtotal = (cantidad: number) => {
+    if (!preciosProducto || preciosProducto.length === 0 || cantidad <= 0) {
+      return { precioUnitario: productoSeleccionado?.precio_local || 0, subtotal: 0, nombreUnidad: 'unidad', factor: 1 };
+    }
+
+    // Ordenar precios por factor (mayor a menor)
+    const preciosOrdenados = [...preciosProducto].sort((a, b) => {
+      const factorA = getFactorUnidad(a.unidad_medida_id);
+      const factorB = getFactorUnidad(b.unidad_medida_id);
+      return factorB - factorA;
+    });
+
+    // Buscar el mejor precio para esta cantidad
+    for (const precio of preciosOrdenados) {
+      const factor = getFactorUnidad(precio.unidad_medida_id);
+      if (cantidad >= factor) {
+        const nombreUnidad = getNombreUnidad(precio.unidad_medida_id);
+        // El monto_precio es el precio UNITARIO para este tier
+        const precioUnitario = precio.monto_precio;
+        const subtotal = Math.round(cantidad * precioUnitario);
+        return { precioUnitario, factor, subtotal, nombreUnidad };
+      }
+    }
+
+    // Si no aplica ningún precio por volumen, usar el unitario
+    const precioUnitario = preciosOrdenados[preciosOrdenados.length - 1];
+    const factor = getFactorUnidad(precioUnitario.unidad_medida_id);
+    return {
+      precioUnitario: precioUnitario.monto_precio,
+      factor,
+      subtotal: Math.round(cantidad * precioUnitario.monto_precio),
+      nombreUnidad: getNombreUnidad(precioUnitario.unidad_medida_id)
+    };
+  };
   
   // Obtener categorías únicas
   const categorias = Array.from(new Set(productos.map(p => p.categoria_nombre).filter(Boolean)));
@@ -124,7 +203,7 @@ export function EtapaProductos({
                 <div className="aspect-square bg-slate-700 rounded-lg mb-2 flex items-center justify-center">
                   {producto.imagen_url ? (
                     <Image
-                      src={`${process.env.NEXT_PUBLIC_API_URL}${producto.imagen_url}`}
+                      src={`${process.env.NEXT_PUBLIC_API_URL}${producto.imagen_url}?t=${Date.now()}`}
                       alt={producto.nombre}
                       width={80}
                       height={80}
@@ -210,6 +289,58 @@ export function EtapaProductos({
                 </p>
               </div>
               
+              {/* Rangos de precios por cantidad (si aplica) */}
+              {productoSeleccionado.tipo_venta_codigo !== 'PESO_SUELTO' && preciosProducto.length > 0 && (
+                <div className="bg-blue-900/20 border border-blue-700/30 rounded-lg p-3">
+                  <h5 className="text-sm font-semibold text-blue-400 mb-2">💰 Precios por volumen</h5>
+                  {loadingPrecios ? (
+                    <p className="text-xs text-slate-400">Cargando precios...</p>
+                  ) : (
+                    <>
+                      <div className="space-y-2 text-xs">
+                        {preciosProducto
+                          .sort((a, b) => getFactorUnidad(a.unidad_medida_id) - getFactorUnidad(b.unidad_medida_id))
+                          .map((precio, index, array) => {
+                            const factor = Math.round(getFactorUnidad(precio.unidad_medida_id));
+                            const nombreUnidad = getNombreUnidad(precio.unidad_medida_id);
+                            const precioUnitario = precio.monto_precio; // Ahora es precio por unidad
+                            
+                            // Determinar el rango
+                            let rangoTexto = '';
+                            if (factor === 1) {
+                              // Primera opción: desde 1 hasta antes del siguiente factor
+                              const nextFactor = index < array.length - 1 
+                                ? Math.round(getFactorUnidad(array[index + 1].unidad_medida_id))
+                                : null;
+                              const hasta = nextFactor ? nextFactor - 1 : 5;
+                              rangoTexto = `1-${hasta} unidades:`;
+                            } else {
+                              // Otras opciones: desde el factor en adelante
+                              rangoTexto = `${factor}+ unidades (${nombreUnidad}):`;
+                            }
+                            
+                            return (
+                              <div key={precio.id} className="flex justify-between items-center">
+                                <span className="text-slate-300">{rangoTexto}</span>
+                                <span className={`font-bold ${
+                                  factor === 1 ? 'text-white' : 
+                                  factor === 6 ? 'text-emerald-400' : 
+                                  'text-amber-400'
+                                }`}>
+                                  ${Math.round(precioUnitario).toLocaleString()} c/u
+                                </span>
+                              </div>
+                            );
+                          })}
+                      </div>
+                      <p className="text-xs text-blue-300 mt-2 italic">
+                        💡 El precio se ajusta automáticamente según la cantidad
+                      </p>
+                    </>
+                  )}
+                </div>
+              )}
+              
               {/* Input de cantidad/peso */}
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
@@ -245,17 +376,28 @@ export function EtapaProductos({
                 </div>
                 
                 {/* Subtotal */}
-                {cantidadInput && parseFloat(cantidadInput) > 0 && productoSeleccionado.precio_local > 0 && (
-                  <div className="mt-3 p-3 bg-teal-900/20 border border-teal-500/30 rounded-lg">
-                    <p className="text-sm text-slate-400">Subtotal:</p>
-                    <p className="text-xl font-bold text-teal-400">
-                      ${((parseFloat(cantidadInput) || 0) * (productoSeleccionado.precio_local || 0)).toLocaleString()}
-                    </p>
-                    <p className="text-xs text-slate-400">
-                      {parseFloat(cantidadInput)} {productoSeleccionado.tipo_venta_codigo === 'PESO_SUELTO' ? 'kg' : 'unid'} × ${productoSeleccionado.precio_local?.toLocaleString()}
-                    </p>
-                  </div>
-                )}
+                {cantidadInput && parseFloat(cantidadInput) > 0 && (() => {
+                  const cantidad = parseFloat(cantidadInput);
+                  const { subtotal, precioUnitario, factor, nombreUnidad } = calcularPrecioYSubtotal(cantidad);
+                  
+                  if (subtotal === 0) return null;
+                  
+                  return (
+                    <div className="mt-3 p-3 bg-teal-900/20 border border-teal-500/30 rounded-lg">
+                      <p className="text-sm text-slate-400">Subtotal:</p>
+                      <p className="text-xl font-bold text-teal-400">
+                        ${subtotal.toLocaleString()}
+                      </p>
+                      <p className="text-xs text-slate-400">
+                        {factor > 1 ? (
+                          `${cantidad} unid × $${precioUnitario.toLocaleString()} (precio ${nombreUnidad})`
+                        ) : (
+                          `${cantidad} unid × $${precioUnitario.toLocaleString()}`
+                        )}
+                      </p>
+                    </div>
+                  );
+                })()}
                 
                 {cantidadInput && parseFloat(cantidadInput) > 0 && (!productoSeleccionado.precio_local || productoSeleccionado.precio_local === 0) && (
                   <div className="mt-3 p-3 bg-red-900/20 border border-red-500/30 rounded-lg">
@@ -267,12 +409,19 @@ export function EtapaProductos({
               {/* Botón agregar al carrito */}
               <button
                 onClick={agregarAlCarrito}
-                disabled={!cantidadInput || parseFloat(cantidadInput) <= 0}
-                className="w-full bg-teal-600 hover:bg-teal-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2"
+                disabled={!cajaAbierta || !cantidadInput || parseFloat(cantidadInput) <= 0}
+                className="w-full bg-teal-600 hover:bg-teal-700 disabled:bg-slate-600 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2"
+                title={!cajaAbierta ? 'Caja no abierta - No se pueden crear pedidos' : ''}
               >
                 <PlusIcon className="w-5 h-5" />
-                <span>Agregar al Carrito</span>
+                <span>{!cajaAbierta ? '🔒 Caja Cerrada' : 'Agregar al Carrito'}</span>
               </button>
+              
+              {!cajaAbierta && (
+                <p className="text-xs text-red-400 text-center mt-2">
+                  ⚠️ Debes abrir un turno de caja antes de agregar productos
+                </p>
+              )}
             </div>
           </div>
         )}

@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getProveedores, createProveedor, updateProveedor, Proveedor, ProveedorCreate } from '@/lib/api/compras';
+import { getProveedores, createProveedor, updateProveedor, Proveedor, ProveedorCreate, getTiposProveedor, TipoProveedor } from '@/lib/api/compras';
 
 export default function ProveedoresPage() {
     const [proveedores, setProveedores] = useState<Proveedor[]>([]);
+    const [tiposProveedor, setTiposProveedor] = useState<TipoProveedor[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -18,6 +19,7 @@ export default function ProveedoresPage() {
         email: '',
         telefono: '',
         direccion: '',
+        tipo_proveedor_id: null,
         activo: true
     });
 
@@ -28,8 +30,12 @@ export default function ProveedoresPage() {
     async function loadData() {
         try {
             setLoading(true);
-            const data = await getProveedores();
-            setProveedores(data);
+            const [proveedoresData, tiposData] = await Promise.all([
+                getProveedores(),
+                getTiposProveedor()
+            ]);
+            setProveedores(proveedoresData);
+            setTiposProveedor(tiposData);
             setError(null);
         } catch (err: any) {
             setError(err.message);
@@ -47,6 +53,7 @@ export default function ProveedoresPage() {
             email: '',
             telefono: '',
             direccion: '',
+            tipo_proveedor_id: null,
             activo: true
         });
         setModalOpen(true);
@@ -61,6 +68,7 @@ export default function ProveedoresPage() {
             email: proveedor.email || '',
             telefono: proveedor.telefono || '',
             direccion: proveedor.direccion || '',
+            tipo_proveedor_id: proveedor.tipo_proveedor_id || null,
             activo: proveedor.activo
         });
         setModalOpen(true);
@@ -181,6 +189,21 @@ export default function ProveedoresPage() {
                                     value={formData.rut}
                                     onChange={(e) => setFormData({ ...formData, rut: e.target.value })}
                                 />
+                            </div>
+                            <div>
+                                <label className="block text-sm text-gray-300 mb-1">Tipo de Proveedor</label>
+                                <select
+                                    className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white"
+                                    value={formData.tipo_proveedor_id || ''}
+                                    onChange={(e) => setFormData({ ...formData, tipo_proveedor_id: e.target.value ? parseInt(e.target.value) : null })}
+                                >
+                                    <option value="">Seleccionar tipo</option>
+                                    {tiposProveedor.map((tipo) => (
+                                        <option key={tipo.id} value={tipo.id}>
+                                            {tipo.nombre}
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
                             <div>
                                 <label className="block text-sm text-gray-300 mb-1">Contacto</label>

@@ -121,6 +121,20 @@ export default function NuevaOrdenPage() {
         <div className="max-w-4xl mx-auto">
             <h1 className="text-3xl font-bold text-white mb-6">Nueva Orden de Producción</h1>
 
+            {/* Mensaje informativo */}
+            <div className="bg-blue-900/20 border border-blue-500/50 rounded-lg p-4 mb-6">
+                <div className="flex items-start gap-3">
+                    <span className="text-xl">ℹ️</span>
+                    <div>
+                        <p className="text-blue-200 font-medium text-sm">Información importante</p>
+                        <p className="text-blue-300/80 text-sm mt-1">
+                            Solo aparecen productos que tienen <strong>receta configurada</strong>. Si no ves productos en la lista, 
+                            verifica que tengan la opción "Tiene Receta" activada en el catálogo y al menos una receta creada.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
             <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Header Info */}
                 <div className="bg-slate-800 p-6 rounded-lg grid grid-cols-1 md:grid-cols-2 gap-6">
