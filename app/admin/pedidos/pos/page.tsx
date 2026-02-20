@@ -266,7 +266,7 @@ export default function POSPedidoPage() {
       const productosLocal = await getProductosConDatosLocal(localIdParam);
       
       // Solo mostrar productos con stock en este local
-      setProductos(productosLocal.filter(p => p.stock_local > 0));
+      setProductos(productosLocal.filter((p: any) => p.stock_local > 0));
     } catch (error) {
       console.error('❌ Error cargando productos del local:', error);
     } finally {
