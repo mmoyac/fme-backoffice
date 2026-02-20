@@ -32,66 +32,32 @@ async function getCatalogoProductos() {
 
 // Función para obtener productos con datos específicos del local
 async function getProductosConDatosLocal(localId: number) {
-  // Primero, cargar las unidades de medida
-  const unidadesMedida = await getUnidadesMedida();
-  
-  // Obtener productos base
-  const productos = await getProductos();
-  
-  // Para cada producto, obtener precio e inventario del local específico
-  const productosConDatos = await Promise.all(
-    productos.map(async (producto) => {
-      try {
-        // Obtener precios del local (ahora devuelve array)
-        const precios = await getPrecioProductoLocal(producto.id, localId);
-        
-        // Buscar el precio con el factor de conversión más bajo (unidad base)
-        let precioBase = null;
-        if (Array.isArray(precios) && precios.length > 0) {
-          // Ordenar por factor de conversión (menor a mayor)
-          const preciosOrdenados = [...precios].sort((a: any, b: any) => {
-            const unidadA = unidadesMedida.find((u: any) => u.id === a.unidad_medida_id);
-            const unidadB = unidadesMedida.find((u: any) => u.id === b.unidad_medida_id);
-            const factorA = unidadA?.factor_conversion || 1;
-            const factorB = unidadB?.factor_conversion || 1;
-            return factorA - factorB; // Menor factor primero (unitario < media docena < docena)
-          });
-          // Tomar el primer precio (menor factor = unidad base)
-          precioBase = preciosOrdenados[0];
-        }
-        
-        // Obtener stock del local específico
-        const responseStock = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/inventario/producto/${producto.id}/local/${localId}`,
-          { headers: AuthService.getAuthHeaders() }
-        );
-        
-        let stockLocal = 0;
-        if (responseStock.ok) {
-          const inventario = await responseStock.json();
-          stockLocal = inventario.cantidad_stock || 0;
-        }
-        
-        return {
-          ...producto,
-          precio_local: precioBase?.monto_precio || 0,
-          stock_local: stockLocal,
-          // Mantener compatibilidad con código existente
-          stock_total: stockLocal
-        };
-      } catch (error) {
-        console.warn(`Error obteniendo datos para producto ${producto.id}:`, error);
-        return {
-          ...producto,
-          precio_local: 0,
-          stock_local: 0,
-          stock_total: 0
-        };
-      }
-    })
+  // ✅ OPTIMIZADO: Un solo endpoint que devuelve TODO en una query SQL
+  const response = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/api/productos/catalogo-local/${localId}`,
+    { headers: AuthService.getAuthHeaders() }
   );
   
-  return productosConDatos;
+  if (!response.ok) {
+    throw new Error('Error al obtener catálogo del local');
+  }
+  
+  const productos = await response.json();
+  
+  // Mapear al formato esperado por el componente
+  return productos.map((p: any) => ({
+    ...p,
+    precio_local: p.precio_local || 0,
+    stock_total: p.stock_local || 0,
+    // Compatibilidad con código existente
+    tipo_producto: { id: p.tipo_producto_id },
+    unidad_medida: { id: p.unidad_medida_id },
+    categoria: {
+      id: p.categoria_id,
+      nombre: p.categoria_nombre,
+      puntos_fidelidad: p.categoria_puntos_fidelidad || 0
+    }
+  }));
 }
 
 // Importar componentes de las etapas
