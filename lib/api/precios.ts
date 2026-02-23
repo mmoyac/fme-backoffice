@@ -24,7 +24,7 @@ export interface PrecioUpdate {
 }
 
 export async function getPrecios(): Promise<Precio[]> {
-  const response = await fetch(`${API_URL}/api/precios/`, {
+  const response = await fetch(`${API_URL}/api/precios/?limit=1000`, {
     headers: AuthService.getAuthHeaders(),
   });
   if (!response.ok) throw new Error('Error al obtener precios');
