@@ -8,6 +8,8 @@ import { getUnidadesMedida, type UnidadMedida } from '@/lib/api/maestras';
 
 export default function PreciosPage() {
   const [productos, setProductos] = useState<Producto[]>([]);
+  // Productos ordenados alfabéticamente por nombre
+  const productosOrdenados = [...productos].sort((a, b) => a.nombre.localeCompare(b.nombre));
   const [locales, setLocales] = useState<Local[]>([]);
   const [unidades, setUnidades] = useState<UnidadMedida[]>([]);
   const [precios, setPrecios] = useState<Precio[]>([]);
@@ -164,7 +166,7 @@ export default function PreciosPage() {
 
       {/* Lista de productos con sus precios */}
       <div className="space-y-6">
-        {productos.map(producto => {
+        {productosOrdenados.map(producto => {
           const preciosProducto = getPreciosPorProducto(producto.id);
           
           return (
