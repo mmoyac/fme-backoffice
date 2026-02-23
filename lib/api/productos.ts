@@ -53,7 +53,7 @@ export interface ProductoCreate {
 export type ProductoUpdate = Partial<ProductoCreate>;
 
 export async function getProductos(): Promise<Producto[]> {
-  const response = await fetch(`${API_URL}/api/productos/`, {
+  const response = await fetch(`${API_URL}/api/productos/?limit=1000`, {
     headers: AuthService.getAuthHeaders(),
   });
   if (!response.ok) throw new Error('Error al cargar productos');
