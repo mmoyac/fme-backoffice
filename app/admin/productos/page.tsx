@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { getProductos, deleteProducto, type Producto } from '@/lib/api/productos';
+import { type Inventario } from '@/lib/api/inventario';
+import { type Local } from '@/lib/api/locales';
 import Link from 'next/link';
 
 export default function ProductosPage() {
@@ -45,7 +47,7 @@ export default function ProductosPage() {
 
     try {
       await deleteProducto(id);
-      await loadProductos();
+      await loadData();
     } catch (err) {
       alert('Error al eliminar producto');
       console.error(err);
