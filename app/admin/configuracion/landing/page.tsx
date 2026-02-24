@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   obtenerConfiguracion,
   actualizarConfiguracion,
@@ -11,38 +11,60 @@ import {
   type Beneficio,
   type RedesSociales
 } from '@/lib/api/configuracion-landing';
+import { getPaletasColores, type PaletaColor } from '@/lib/api/paletas_colores_fetch';
+
 import { useTenant } from '@/lib/TenantContext';
 import { PencilIcon, PlusIcon, TrashIcon, SwatchIcon } from '@heroicons/react/24/outline';
 import ImageUpload from '@/components/ImageUpload';
 
 export default function ConfiguracionLandingPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { config: tenantConfig } = useTenant();
-  
+  // Leer tenant_id de la URL si está presente
+  const tenantIdParam = searchParams.get('tenant_id');
+  const tenantId = tenantIdParam ? parseInt(tenantIdParam, 10) : tenantConfig?.tenant?.id;
+
   const [configuracion, setConfiguracion] = useState<ConfiguracionLanding | null>(null);
   const [loading, setLoading] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string>('');
   const [mensaje, setMensaje] = useState<string>('');
   
+  // Paletas de colores
+  const [paletas, setPaletas] = useState<PaletaColor[]>([]);
+  const [paletaSeleccionada, setPaletaSeleccionada] = useState<number | null>(null);
+
   // Estados del formulario
   const [formData, setFormData] = useState<ConfiguracionLandingUpdate>({});
 
   useEffect(() => {
     cargarConfiguracion();
-  }, [tenantConfig]);
+    cargarPaletas();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tenantId]);
+
+  const cargarPaletas = async () => {
+    try {
+      const data = await getPaletasColores();
+      setPaletas(data);
+    } catch (err) {
+      console.error('Error cargando paletas:', err);
+    }
+  };
 
   const cargarConfiguracion = async () => {
-    if (!tenantConfig?.tenant?.id) return;
-    
+    if (!tenantId) return;
     try {
       setLoading(true);
-      const data = await obtenerConfiguracion(tenantConfig.tenant.id);
+      const data = await obtenerConfiguracion(tenantId);
       setConfiguracion(data);
+      setPaletaSeleccionada(data.paleta_id || null);
       setFormData({
         logo_url: data.logo_url,
         favicon_url: data.favicon_url,
         nombre_comercial: data.nombre_comercial,
+        paleta_id: data.paleta_id,
         colores: data.colores,
         hero_titulo: data.hero_titulo,
         hero_subtitulo: data.hero_subtitulo,
@@ -73,16 +95,13 @@ export default function ConfiguracionLandingPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!tenantConfig?.tenant?.id) return;
-    
+    if (!tenantId) return;
     setGuardando(true);
     setError('');
     setMensaje('');
-    
     try {
-      await actualizarConfiguracion(tenantConfig.tenant.id, formData);
+      await actualizarConfiguracion(tenantId, formData);
       setMensaje('✅ Configuración actualizada exitosamente. Recarga la página para ver los cambios.');
-      
       // Recargar configuración
       await cargarConfiguracion();
     } catch (err) {
@@ -91,6 +110,47 @@ export default function ConfiguracionLandingPage() {
     } finally {
       setGuardando(false);
     }
+  };
+
+  const aplicarPaleta = (paletaId: number | null) => {
+    setPaletaSeleccionada(paletaId);
+    if (paletaId) {
+      // Solo guardamos el paleta_id, NO copiamos los colores
+      // Los colores se obtienen del backend mediante JOIN
+      setFormData(prev => ({
+        ...prev,
+        paleta_id: paletaId
+      }));
+    } else {
+      setFormData(prev => ({ ...prev, paleta_id: null }));
+    }
+  };
+
+  const desasociarPaleta = () => {
+    setPaletaSeleccionada(null);
+    setFormData(prev => ({ ...prev, paleta_id: null }));
+  };
+
+  // Obtener colores para vista previa (de paleta o custom)
+  const getColoresActuales = () => {
+    if (paletaSeleccionada) {
+      const paleta = paletas.find(p => p.id === paletaSeleccionada);
+      if (paleta) {
+        return {
+          primario: paleta.primario,
+          primario_light: paleta.primario_light || '',
+          primario_dark: paleta.primario_dark || '',
+          secundario: paleta.secundario,
+          secundario_light: paleta.secundario_light || '',
+          secundario_dark: paleta.secundario_dark || '',
+          acento: paleta.acento || '',
+          fondo_hero_inicio: paleta.fondo_hero_inicio || '',
+          fondo_hero_fin: paleta.fondo_hero_fin || '',
+          fondo_seccion: paleta.fondo_seccion || ''
+        };
+      }
+    }
+    return formData.colores || {};
   };
 
   const handleColorChange = (key: string, value: string) => {
@@ -220,6 +280,52 @@ export default function ConfiguracionLandingPage() {
             Paleta de Colores
           </h2>
           
+          {/* Selector de Paleta */}
+          <div className="mb-6 p-4 bg-slate-700 rounded-lg">
+            <label className="block text-sm font-medium text-slate-300 mb-3">
+              🎨 Seleccionar Paleta Predefinida (opcional)
+            </label>
+            <div className="flex gap-3">
+              <select
+                value={paletaSeleccionada || ''}
+                onChange={(e) => aplicarPaleta(e.target.value ? parseInt(e.target.value) : null)}
+                className="flex-1 p-3 bg-slate-600 border border-slate-500 rounded-lg text-white"
+                disabled={!!paletaSeleccionada}
+              >
+                <option value="">Sin paleta (colores personalizados)</option>
+                {paletas.map(paleta => (
+                  <option key={paleta.id} value={paleta.id}>
+                    {paleta.nombre} {paleta.descripcion ? `- ${paleta.descripcion}` : ''}
+                  </option>
+                ))}
+              </select>
+              {paletaSeleccionada && (
+                <button
+                  type="button"
+                  onClick={desasociarPaleta}
+                  className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors"
+                >
+                  🎨 Personalizar
+                </button>
+              )}
+            </div>
+            {paletaSeleccionada && (
+              <div className="mt-3 p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg">
+                <p className="text-sm text-blue-300">
+                  ℹ️ <strong>Usando paleta "{paletas.find(p => p.id === paletaSeleccionada)?.nombre}"</strong>
+                </p>
+                <p className="text-xs text-blue-400 mt-1">
+                  Los colores se toman automáticamente de la paleta. Para personalizar, haz clic en "Personalizar".
+                </p>
+              </div>
+            )}
+            {!paletaSeleccionada && (
+              <p className="text-xs text-slate-400 mt-2">
+                💡 Sin paleta seleccionada. Puedes editar los colores manualmente abajo.
+              </p>
+            )}
+          </div>
+          
           {/* Vista previa de colores principales */}
           <div className="mb-6 p-4 bg-slate-900 rounded-lg">
             <p className="text-sm text-slate-400 mb-3">Vista Previa:</p>
@@ -227,21 +333,21 @@ export default function ConfiguracionLandingPage() {
               <div className="text-center">
                 <div 
                   className="w-20 h-20 rounded-lg shadow-lg mb-2" 
-                  style={{ backgroundColor: formData.colores?.primario || '#5EC8F2' }}
+                  style={{ backgroundColor: getColoresActuales().primario || '#5EC8F2' }}
                 ></div>
                 <p className="text-xs text-slate-400">Primario</p>
               </div>
               <div className="text-center">
                 <div 
                   className="w-20 h-20 rounded-lg shadow-lg mb-2" 
-                  style={{ backgroundColor: formData.colores?.secundario || '#45A29A' }}
+                  style={{ backgroundColor: getColoresActuales().secundario || '#45A29A' }}
                 ></div>
                 <p className="text-xs text-slate-400">Secundario</p>
               </div>
               <div className="text-center">
                 <div 
                   className="w-20 h-20 rounded-lg shadow-lg mb-2" 
-                  style={{ backgroundColor: formData.colores?.acento || '#90DCFF' }}
+                  style={{ backgroundColor: getColoresActuales().acento || '#90DCFF' }}
                 ></div>
                 <p className="text-xs text-slate-400">Acento</p>
               </div>
@@ -251,34 +357,48 @@ export default function ConfiguracionLandingPage() {
           {/* Colores principales */}
           <div className="mb-6">
             <h3 className="text-lg font-semibold text-white mb-3">🎨 Colores Principales</h3>
+            {paletaSeleccionada && (
+              <div className="mb-3 p-2 bg-yellow-900/20 border border-yellow-600/30 rounded text-xs text-yellow-400">
+                ⚠️ Campos deshabilitados porque estás usando una paleta. Haz clic en "Personalizar" para editar.
+              </div>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {['primario', 'secundario', 'acento'].map((key) => (
-                <div key={key} className="bg-slate-700 p-4 rounded-lg">
-                  <label className="block text-sm font-medium text-slate-300 mb-2 capitalize">
-                    {key === 'primario' ? '🔵 Color Primario' : 
-                     key === 'secundario' ? '🟢 Color Secundario' : 
-                     '⭐ Color de Acento'}
-                  </label>
-                  <div className="flex items-center space-x-3">
-                    <input
-                      type="color"
-                      value={formData.colores?.[key] || '#5EC8F2'}
-                      onChange={(e) => handleColorChange(key, e.target.value)}
-                      className="w-16 h-16 rounded-lg cursor-pointer border-2 border-slate-600"
-                    />
-                    <div className="flex-1">
+              {['primario', 'secundario', 'acento'].map((key) => {
+                const coloresActuales = getColoresActuales();
+                const isDisabled = !!paletaSeleccionada;
+                return (
+                  <div key={key} className={`bg-slate-700 p-4 rounded-lg ${isDisabled ? 'opacity-60' : ''}`}>
+                    <label className="block text-sm font-medium text-slate-300 mb-2 capitalize">
+                      {key === 'primario' ? '🔵 Color Primario' : 
+                       key === 'secundario' ? '🟢 Color Secundario' : 
+                       '⭐ Color de Acento'}
+                      {isDisabled && ' (de paleta)'}
+                    </label>
+                    <div className="flex items-center space-x-3">
                       <input
-                        type="text"
-                        value={formData.colores?.[key] || ''}
+                        type="color"
+                        value={coloresActuales[key] || '#5EC8F2'}
                         onChange={(e) => handleColorChange(key, e.target.value)}
-                        className="w-full p-2 bg-slate-600 border border-slate-500 rounded text-white text-sm font-mono"
-                        placeholder="#RRGGBB"
+                        className="w-16 h-16 rounded-lg cursor-pointer border-2 border-slate-600"
+                        disabled={isDisabled}
                       />
-                      <p className="text-xs text-slate-400 mt-1">Haz clic en el cuadro para elegir</p>
+                      <div className="flex-1">
+                        <input
+                          type="text"
+                          value={coloresActuales[key] || ''}
+                          onChange={(e) => handleColorChange(key, e.target.value)}
+                          className="w-full p-2 bg-slate-600 border border-slate-500 rounded text-white text-sm font-mono"
+                          placeholder="#RRGGBB"
+                          disabled={isDisabled}
+                        />
+                        <p className="text-xs text-slate-400 mt-1">
+                          {isDisabled ? 'Valor de la paleta' : 'Haz clic en el cuadro para elegir'}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -287,31 +407,42 @@ export default function ConfiguracionLandingPage() {
             <summary className="text-white font-medium cursor-pointer">
               ⚙️ Colores Avanzados (opcional)
             </summary>
+            {paletaSeleccionada && (
+              <div className="mt-3 mb-3 p-2 bg-yellow-900/20 border border-yellow-600/30 rounded text-xs text-yellow-400">
+                ⚠️ Campos deshabilitados porque estás usando una paleta. Haz clic en "Personalizar" para editar.
+              </div>
+            )}
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
-              {Object.entries(formData.colores || {})
+              {Object.entries(getColoresActuales())
                 .filter(([key]) => !['primario', 'secundario', 'acento'].includes(key))
-                .map(([key, value]) => (
-                <div key={key} className="bg-slate-600 p-3 rounded">
-                  <label className="block text-xs font-medium text-slate-300 mb-2 capitalize">
-                    {key.replace(/_/g, ' ')}
-                  </label>
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="color"
-                      value={value}
-                      onChange={(e) => handleColorChange(key, e.target.value)}
-                      className="w-10 h-10 rounded cursor-pointer"
-                    />
-                    <input
-                      type="text"
-                      value={value}
-                      onChange={(e) => handleColorChange(key, e.target.value)}
-                      className="flex-1 p-2 bg-slate-700 border border-slate-500 rounded text-white text-xs font-mono"
-                      placeholder="#RRGGBB"
-                    />
-                  </div>
-                </div>
-              ))}
+                .map(([key, value]) => {
+                  const isDisabled = !!paletaSeleccionada;
+                  return (
+                    <div key={key} className={`bg-slate-600 p-3 rounded ${isDisabled ? 'opacity-60' : ''}`}>
+                      <label className="block text-xs font-medium text-slate-300 mb-2 capitalize">
+                        {key.replace(/_/g, ' ')}
+                        {isDisabled && ' (de paleta)'}
+                      </label>
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="color"
+                          value={value}
+                          onChange={(e) => handleColorChange(key, e.target.value)}
+                          className="w-10 h-10 rounded cursor-pointer"
+                          disabled={isDisabled}
+                        />
+                        <input
+                          type="text"
+                          value={value}
+                          onChange={(e) => handleColorChange(key, e.target.value)}
+                          className="flex-1 p-2 bg-slate-700 border border-slate-500 rounded text-white text-xs font-mono"
+                          placeholder="#RRGGBB"
+                          disabled={isDisabled}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
             </div>
           </details>
         </div>

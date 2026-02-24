@@ -45,6 +45,7 @@ export interface ConfiguracionLanding {
     
     // Colores
     colores: Record<string, string>;
+    paleta_id?: number | null;
     
     // Hero Section
     hero_titulo?: string;

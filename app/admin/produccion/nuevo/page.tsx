@@ -8,6 +8,7 @@ import { getProductos, Producto } from '@/lib/api/productos';
 import { getLocales, Local } from '@/lib/api/locales';
 import { createOrden, DetalleOrdenCreate } from '@/lib/api/produccion';
 import { getInventarios, Inventario } from '@/lib/api/inventario';
+import { chequearInsumos, ChequeoInsumosResult } from '@/lib/api/chequearInsumos';
 
 interface Row {
     id: number; // Temporary ID for UI key
@@ -27,6 +28,8 @@ export default function NuevaOrdenPage() {
     const [fecha, setFecha] = useState<string>(new Date().toISOString().split('T')[0]);
     const [notas, setNotas] = useState('');
     const [rows, setRows] = useState<Row[]>([{ id: Date.now(), producto_id: '', cantidad: '' }]);
+    // Insumos check state per row
+    const [insumosChecks, setInsumosChecks] = useState<Record<number, ChequeoInsumosResult | null>>({});
 
     useEffect(() => {
         loadCatalogs();
@@ -51,7 +54,8 @@ export default function NuevaOrdenPage() {
             ]);
             // Filter products that have recipes
             setProductos(prodsData.filter(p => p.tiene_receta));
-            setLocales(localesData);
+            // Filtrar locales: excluir tienda WEB (codigo === 'WEB')
+            setLocales(localesData.filter(l => l.codigo !== 'WEB'));
             if (localesData.length > 0) setLocalId(localesData[0].id.toString());
             setInventarios(invData);
         } catch (err) {
@@ -79,6 +83,21 @@ export default function NuevaOrdenPage() {
         setRows(rows.map(row =>
             row.id === id ? { ...row, [field]: value } : row
         ));
+            // Trigger insumos check if producto_id and cantidad are set
+            const updatedRow = rows.find(row => row.id === id);
+            const prodId = field === 'producto_id' ? value : updatedRow?.producto_id;
+            const cantidad = field === 'cantidad' ? value : updatedRow?.cantidad;
+            if (prodId && cantidad && localId) {
+                chequearInsumos(Number(prodId), Number(cantidad), Number(localId))
+                    .then(res => {
+                        setInsumosChecks(prev => ({ ...prev, [id]: res }));
+                    })
+                    .catch(() => {
+                        setInsumosChecks(prev => ({ ...prev, [id]: null }));
+                    });
+            } else {
+                setInsumosChecks(prev => ({ ...prev, [id]: null }));
+            }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -179,6 +198,7 @@ export default function NuevaOrdenPage() {
                     <div className="space-y-4">
                         {rows.map((row, index) => {
                             const stockActual = getStock(row.producto_id);
+                                const insumosCheck = insumosChecks[row.id];
                             return (
                                 <div key={row.id} className="flex gap-4 items-end">
                                     <div className="flex-1">
@@ -199,6 +219,17 @@ export default function NuevaOrdenPage() {
                                                 Stock actual: {stockActual} un
                                             </p>
                                         )}
+                                            {/* Insumos faltantes */}
+                                            {insumosCheck && !insumosCheck.ok && insumosCheck.errores.length > 0 && (
+                                                <div className="mt-2 text-xs text-red-400">
+                                                    <strong>Faltan insumos:</strong>
+                                                    <ul className="list-disc ml-4">
+                                                        {insumosCheck.errores.map((err, idx) => (
+                                                            <li key={idx}>{err}</li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            )}
                                     </div>
                                     <div className="w-32">
                                         <label className="block text-xs text-gray-400 mb-1">Cantidad</label>
@@ -242,7 +273,10 @@ export default function NuevaOrdenPage() {
                     </Link>
                     <button
                         type="submit"
-                        disabled={loading}
+                        disabled={loading || rows.some(row => {
+                            const check = insumosChecks[row.id];
+                            return check && !check.ok && check.errores.length > 0;
+                        })}
                         className="px-6 py-2 rounded-lg bg-primary hover:bg-primary-dark text-slate-900 font-bold disabled:opacity-50"
                     >
                         {loading ? 'Guardando...' : 'Crear Orden'}

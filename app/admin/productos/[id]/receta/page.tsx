@@ -101,9 +101,11 @@ export default function RecetaPage({ params }: { params: { id: string } }) {
     }
 
     function selectProducto(producto: Producto) {
+        // Heredar unidad de medida del producto seleccionado
         setNuevoIngrediente({
             ...nuevoIngrediente,
             producto_ingrediente_id: producto.id,
+            unidad_medida_id: producto.unidad_medida_id,
         });
         setSearchTerm(producto.nombre);
         setShowDropdown(false);
@@ -429,15 +431,12 @@ export default function RecetaPage({ params }: { params: { id: string } }) {
                                     </div>
                                     <div>
                                         <label className="block text-xs font-medium text-gray-400 mb-1">Unidad</label>
-                                        <select
-                                            value={nuevoIngrediente.unidad_medida_id}
-                                            onChange={(e) => setNuevoIngrediente({ ...nuevoIngrediente, unidad_medida_id: Number(e.target.value) })}
-                                            className="w-full bg-slate-600 text-white px-3 py-2 rounded-lg text-sm"
-                                        >
-                                            {unidades.map(u => (
-                                                <option key={u.id} value={u.id}>{u.simbolo}</option>
-                                            ))}
-                                        </select>
+                                        <input
+                                            type="text"
+                                            value={getUnidadSimbolo(nuevoIngrediente.unidad_medida_id)}
+                                            disabled
+                                            className="w-full bg-slate-600 text-white px-3 py-2 rounded-lg text-sm opacity-70 cursor-not-allowed"
+                                        />
                                     </div>
                                     <div className="flex items-end">
                                         <button

@@ -12,6 +12,9 @@ import TiposPedidoList from "./components/TiposPedidoList";
 
 export default function MantenedoresPage() {
     const [activeTab, setActiveTab] = useState("categorias");
+    // Importar el componente de paletas
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const PaletasColoresList = require("./components/PaletasColoresList").default;
 
     return (
         <div>
@@ -25,6 +28,15 @@ export default function MantenedoresPage() {
             {/* Tabs Navigation */}
             <div className="border-b border-slate-700 mb-6">
                 <nav className="flex space-x-8">
+                                        <button
+                                            onClick={() => setActiveTab("paletas_colores")}
+                                            className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === "paletas_colores"
+                                                ? "border-primary text-primary"
+                                                : "border-transparent text-gray-400 hover:text-gray-300 hover:border-slate-600"
+                                                }`}
+                                        >
+                                            🎨 Paleta de Colores
+                                        </button>
                     <button
                         onClick={() => setActiveTab("categorias")}
                         className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === "categorias"
@@ -129,6 +141,7 @@ export default function MantenedoresPage() {
 
             {/* Tab Content */}
             <div className="bg-slate-800 rounded-lg p-6">
+                                {activeTab === "paletas_colores" && <PaletasColoresList />}
                 {activeTab === "categorias" && (
                     <div>
                         <h2 className="text-xl font-semibold text-white mb-2">Categorías de Producto</h2>

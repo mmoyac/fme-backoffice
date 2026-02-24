@@ -139,6 +139,7 @@ export default function ProductosPage() {
                 <th className="px-6 py-3 text-center text-sm font-semibold text-gray-300">Stock Mínimo</th>
                 <th className="px-6 py-3 text-center text-sm font-semibold text-gray-300">Stock Crítico</th>
                 <th className="px-6 py-3 text-center text-sm font-semibold text-gray-300">Stock Actual</th>
+                <th className="px-6 py-3 text-center text-sm font-semibold text-gray-300">Unidad</th>
                 <th className="px-6 py-3 text-right text-sm font-semibold text-gray-300">Acciones</th>
               </tr>
             </thead>
@@ -152,6 +153,9 @@ export default function ProductosPage() {
                   <td className="px-6 py-4 text-sm text-center text-red-400 font-semibold">{producto.stock_critico ?? 0}</td>
                   <td className="px-6 py-4 text-sm text-center font-bold text-white">
                     {getStockActual(producto.id)}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-center text-gray-400 font-normal">
+                    {producto.unidad_medida_simbolo || ''}
                   </td>
                   <td className="px-6 py-4 text-sm text-right space-x-2">
                     <Link
