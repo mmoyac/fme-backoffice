@@ -77,10 +77,17 @@ export default function PaletasColoresList() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     try {
+      // Validar y forzar que los campos requeridos sean string
+      const safeFormData = {
+        ...formData,
+        nombre: formData.nombre ?? "",
+        primario: formData.primario ?? "",
+        secundario: formData.secundario ?? "",
+      };
       if (editingId) {
-        await updatePaletaColor(editingId, formData);
+        await updatePaletaColor(editingId, safeFormData);
       } else {
-        await createPaletaColor(formData);
+        await createPaletaColor(safeFormData);
       }
       await fetchPaletas();
       setModalOpen(false);

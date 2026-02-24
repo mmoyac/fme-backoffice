@@ -85,6 +85,7 @@ export interface ConfiguracionLandingCreate {
     favicon_url?: string;
     nombre_comercial?: string;
     colores?: Record<string, string>;
+    paleta_id?: number | null;
     hero_titulo?: string;
     hero_subtitulo?: string;
     hero_imagen_url?: string;
@@ -105,7 +106,9 @@ export interface ConfiguracionLandingCreate {
     habilitar_carrito?: boolean;
 }
 
-export interface ConfiguracionLandingUpdate extends Partial<Omit<ConfiguracionLandingCreate, 'tenant_id'>> {}
+export interface ConfiguracionLandingUpdate extends Partial<Omit<ConfiguracionLandingCreate, 'tenant_id'>> {
+    paleta_id?: number | null;
+}
 
 export async function listarConfiguraciones(): Promise<ConfiguracionLanding[]> {
     const response = await fetch(`${API_URL}/api/admin/configuracion-landing/`, {

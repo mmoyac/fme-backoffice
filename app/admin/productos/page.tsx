@@ -155,7 +155,7 @@ export default function ProductosPage() {
                     {getStockActual(producto.id)}
                   </td>
                   <td className="px-6 py-4 text-sm text-center text-gray-400 font-normal">
-                    {producto.unidad_medida_simbolo || ''}
+                    {'-'}
                   </td>
                   <td className="px-6 py-4 text-sm text-right space-x-2">
                     <Link
