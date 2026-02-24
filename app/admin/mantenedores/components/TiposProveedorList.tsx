@@ -12,8 +12,10 @@ export default function TiposProveedorList() {
     const [modalOpen, setModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
     const [formData, setFormData] = useState<TipoProveedorCreate>({
+        codigo: '',
         nombre: '',
-        descripcion: ''
+        descripcion: '',
+        activo: true
     });
 
     useEffect(() => {
@@ -36,8 +38,10 @@ export default function TiposProveedorList() {
     function openCreateModal() {
         setEditingId(null);
         setFormData({
+            codigo: '',
             nombre: '',
-            descripcion: ''
+            descripcion: '',
+            activo: true
         });
         setModalOpen(true);
     }
@@ -45,8 +49,10 @@ export default function TiposProveedorList() {
     function openEditModal(tipo: TipoProveedor) {
         setEditingId(tipo.id);
         setFormData({
+            codigo: tipo.codigo,
             nombre: tipo.nombre,
-            descripcion: tipo.descripcion || ''
+            descripcion: tipo.descripcion || '',
+            activo: tipo.activo
         });
         setModalOpen(true);
     }
@@ -161,7 +167,20 @@ export default function TiposProveedorList() {
                             </h3>
                         </div>
 
+
                         <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-2">
+                                    Código *
+                                </label>
+                                <input
+                                    type="text"
+                                    value={formData.codigo}
+                                    onChange={(e) => setFormData({ ...formData, codigo: e.target.value })}
+                                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent"
+                                    required
+                                />
+                            </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-300 mb-2">
                                     Nombre *
@@ -174,7 +193,6 @@ export default function TiposProveedorList() {
                                     required
                                 />
                             </div>
-
                             <div>
                                 <label className="block text-sm font-medium text-gray-300 mb-2">
                                     Descripción

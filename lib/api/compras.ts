@@ -15,8 +15,10 @@ export interface TipoProveedor {
 }
 
 export interface TipoProveedorCreate {
+    codigo: string;
     nombre: string;
     descripcion?: string;
+    activo?: boolean;
 }
 
 export async function getTiposProveedor(): Promise<TipoProveedor[]> {
