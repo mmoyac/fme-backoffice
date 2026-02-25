@@ -1,18 +1,18 @@
 import { useEffect, useState } from "react";
 import {
-  getEstadosEnrolamiento,
-  createEstadoEnrolamiento,
-  updateEstadoEnrolamiento,
-  deleteEstadoEnrolamiento,
-  type EstadoEnrolamiento
+  getUbicaciones,
+  createUbicacion,
+  updateUbicacion,
+  deleteUbicacion,
+  type Ubicacion
 } from "@/lib/api/recepcion";
 
-export default function EstadosEnrolamientoList() {
-  const [estados, setEstados] = useState<EstadoEnrolamiento[]>([]);
+export default function UbicacionesList() {
+  const [ubicaciones, setUbicaciones] = useState<Ubicacion[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [formData, setFormData] = useState<Partial<EstadoEnrolamiento>>({
+  const [formData, setFormData] = useState<Partial<Ubicacion>>({
     codigo: "",
     nombre: "",
     descripcion: "",
@@ -20,15 +20,15 @@ export default function EstadosEnrolamientoList() {
   });
 
   useEffect(() => {
-    fetchEstados();
+    fetchUbicaciones();
   }, []);
 
-  const fetchEstados = async () => {
+  const fetchUbicaciones = async () => {
     try {
-      const data = await getEstadosEnrolamiento();
-      setEstados(data);
+      const data = await getUbicaciones();
+      setUbicaciones(data);
     } catch (error) {
-      console.error("Error cargando estados de enrolamiento:", error);
+      console.error("Error cargando ubicaciones:", error);
     } finally {
       setLoading(false);
     }
@@ -40,13 +40,13 @@ export default function EstadosEnrolamientoList() {
     setModalOpen(true);
   }
 
-  function openEditModal(estado: EstadoEnrolamiento) {
-    setEditingId(estado.id);
+  function openEditModal(ubicacion: Ubicacion) {
+    setEditingId(ubicacion.id);
     setFormData({
-      codigo: estado.codigo,
-      nombre: estado.nombre,
-      descripcion: estado.descripcion || "",
-      activo: estado.activo
+      codigo: ubicacion.codigo,
+      nombre: ubicacion.nombre,
+      descripcion: ubicacion.descripcion || "",
+      activo: ubicacion.activo
     });
     setModalOpen(true);
   }
@@ -55,26 +55,26 @@ export default function EstadosEnrolamientoList() {
     e.preventDefault();
     try {
       if (editingId) {
-        await updateEstadoEnrolamiento(editingId, formData);
+        await updateUbicacion(editingId, formData);
       } else {
-        await createEstadoEnrolamiento(formData);
+        await createUbicacion(formData);
       }
-      await fetchEstados();
+      await fetchUbicaciones();
       setModalOpen(false);
     } catch (err: any) {
-      alert(err.message || "Error al guardar estado de enrolamiento");
+      alert(err.message || "Error al guardar ubicación");
     }
   }
 
   async function handleDelete(id: number, nombre: string) {
-    if (!confirm(`¿Está seguro de eliminar el estado "${nombre}"?`)) {
+    if (!confirm(`¿Está seguro de eliminar la ubicación "${nombre}"?`)) {
       return;
     }
     try {
-      await deleteEstadoEnrolamiento(id);
-      await fetchEstados();
+      await deleteUbicacion(id);
+      await fetchUbicaciones();
     } catch (err: any) {
-      alert(err.message || "Error al eliminar estado de enrolamiento");
+      alert(err.message || "Error al eliminar ubicación");
     }
   }
 
@@ -89,13 +89,13 @@ export default function EstadosEnrolamientoList() {
           onClick={openCreateModal}
           className="bg-primary hover:bg-primary-dark text-slate-900 px-4 py-2 rounded-lg font-semibold transition-colors"
         >
-          + Nuevo Estado de Enrolamiento
+          + Nueva Ubicación
         </button>
       </div>
 
-      {estados.length === 0 ? (
+      {ubicaciones.length === 0 ? (
         <div className="text-center py-8 text-gray-400">
-          No hay estados de enrolamiento registrados
+          No hay ubicaciones registradas
         </div>
       ) : (
         <div className="overflow-x-auto bg-slate-700 rounded-lg">
@@ -110,25 +110,25 @@ export default function EstadosEnrolamientoList() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-600">
-              {estados.map((estado) => (
-                <tr key={estado.id} className="hover:bg-slate-600/50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-300">{estado.codigo}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">{estado.nombre}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{estado.descripcion || "-"}</td>
+              {ubicaciones.map((ubicacion) => (
+                <tr key={ubicacion.id} className="hover:bg-slate-600/50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-300">{ubicacion.codigo}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">{ubicacion.nombre}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{ubicacion.descripcion || "-"}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-center">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${estado.activo ? "bg-green-900 text-green-300" : "bg-gray-700 text-gray-400"}`}>
-                      {estado.activo ? "Activo" : "Inactivo"}
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${ubicacion.activo ? "bg-green-900 text-green-300" : "bg-gray-700 text-gray-400"}`}>
+                      {ubicacion.activo ? "Activo" : "Inactivo"}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm space-x-2">
                     <button
-                      onClick={() => openEditModal(estado)}
+                      onClick={() => openEditModal(ubicacion)}
                       className="text-primary hover:text-primary-dark font-medium"
                     >
                       Editar
                     </button>
                     <button
-                      onClick={() => handleDelete(estado.id, estado.nombre)}
+                      onClick={() => handleDelete(ubicacion.id, ubicacion.nombre)}
                       className="text-red-400 hover:text-red-300 font-medium"
                     >
                       Eliminar
@@ -146,7 +146,7 @@ export default function EstadosEnrolamientoList() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-slate-800 rounded-lg p-6 max-w-lg w-full shadow-xl border border-slate-700">
             <h2 className="text-xl font-bold text-white mb-4">
-              {editingId ? "Editar Estado de Enrolamiento" : "Nuevo Estado de Enrolamiento"}
+              {editingId ? "Editar Ubicación" : "Nueva Ubicación"}
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
@@ -181,12 +181,12 @@ export default function EstadosEnrolamientoList() {
               <div className="flex items-center gap-2">
                 <input
                   type="checkbox"
-                  id="activo-estado-enrolamiento"
+                  id="activo-ubicacion"
                   className="w-4 h-4 text-primary bg-slate-700 border-slate-600 rounded focus:ring-primary focus:ring-2"
                   checked={formData.activo}
                   onChange={(e) => setFormData({ ...formData, activo: e.target.checked })}
                 />
-                <label htmlFor="activo-estado-enrolamiento" className="text-sm font-medium text-gray-300 cursor-pointer">Activo</label>
+                <label htmlFor="activo-ubicacion" className="text-sm font-medium text-gray-300 cursor-pointer">Activo</label>
               </div>
               <div className="flex justify-end gap-3 mt-6">
                 <button

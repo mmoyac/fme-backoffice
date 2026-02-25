@@ -11,6 +11,7 @@ import TiposDocumentoList from "./components/TiposDocumentoList";
 import TiposPedidoList from "./components/TiposPedidoList";
 import TiposVehiculoList from "./components/TiposVehiculoList";
 import EstadosEnrolamientoList from "./components/EstadosEnrolamientoList";
+import UbicacionesList from "./components/UbicacionesList";
 
 export default function MantenedoresPage() {
     const [activeTab, setActiveTab] = useState("categorias");
@@ -27,6 +28,15 @@ export default function MantenedoresPage() {
             {/* Tabs Navigation */}
             <div className="border-b border-slate-700 mb-6">
                 <nav className="flex space-x-8">
+                    <button
+                        onClick={() => setActiveTab("ubicaciones")}
+                        className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === "ubicaciones"
+                            ? "border-primary text-primary"
+                            : "border-transparent text-gray-400 hover:text-gray-300 hover:border-slate-600"
+                            }`}
+                    >
+                        🗄️ Ubicaciones
+                    </button>
                     <button
                         onClick={() => setActiveTab("estados_enrolamiento")}
                         className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === "estados_enrolamiento"
@@ -158,6 +168,15 @@ export default function MantenedoresPage() {
 
             {/* Tab Content */}
             <div className="bg-slate-800 rounded-lg p-6">
+                {activeTab === "ubicaciones" && (
+                    <div>
+                        <h2 className="text-xl font-semibold text-white mb-2">Ubicaciones en Almacén</h2>
+                        <p className="text-gray-400 mb-4">
+                            Gestiona las ubicaciones físicas del almacén para asignación de lotes y stock.
+                        </p>
+                        <UbicacionesList />
+                    </div>
+                )}
                 {activeTab === "estados_enrolamiento" && (
                     <div>
                         <h2 className="text-xl font-semibold text-white mb-2">Estados de Enrolamiento</h2>

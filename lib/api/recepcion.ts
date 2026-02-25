@@ -1,3 +1,32 @@
+// CRUD Ubicaciones
+export const createUbicacion = async (data: Partial<Ubicacion>): Promise<Ubicacion> => {
+  return apiRequest('/api/maestras/ubicaciones', {
+    method: 'POST',
+    body: JSON.stringify(data),
+    headers: {
+      'Content-Type': 'application/json',
+      ...AuthService.getAuthHeaders(),
+    },
+  });
+};
+
+export const updateUbicacion = async (id: number, data: Partial<Ubicacion>): Promise<Ubicacion> => {
+  return apiRequest(`/api/maestras/ubicaciones/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+    headers: {
+      'Content-Type': 'application/json',
+      ...AuthService.getAuthHeaders(),
+    },
+  });
+};
+
+export const deleteUbicacion = async (id: number): Promise<void> => {
+  return apiRequest(`/api/maestras/ubicaciones/${id}`, {
+    method: 'DELETE',
+    headers: AuthService.getAuthHeaders(),
+  });
+};
 // CRUD Estados de Enrolamiento
 export const createEstadoEnrolamiento = async (data: Partial<EstadoEnrolamiento>): Promise<EstadoEnrolamiento> => {
   return apiRequest('/api/maestras/estados-enrolamiento', {
