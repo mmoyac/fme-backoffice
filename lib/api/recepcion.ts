@@ -1,3 +1,32 @@
+// CRUD Estados de Enrolamiento
+export const createEstadoEnrolamiento = async (data: Partial<EstadoEnrolamiento>): Promise<EstadoEnrolamiento> => {
+  return apiRequest('/api/maestras/estados-enrolamiento', {
+    method: 'POST',
+    body: JSON.stringify(data),
+    headers: {
+      'Content-Type': 'application/json',
+      ...AuthService.getAuthHeaders(),
+    },
+  });
+};
+
+export const updateEstadoEnrolamiento = async (id: number, data: Partial<EstadoEnrolamiento>): Promise<EstadoEnrolamiento> => {
+  return apiRequest(`/api/maestras/estados-enrolamiento/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+    headers: {
+      'Content-Type': 'application/json',
+      ...AuthService.getAuthHeaders(),
+    },
+  });
+};
+
+export const deleteEstadoEnrolamiento = async (id: number): Promise<void> => {
+  return apiRequest(`/api/maestras/estados-enrolamiento/${id}`, {
+    method: 'DELETE',
+    headers: AuthService.getAuthHeaders(),
+  });
+};
 // CRUD Tipos de Vehículo
 export const createTipoVehiculo = async (data: Partial<TipoVehiculo>): Promise<TipoVehiculo> => {
   return apiRequest('/api/maestras/tipos-vehiculo', {

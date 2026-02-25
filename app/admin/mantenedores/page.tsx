@@ -10,6 +10,7 @@ import LocalesList from "./components/LocalesList";
 import TiposDocumentoList from "./components/TiposDocumentoList";
 import TiposPedidoList from "./components/TiposPedidoList";
 import TiposVehiculoList from "./components/TiposVehiculoList";
+import EstadosEnrolamientoList from "./components/EstadosEnrolamientoList";
 
 export default function MantenedoresPage() {
     const [activeTab, setActiveTab] = useState("categorias");
@@ -26,6 +27,15 @@ export default function MantenedoresPage() {
             {/* Tabs Navigation */}
             <div className="border-b border-slate-700 mb-6">
                 <nav className="flex space-x-8">
+                    <button
+                        onClick={() => setActiveTab("estados_enrolamiento")}
+                        className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === "estados_enrolamiento"
+                            ? "border-primary text-primary"
+                            : "border-transparent text-gray-400 hover:text-gray-300 hover:border-slate-600"
+                            }`}
+                    >
+                        🟢 Estados de Enrolamiento
+                    </button>
                     <button
                         onClick={() => setActiveTab("tipos_vehiculo")}
                         className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === "tipos_vehiculo"
@@ -148,6 +158,15 @@ export default function MantenedoresPage() {
 
             {/* Tab Content */}
             <div className="bg-slate-800 rounded-lg p-6">
+                {activeTab === "estados_enrolamiento" && (
+                    <div>
+                        <h2 className="text-xl font-semibold text-white mb-2">Estados de Enrolamiento</h2>
+                        <p className="text-gray-400 mb-4">
+                            Gestiona los estados posibles de un enrolamiento (ej: Pendiente, En Proceso, Finalizado, etc.)
+                        </p>
+                        <EstadosEnrolamientoList />
+                    </div>
+                )}
                 {activeTab === "tipos_vehiculo" && (
                     <div>
                         <h2 className="text-xl font-semibold text-white mb-2">Tipos de Vehículo</h2>
