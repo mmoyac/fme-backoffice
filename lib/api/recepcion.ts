@@ -1,3 +1,32 @@
+// CRUD Tipos de Vehículo
+export const createTipoVehiculo = async (data: Partial<TipoVehiculo>): Promise<TipoVehiculo> => {
+  return apiRequest('/api/maestras/tipos-vehiculo', {
+    method: 'POST',
+    body: JSON.stringify(data),
+    headers: {
+      'Content-Type': 'application/json',
+      ...AuthService.getAuthHeaders(),
+    },
+  });
+};
+
+export const updateTipoVehiculo = async (id: number, data: Partial<TipoVehiculo>): Promise<TipoVehiculo> => {
+  return apiRequest(`/api/maestras/tipos-vehiculo/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+    headers: {
+      'Content-Type': 'application/json',
+      ...AuthService.getAuthHeaders(),
+    },
+  });
+};
+
+export const deleteTipoVehiculo = async (id: number): Promise<void> => {
+  return apiRequest(`/api/maestras/tipos-vehiculo/${id}`, {
+    method: 'DELETE',
+    headers: AuthService.getAuthHeaders(),
+  });
+};
 /**
  * API functions para el módulo de Recepción de Mercancías (Sistema WMS)
  */

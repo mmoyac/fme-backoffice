@@ -9,12 +9,10 @@ import TiposProveedorList from "./components/TiposProveedorList";
 import LocalesList from "./components/LocalesList";
 import TiposDocumentoList from "./components/TiposDocumentoList";
 import TiposPedidoList from "./components/TiposPedidoList";
+import TiposVehiculoList from "./components/TiposVehiculoList";
 
 export default function MantenedoresPage() {
     const [activeTab, setActiveTab] = useState("categorias");
-    // Importar el componente de paletas
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const PaletasColoresList = require("./components/PaletasColoresList").default;
 
     return (
         <div>
@@ -28,15 +26,24 @@ export default function MantenedoresPage() {
             {/* Tabs Navigation */}
             <div className="border-b border-slate-700 mb-6">
                 <nav className="flex space-x-8">
-                                        <button
-                                            onClick={() => setActiveTab("paletas_colores")}
-                                            className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === "paletas_colores"
-                                                ? "border-primary text-primary"
-                                                : "border-transparent text-gray-400 hover:text-gray-300 hover:border-slate-600"
-                                                }`}
-                                        >
-                                            🎨 Paleta de Colores
-                                        </button>
+                    <button
+                        onClick={() => setActiveTab("tipos_vehiculo")}
+                        className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === "tipos_vehiculo"
+                            ? "border-primary text-primary"
+                            : "border-transparent text-gray-400 hover:text-gray-300 hover:border-slate-600"
+                            }`}
+                    >
+                        🚚 Tipos de Vehículo
+                    </button>
+                    <button
+                        onClick={() => setActiveTab("paletas_colores")}
+                        className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === "paletas_colores"
+                            ? "border-primary text-primary"
+                            : "border-transparent text-gray-400 hover:text-gray-300 hover:border-slate-600"
+                            }`}
+                    >
+                        🎨 Paleta de Colores
+                    </button>
                     <button
                         onClick={() => setActiveTab("categorias")}
                         className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === "categorias"
@@ -141,7 +148,23 @@ export default function MantenedoresPage() {
 
             {/* Tab Content */}
             <div className="bg-slate-800 rounded-lg p-6">
-                                {activeTab === "paletas_colores" && <PaletasColoresList />}
+                {activeTab === "tipos_vehiculo" && (
+                    <div>
+                        <h2 className="text-xl font-semibold text-white mb-2">Tipos de Vehículo</h2>
+                        <p className="text-gray-400 mb-4">
+                            Gestiona los tipos de vehículo utilizados en enrolamientos y logística.
+                        </p>
+                        <TiposVehiculoList />
+                    </div>
+                )}
+
+                {activeTab === "paletas_colores" && (() => {
+                    // Dynamic require to avoid build error
+                    // eslint-disable-next-line @typescript-eslint/no-var-requires
+                    const PaletasColoresList = require("./components/PaletasColoresList").default;
+                    return <PaletasColoresList />;
+                })()}
+
                 {activeTab === "categorias" && (
                     <div>
                         <h2 className="text-xl font-semibold text-white mb-2">Categorías de Producto</h2>
