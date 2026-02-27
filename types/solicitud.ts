@@ -12,6 +12,7 @@ export interface SolicitudTransferencia {
   local_origen_id: number;
   local_destino_id: number;
   usuario_solicitante_id: number;
+  usuario_finalizador_id?: number;
   estado_id: number;
   nota?: string;
   fecha_creacion: string;
@@ -30,6 +31,7 @@ export interface SolicitudTransferenciaCreate {
   local_origen_id: number;
   local_destino_id: number;
   usuario_solicitante_id: number;
+  usuario_finalizador_id?: number;
   estado_id: number;
   nota?: string;
   items: ItemSolicitudTransferenciaCreate[];
@@ -38,5 +40,6 @@ export interface SolicitudTransferenciaCreate {
 export interface SolicitudTransferenciaUpdate {
   estado_id?: number;
   nota?: string;
+  usuario_finalizador_id?: number;
   items?: ItemSolicitudTransferenciaCreate[];
 }

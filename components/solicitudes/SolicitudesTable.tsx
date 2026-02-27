@@ -11,6 +11,9 @@ import {
 import { SolicitudTransferencia, SolicitudTransferenciaCreate, SolicitudTransferenciaUpdate } from "@/types/solicitud";
 
 import SolicitudForm from "./SolicitudForm";
+import SolicitudDetalleModal from "./SolicitudDetalleModal";
+import { generarPDFSolicitudHTML } from "./generarPDFSolicitudHTML";
+import { useAuth } from "@/lib/AuthProvider";
 import { useLocalesMap } from "./useLocalesMap";
 import { useEstadosEnrolamientoMap } from "./useEstadosEnrolamientoMap";
 import { useProductosMap } from "./useProductosMap";
@@ -20,10 +23,12 @@ export default function SolicitudesTable() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<SolicitudTransferencia | null>(null);
+  const [detalleOpen, setDetalleOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const localesMap = useLocalesMap();
   const estadosMap = useEstadosEnrolamientoMap();
   const productosMap = useProductosMap();
+  const { user } = useAuth();
 
   useEffect(() => {
     fetchSolicitudes();
@@ -54,6 +59,10 @@ export default function SolicitudesTable() {
   const handleEdit = (solicitud: SolicitudTransferencia) => {
     setEditing(solicitud);
     setModalOpen(true);
+  };
+  const handleDetalle = (solicitud: SolicitudTransferencia) => {
+    setEditing(solicitud);
+    setDetalleOpen(true);
   };
 
   const handleUpdate = async (id: number, data: SolicitudTransferenciaUpdate) => {
@@ -131,12 +140,44 @@ export default function SolicitudesTable() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{new Date(s.fecha_creacion).toLocaleString()}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm space-x-2">
-                    <button
-                      onClick={() => handleEdit(s)}
-                      className="text-primary hover:text-primary-dark font-medium"
-                    >
-                      Editar
-                    </button>
+                    {/* Botón PDF solo si está finalizada, pero el ojito siempre visible */}
+                    {/* Botón PDF eliminado */}
+                        <button
+                          className="bg-slate-700 text-primary px-2 py-1 rounded text-xs mr-2 hover:bg-slate-600"
+                          title="Ver detalle"
+                          onClick={() => {
+                            window.solicitudIds = [s.usuario_solicitante_id];
+                            if (s.usuario_finalizador_id) window.solicitudIds.push(s.usuario_finalizador_id);
+                            handleDetalle(s);
+                          }}
+                        >
+                          <span role="img" aria-label="ver">👁️</span>
+                        </button>
+                    {/* Solo mostrar botón 'Comenzar atención' si es local origen y estado PENDIENTE */}
+                    {user?.local_defecto_id === s.local_origen_id && estadosMap[s.estado_id]?.codigo === "PENDIENTE" && (
+                      <button
+                        className="bg-primary text-slate-900 font-semibold px-3 py-1 rounded hover:bg-primary-dark mr-2"
+                        onClick={async () => {
+                          await handleUpdate(s.solicitud_id, { estado_id: Object.values(estadosMap).find((e: any) => e.codigo === "EN_PROCESO")?.id });
+                        }}
+                      >
+                        Comenzar atención
+                      </button>
+                    )}
+                    {/* Solo permitir editar si: */}
+                    {/* - Local destino y estado PENDIENTE (puede editar productos/nota) */}
+                    {/* - Local origen y estado EN_PROCESO (puede aprobar cantidades/finalizar) */}
+                    {(
+                      (user?.local_defecto_id === s.local_destino_id && estadosMap[s.estado_id]?.codigo === "PENDIENTE") ||
+                      (user?.local_defecto_id === s.local_origen_id && estadosMap[s.estado_id]?.codigo === "EN_PROCESO")
+                    ) && (
+                      <button
+                        onClick={() => handleEdit(s)}
+                        className="text-primary hover:text-primary-dark font-medium"
+                      >
+                        Editar
+                      </button>
+                    )}
                     <button
                       onClick={() => handleDelete(s.solicitud_id)}
                       className="text-red-400 hover:text-red-300 font-medium"
@@ -151,7 +192,7 @@ export default function SolicitudesTable() {
         </div>
       )}
 
-      {/* Modal */}
+      {/* Modal de edición */}
       {modalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-slate-800 rounded-lg p-6 max-w-lg w-full shadow-xl border border-slate-700 relative">
@@ -166,6 +207,15 @@ export default function SolicitudesTable() {
             />
           </div>
         </div>
+      )}
+      {/* Modal de detalle solo lectura */}
+      {detalleOpen && editing && (
+        <SolicitudDetalleModal
+          solicitud={editing}
+          localesMap={localesMap}
+          productosMap={productosMap}
+          onClose={() => { setDetalleOpen(false); setEditing(null); }}
+        />
       )}
     </div>
   );
