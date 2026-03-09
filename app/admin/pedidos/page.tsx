@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { listarPedidos, Pedido, actualizarEstadoSII } from '@/lib/api/pedidos';
+import { listarPedidos, Pedido } from '@/lib/api/pedidos';
 
 export default function PedidosPage() {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
@@ -54,17 +54,6 @@ export default function PedidosPage() {
       hour: '2-digit',
       minute: '2-digit'
     });
-  };
-
-  const actualizarSII = async (pedidoId: number, nuevoEstado: string) => {
-    try {
-      await actualizarEstadoSII(pedidoId, nuevoEstado);
-      // Recargar pedidos para mostrar el cambio
-      await cargarPedidos();
-    } catch (error) {
-      console.error('Error actualizando estado SII:', error);
-      alert('Error al actualizar el estado SII');
-    }
   };
 
   return (
@@ -220,21 +209,9 @@ export default function PedidosPage() {
                     </td>
                     <td className="px-4 py-4">
                       {pedido.tipo_documento_codigo === 'FAC' ? (
-                        <div className="flex flex-col">
-                          <span className="bg-purple-600 text-white px-3 py-1 rounded-full text-xs font-semibold mb-2">
-                            📄 Factura
-                          </span>
-                          <select
-                            value={pedido.estado_sii || 'PENDIENTE'}
-                            onChange={(e) => actualizarSII(pedido.id, e.target.value)}
-                            className="bg-slate-700 text-white text-xs px-2 py-1 rounded border border-slate-600 focus:border-purple-400 focus:outline-none"
-                          >
-                            <option value="PENDIENTE">📋 Pendiente</option>
-                            <option value="ENVIADO">📤 Enviado</option>
-                            <option value="APROBADO">✅ Aprobado</option>
-                            <option value="RECHAZADO">❌ Rechazado</option>
-                          </select>
-                        </div>
+                        <span className="bg-purple-600 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                          📄 Factura
+                        </span>
                       ) : (
                         <span className="bg-green-600 text-white px-3 py-1 rounded-full text-xs font-semibold">
                           📄 Boleta

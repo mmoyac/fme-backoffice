@@ -97,3 +97,39 @@ export async function obtenerEstadosCheque(): Promise<EstadoCheque[]> {
   }
   return response.json();
 }
+
+export interface ChequeCreate {
+  pedido_id: number;
+  numero_cheque: string;
+  banco_id: number;
+  monto: number;
+  fecha_emision: string;       // ISO datetime string
+  fecha_vencimiento: string;   // ISO datetime string
+  librador_nombre: string;
+  librador_rut?: string;
+  observaciones?: string;
+}
+
+export async function crearCheque(data: ChequeCreate): Promise<Cheque> {
+  const response = await fetch(`${API_URL}/api/cheques/`, {
+    method: 'POST',
+    headers: { ...AuthService.getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.detail || 'Error al crear cheque');
+  }
+  return response.json();
+}
+
+export async function eliminarCheque(chequeId: number): Promise<void> {
+  const response = await fetch(`${API_URL}/api/cheques/${chequeId}`, {
+    method: 'DELETE',
+    headers: AuthService.getAuthHeaders(),
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.detail || 'Error al eliminar cheque');
+  }
+}

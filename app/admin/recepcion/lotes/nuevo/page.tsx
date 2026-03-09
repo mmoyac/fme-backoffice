@@ -44,6 +44,7 @@ export default function NuevoLotePage() {
     ubicacion_id: '',
     peso_original: '',
     peso_actual: '',
+    peso_bruto_kg: '',
     fecha_vencimiento: '',
     fecha_fabricacion: '',
     qr_original: '',
@@ -74,11 +75,12 @@ export default function NuevoLotePage() {
       }
       
       if (datos.peso_bruto_kg) {
-        nuevo.peso_original = datos.peso_bruto_kg;
+        nuevo.peso_bruto_kg = datos.peso_bruto_kg;
         datosEncontrados.push(`Peso Bruto: ${datos.peso_bruto_kg} kg`);
       }
       
       if (datos.peso_neto_kg) {
+        nuevo.peso_original = datos.peso_neto_kg;
         nuevo.peso_actual = datos.peso_neto_kg;
         datosEncontrados.push(`Peso Neto: ${datos.peso_neto_kg} kg`);
       }
@@ -201,6 +203,7 @@ export default function NuevoLotePage() {
         qr_propio: generarQRPropio(),
         peso_original: parseFloat(formData.peso_original),
         peso_actual: parseFloat(formData.peso_actual || formData.peso_original),
+        peso_bruto_kg: formData.peso_bruto_kg ? parseFloat(formData.peso_bruto_kg) : undefined,
         fecha_vencimiento: new Date(formData.fecha_vencimiento).toISOString(),
         fecha_fabricacion: formData.fecha_fabricacion ? new Date(formData.fecha_fabricacion).toISOString() : undefined,
         qr_original: formData.qr_original || undefined
@@ -364,10 +367,10 @@ export default function NuevoLotePage() {
               </select>
             </div>
 
-            {/* Peso Original */}
+            {/* Peso Original / Neto */}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Peso Original (kg) *
+                Peso Neto (kg) * <span className="text-gray-500 font-normal">— el que se vende</span>
               </label>
               <input
                 type="number"
@@ -377,24 +380,24 @@ export default function NuevoLotePage() {
                 step="0.01"
                 min="0"
                 required
-                placeholder="Ej: 25.50"
+                placeholder="Ej: 23.80"
                 className="w-full bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent placeholder-gray-400"
               />
             </div>
 
-            {/* Peso Actual */}
+            {/* Peso Bruto */}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Peso Actual (kg)
+                Peso Bruto (kg) <span className="text-gray-500 font-normal">— para carga de camión</span>
               </label>
               <input
                 type="number"
-                name="peso_actual"
-                value={formData.peso_actual}
+                name="peso_bruto_kg"
+                value={formData.peso_bruto_kg}
                 onChange={handleInputChange}
                 step="0.01"
                 min="0"
-                placeholder="Auto-completado desde peso original"
+                placeholder="Ej: 25.50"
                 className="w-full bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent placeholder-gray-400"
               />
             </div>

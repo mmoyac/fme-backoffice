@@ -39,6 +39,7 @@ export default function LotesPage() {
   const [filtroProducto, setFiltroProducto] = useState<number | ''>('');
   const [filtroDisponible, setFiltroDisponible] = useState<string>('');
   const [filtroVendido, setFiltroVendido] = useState<string>('');
+  const [filtroReservado, setFiltroReservado] = useState<string>('');
 
   // Estados para selección múltiple
   const [lotesSeleccionados, setLotesSeleccionados] = useState<number[]>([]);
@@ -74,6 +75,7 @@ export default function LotesPage() {
       if (filtroProducto) params.producto_id = Number(filtroProducto);
       if (filtroDisponible !== '') params.disponible_venta = filtroDisponible === 'true';
       if (filtroVendido !== '') params.vendido = filtroVendido === 'true';
+      if (filtroReservado !== '') params.reservado = filtroReservado === 'true';
 
       const lotesRes = await getLotes(params);
       setLotes(lotesRes);
@@ -92,6 +94,7 @@ export default function LotesPage() {
     setFiltroProducto('');
     setFiltroDisponible('');
     setFiltroVendido('');
+    setFiltroReservado('');
   };
 
   const handleEliminarLote = async (loteId: number, codigoLote: string) => {
@@ -195,6 +198,7 @@ export default function LotesPage() {
     return 'En Proceso';
   };
 
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -230,8 +234,7 @@ export default function LotesPage() {
 
       {/* Filtros */}
       <div className="bg-slate-800 p-4 rounded-lg border border-slate-700">
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap items-center gap-4">          <div className="flex items-center space-x-2">
             <label className="text-sm font-medium text-gray-300">Enrolamiento:</label>
             <select
               value={filtroEnrolamiento}
@@ -281,6 +284,19 @@ export default function LotesPage() {
             <select
               value={filtroVendido}
               onChange={(e) => setFiltroVendido(e.target.value)}
+              className="bg-slate-700 border border-slate-600 text-white rounded px-3 py-1 text-sm focus:ring-2 focus:ring-primary"
+            >
+              <option value="">Todos</option>
+              <option value="true">Sí</option>
+              <option value="false">No</option>
+            </select>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <label className="text-sm font-medium text-gray-300">Reservado:</label>
+            <select
+              value={filtroReservado}
+              onChange={(e) => setFiltroReservado(e.target.value)}
               className="bg-slate-700 border border-slate-600 text-white rounded px-3 py-1 text-sm focus:ring-2 focus:ring-primary"
             >
               <option value="">Todos</option>
@@ -351,13 +367,19 @@ export default function LotesPage() {
               <div className="text-3xl font-bold text-green-400">
                 {(calcularPesoTotal() || 0).toFixed(2)} kg
               </div>
-              <div className="text-sm text-gray-300">Peso Total</div>
+              <div className="text-sm text-gray-300">Peso Total Neto</div>
             </div>
             <div className="text-center">
               <div className="text-3xl font-bold text-yellow-400">
-                {lotes.filter(l => l.disponible_venta && !l.vendido).length}
+                {lotes.filter(l => l.disponible_venta && !l.vendido && !l.reservado).length}
               </div>
               <div className="text-sm text-gray-300">Disponibles</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold text-orange-400">
+                {lotes.filter(l => l.reservado).length}
+              </div>
+              <div className="text-sm text-gray-300">Reservados</div>
             </div>
             <div className="text-center">
               <div className="text-3xl font-bold text-red-400">
@@ -423,7 +445,7 @@ export default function LotesPage() {
                     Producto
                   </th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">
-                    Peso
+                    Peso Neto / Bruto
                   </th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">
                     Vencimiento
@@ -467,8 +489,8 @@ export default function LotesPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-300">
-                        <div>Original: {lote.peso_original} kg</div>
-                        <div>Actual: {lote.peso_actual} kg</div>
+                        <div className="font-semibold text-white">{lote.peso_actual} kg <span className="text-xs text-gray-400 font-normal">neto</span></div>
+                        {lote.peso_bruto_kg && <div className="text-cyan-400 text-xs">{lote.peso_bruto_kg} kg bruto</div>}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -483,9 +505,16 @@ export default function LotesPage() {
                       <div className="text-sm text-gray-300">{lote.enrolamiento_patente}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getColorEstadoLote(lote.disponible_venta, lote.vendido)}`}>
-                        {getTextoEstadoLote(lote.disponible_venta, lote.vendido)}
-                      </span>
+                      <div className="flex flex-col gap-1">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getColorEstadoLote(lote.disponible_venta, lote.vendido)}`}>
+                          {getTextoEstadoLote(lote.disponible_venta, lote.vendido)}
+                        </span>
+                        {lote.reservado && (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30">
+                            🔒 Reservado
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-xs text-gray-400 font-mono">{lote.qr_propio}</div>
@@ -599,6 +628,16 @@ export default function LotesPage() {
                           {loteDetalles.vendido ? 'Sí' : 'No'}
                         </span>
                       </div>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-gray-400">Reservado (preventa):</span>
+                        {loteDetalles.reservado ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30">
+                            🔒 Sí — apartado para una preventa
+                          </span>
+                        ) : (
+                          <span className="text-green-400 text-sm">No</span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -609,12 +648,14 @@ export default function LotesPage() {
                     <h3 className="text-lg font-semibold text-primary mb-3">Información Física</h3>
                     <div className="space-y-2">
                       <div>
-                        <span className="text-gray-400">Peso Original:</span>
-                        <span className="text-white ml-2 font-semibold">{loteDetalles.peso_original} kg</span>
+                        <span className="text-gray-400">Peso Neto (ventas):</span>
+                        <span className="text-white ml-2 font-semibold">{loteDetalles.peso_actual} kg</span>
                       </div>
                       <div>
-                        <span className="text-gray-400">Peso Actual:</span>
-                        <span className="text-white ml-2 font-semibold">{loteDetalles.peso_actual} kg</span>
+                        <span className="text-gray-400">Peso Bruto (camión):</span>
+                        <span className="text-cyan-300 ml-2 font-semibold">
+                          {loteDetalles.peso_bruto_kg ? `${loteDetalles.peso_bruto_kg} kg` : <span className="text-gray-500">no registrado</span>}
+                        </span>
                       </div>
                       <div>
                         <span className="text-gray-400">Ubicación:</span>

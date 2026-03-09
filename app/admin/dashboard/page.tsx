@@ -3,11 +3,15 @@
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { getEstadisticasDashboard, getMetricasCaja } from '@/lib/api/dashboard';
+import { listarFacturas } from '@/lib/api/facturas';
+import { listarHojasRuta } from '@/lib/api/hojas_ruta';
 
 export default function DashboardPage() {
   const router = useRouter();
   const [ventas, setVentas] = useState<any>(null);
   const [cajas, setCajas] = useState<any>(null);
+  const [facturacionData, setFacturacionData] = useState<any>(null);
+  const [rutasData, setRutasData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -17,12 +21,35 @@ export default function DashboardPage() {
   const cargarResumenes = async () => {
     try {
       setLoading(true);
-      const [ventasData, cajasData] = await Promise.all([
+      const [ventasData, cajasData, facturasArr, hojasArr] = await Promise.all([
         getEstadisticasDashboard().catch(() => null),
-        getMetricasCaja().catch(() => null)
+        getMetricasCaja().catch(() => null),
+        listarFacturas().catch(() => [] as any[]),
+        listarHojasRuta().catch(() => [] as any[])
       ]);
       setVentas(ventasData);
       setCajas(cajasData);
+      // Cálculos rápidos de facturación
+      const activas = facturasArr.filter((f: any) => f.estado !== 'CANCELADO' && (f.total ?? 0) > 0);
+      setFacturacionData({
+        totalFacturado: activas.reduce((s: number, f: any) => s + (f.total ?? 0), 0),
+        porCobrar: activas.filter((f: any) => !f.pagado).reduce((s: number, f: any) => s + (f.total ?? 0), 0),
+        cantPorCobrar: activas.filter((f: any) => !f.pagado).length,
+        sinFolio: activas.filter((f: any) => !f.folio_sii).length,
+      });
+      // Métricas de rutas
+      const hojas = hojasArr as any[];
+      setRutasData({
+        enRuta: hojas.filter((h: any) => h.estado === 'EN_RUTA').length,
+        pendientes: hojas.filter((h: any) => h.estado === 'PENDIENTE').length,
+        completadasHoy: hojas.filter((h: any) => {
+          if (h.estado !== 'COMPLETADA' || !h.fecha_retorno) return false;
+          return new Date(h.fecha_retorno).toDateString() === new Date().toDateString();
+        }).length,
+        pedidosPendientes: hojas
+          .filter((h: any) => h.estado !== 'COMPLETADA')
+          .reduce((s: number, h: any) => s + (h.total_pedidos - h.pedidos_entregados), 0),
+      });
     } catch (err) {
       console.error('Error cargando resúmenes:', err);
     } finally {
@@ -65,6 +92,34 @@ export default function DashboardPage() {
         { label: 'Diferencias Pendientes', valor: cajas.diferencias_cuadre_recientes.total_con_diferencia.toString(), icon: '⚠️' },
         { label: 'Operaciones (30d)', valor: cajas.resumen_operaciones_30d.total_operaciones.toString(), icon: '🔄' }
       ] : []
+    },
+    {
+      id: 'rutas',
+      titulo: 'Tablero de Rutas',
+      descripcion: 'Hojas de ruta, despachos, vehículos y seguimiento de entregas',
+      icono: '🚚',
+      ruta: '/admin/despacho',
+      color: 'from-purple-500 to-violet-500',
+      metricas: rutasData ? [
+        { label: 'En Ruta Ahora', valor: rutasData.enRuta.toString(), icon: '🚛' },
+        { label: 'Pendientes de Salir', valor: rutasData.pendientes.toString(), icon: '⏳' },
+        { label: 'Completadas Hoy', valor: rutasData.completadasHoy.toString(), icon: '✅' },
+        { label: 'Pedidos por Entregar', valor: rutasData.pedidosPendientes.toString(), icon: '📦' },
+      ] : []
+    },
+    {
+      id: 'facturacion',
+      titulo: 'Tablero de Facturación',
+      descripcion: 'Cobranza, estado SII, cheques y clientes deudores',
+      icono: '🧾',
+      ruta: '/admin/dashboard/facturacion',
+      color: 'from-orange-500 to-yellow-500',
+      metricas: facturacionData ? [
+        { label: 'Total facturado', valor: `$${Math.round(facturacionData.totalFacturado).toLocaleString('es-CL')}`, icon: '💵' },
+        { label: 'Por cobrar', valor: `$${Math.round(facturacionData.porCobrar).toLocaleString('es-CL')}`, icon: '⏳' },
+        { label: 'Facturas pendientes', valor: facturacionData.cantPorCobrar.toString(), icon: '📋' },
+        { label: 'Sin folio SII', valor: facturacionData.sinFolio.toString(), icon: '⚠️' },
+      ] : []
     }
   ];
 
@@ -82,7 +137,7 @@ export default function DashboardPage() {
 
         {loading ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {[1, 2].map((i) => (
+            {[1, 2, 3].map((i) => (
               <div key={i} className="bg-slate-800 rounded-xl p-8 animate-pulse">
                 <div className="h-6 bg-slate-700 rounded mb-4"></div>
                 <div className="h-4 bg-slate-700 rounded mb-6 w-3/4"></div>
@@ -189,6 +244,15 @@ export default function DashboardPage() {
               <div className="text-slate-400 text-sm">Catálogo</div>
             </button>
             
+            <button
+              onClick={() => router.push('/admin/facturas')}
+              className="bg-slate-700 hover:bg-slate-600 p-4 rounded-lg transition-colors text-left"
+            >
+              <div className="text-2xl mb-2">🧾</div>
+              <div className="font-semibold">Facturas</div>
+              <div className="text-slate-400 text-sm">Cobranza y SII</div>
+            </button>
+
             <button
               onClick={() => router.push('/admin/clientes')}
               className="bg-slate-700 hover:bg-slate-600 p-4 rounded-lg transition-colors text-left"

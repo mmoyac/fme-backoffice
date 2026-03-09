@@ -15,6 +15,8 @@ export interface ItemPedido {
   cantidad: number;
   precio_unitario_venta: number;
   producto?: ProductoSimple;
+  producto_nombre?: string | null;
+  peso_total_kg?: number | null;
 }
 
 export interface Cliente {
@@ -73,6 +75,8 @@ export interface Pedido {
   usuario_id?: number;
   usuario_nombre?: string;
   usuario_email?: string;
+  // Resumen de cobro de cheques
+  monto_cobrado_cheques?: number;
   cliente?: Cliente;
   items?: ItemPedido[];
 }
@@ -133,10 +137,16 @@ export interface PedidoCreateResponse {
   mensaje: string;
 }
 
-export async function listarPedidos(estado?: string): Promise<Pedido[]> {
+export async function listarPedidos(estado?: string, fecha?: string, tipo_pedido_id?: number): Promise<Pedido[]> {
   const url = new URL(`${API_URL}/api/pedidos/`);
   if (estado) {
     url.searchParams.append('estado', estado);
+  }
+  if (fecha) {
+    url.searchParams.append('fecha', fecha);
+  }
+  if (tipo_pedido_id) {
+    url.searchParams.append('tipo_pedido_id', String(tipo_pedido_id));
   }
 
   const response = await fetch(url.toString(), {

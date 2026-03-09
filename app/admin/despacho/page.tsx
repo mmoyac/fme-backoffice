@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Truck, Package, MapPin, Clock } from 'lucide-react';
+import { Truck, Package, MapPin, Clock, CarFront } from 'lucide-react';
 
 export default function DespachoPage() {
   return (
@@ -89,6 +89,60 @@ export default function DespachoPage() {
               </p>
             </div>
             <Clock className="h-8 w-8 text-purple-500" />
+          </div>
+        </a>
+
+        {/* Picking de Cajas */}
+        <a 
+          href="/admin/despacho/picking-cajas" 
+          className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Picking de Cajas
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
+                Escanear cajas del frigorifico
+              </p>
+            </div>
+            <Package className="h-8 w-8 text-orange-500" />
+          </div>
+        </a>
+
+        {/* Hojas de Ruta */}
+        <a 
+          href="/admin/despacho/rutas" 
+          className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Hojas de Ruta
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
+                Asignar pedidos al camión y registrar entregas
+              </p>
+            </div>
+            <Truck className="h-8 w-8 text-cyan-500" />
+          </div>
+        </a>
+
+        {/* Vehículos */}
+        <a 
+          href="/admin/vehiculos" 
+          className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Vehículos
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
+                Gestionar la flota de camiones y furgones
+              </p>
+            </div>
+            <CarFront className="h-8 w-8 text-emerald-500" />
           </div>
         </a>
       </div>

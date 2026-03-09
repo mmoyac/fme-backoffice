@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { obtenerPedido, actualizarPedido, Pedido, descargarBoleta } from '@/lib/api/pedidos';
+import { descargarFactura } from '@/lib/api/facturas';
+import { obtenerPreventa, PreventaOut, ItemPreventaOut } from '@/lib/api/preventa';
 import { getLocales, Local } from '@/lib/api/locales';
 import { getInventarios, Inventario } from '@/lib/api/inventario';
 import { obtenerPedidoConCheques, actualizarCheque, obtenerEstadosCheque, PedidoConCheques, Cheque, EstadoCheque } from '@/lib/api/cheques';
@@ -31,11 +33,15 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
   const [estadosCheque, setEstadosCheque] = useState<EstadoCheque[]>([]);
   const [actualizandoCheque, setActualizandoCheque] = useState<number | null>(null);
   const [generandoBoleta, setGenerandoBoleta] = useState(false);
+  const [generandoFactura, setGenerandoFactura] = useState(false);
 
   // Estados para confirmación de cajas variables
   const [mostrarConfirmacionCajas, setMostrarConfirmacionCajas] = useState(false);
   const [cajasDisponibles, setCajasDisponibles] = useState<any[]>([]);
   const [cargandoCajas, setCargandoCajas] = useState(false);
+
+  // Datos reales de preventa (asignaciones con peso/precio_kg)
+  const [preventaData, setPreventaData] = useState<PreventaOut | null>(null);
 
   const estados = [
     { value: 'PENDIENTE', label: 'Pendiente', color: 'bg-yellow-500' },
@@ -276,6 +282,16 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
       setNotasAdmin(data.notas_admin || '');
       setLocalSeleccionado(data.local_despacho_id || null);
 
+      // Si es CAJAS_VARIABLES y no está pendiente, cargar datos reales de preventa
+      if (data.tipo_pedido_codigo === 'CAJAS_VARIABLES' && data.estado !== 'PENDIENTE') {
+        try {
+          const preventa = await obtenerPreventa(Number(params.id));
+          setPreventaData(preventa);
+        } catch {
+          // Si falla no bloqueamos la carga del pedido
+        }
+      }
+
       // Si el pedido permite cheques, cargar información de cheques
       if (data.permite_cheque) {
         cargarCheques();
@@ -366,6 +382,20 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
       console.error(err);
     } finally {
       setGenerandoBoleta(false);
+    }
+  };
+
+  const handleDescargarFactura = async () => {
+    if (!pedido) return;
+
+    try {
+      setGenerandoFactura(true);
+      await descargarFactura(pedido.id, pedido.numero_pedido);
+    } catch (err: any) {
+      setError(err.message || 'Error al generar la factura');
+      console.error(err);
+    } finally {
+      setGenerandoFactura(false);
     }
   };
 
@@ -479,25 +509,47 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
 
         {/* Botones de acción */}
         <div className="flex gap-3">
-          <button
-            onClick={handleDescargarBoleta}
-            disabled={generandoBoleta}
-            className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
-          >
-            {generandoBoleta ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                Generando...
-              </>
-            ) : (
-              <>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Descargar Boleta
-              </>
-            )}
-          </button>
+          {pedido.tipo_documento_tributario_id === 1 ? (
+            <button
+              onClick={handleDescargarFactura}
+              disabled={generandoFactura}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+            >
+              {generandoFactura ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Generando...
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Descargar Factura
+                </>
+              )}
+            </button>
+          ) : (
+            <button
+              onClick={handleDescargarBoleta}
+              disabled={generandoBoleta}
+              className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+            >
+              {generandoBoleta ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Generando...
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Descargar Boleta
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
@@ -507,24 +559,74 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
           {/* Items del Pedido */}
           <div className="bg-slate-800 rounded-lg p-6">
             <h2 className="text-xl font-bold text-white mb-4">Productos</h2>
+
             <div className="space-y-3">
-              {pedido.items?.map((item) => (
-                <div key={item.id} className="flex justify-between items-center p-4 bg-slate-700 rounded-lg">
-                  <div className="flex-1">
-                    <p className="text-white font-semibold">{item.producto?.nombre}</p>
-                    <p className="text-sm text-gray-400">SKU: {item.producto?.sku}</p>
-                    <p className="text-sm text-gray-400">Cantidad: {item.cantidad}</p>
+              {pedido.items?.map((item) => {
+                // Para CAJAS_VARIABLES con picking completado, mostrar datos reales
+                const preventaItem: ItemPreventaOut | undefined = preventaData?.items.find(
+                  (pi) => pi.id === item.id
+                );
+                const tieneAsignaciones = preventaItem && preventaItem.asignaciones.length > 0;
+
+                if (pedido.tipo_pedido_codigo === 'CAJAS_VARIABLES' && tieneAsignaciones && preventaItem) {
+                  const pesoTotal = preventaItem.asignaciones.reduce((s, a) => s + a.peso_real, 0);
+                  const montoReal = preventaItem.asignaciones.reduce((s, a) => s + a.monto_real, 0);
+                  const precioKgPromedio = pesoTotal > 0 ? montoReal / pesoTotal : 0;
+
+                  return (
+                    <div key={item.id} className="p-4 bg-slate-700 rounded-lg">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <p className="text-white font-semibold">{item.producto?.nombre}</p>
+                          <p className="text-sm text-gray-400">SKU: {item.producto?.sku}</p>
+                          {preventaItem.proveedor_nombre && (
+                            <p className="text-sm text-gray-400">Proveedor: {preventaItem.proveedor_nombre}</p>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <p className="text-white font-bold text-lg">${montoReal.toLocaleString('es-CL')}</p>
+                          <p className="text-sm text-gray-400">{pesoTotal.toFixed(2)} kg · ${Math.round(precioKgPromedio).toLocaleString('es-CL')}/kg</p>
+                        </div>
+                      </div>
+                      {/* Detalle por lote */}
+                      <div className="space-y-1 border-t border-slate-600 pt-2">
+                        <p className="text-xs text-gray-500 mb-1">{preventaItem.asignaciones.length} caja(s) asignada(s):</p>
+                        {preventaItem.asignaciones.map((a) => (
+                          <div key={a.id} className="flex items-center gap-2 text-xs text-gray-300 bg-slate-800 rounded px-2 py-1">
+                            <span className="font-mono text-gray-400">#{a.codigo_lote}</span>
+                            <span className="text-gray-500">·</span>
+                            <span>{a.peso_real.toFixed(2)} kg</span>
+                            <span className="text-gray-500">·</span>
+                            <span>${a.precio_kg.toLocaleString('es-CL')}/kg</span>
+                            <span className="ml-auto font-semibold text-white">${a.monto_real.toLocaleString('es-CL')}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                }
+
+                // Ítem normal (PRODUCTOS) o CAJAS_VARIABLES pendiente/sin asignaciones
+                return (
+                  <div key={item.id} className="flex justify-between items-center p-4 bg-slate-700 rounded-lg">
+                    <div className="flex-1">
+                      <p className="text-white font-semibold">{item.producto?.nombre}</p>
+                      <p className="text-sm text-gray-400">SKU: {item.producto?.sku}</p>
+                      <p className="text-sm text-gray-400">
+                        Cantidad: {item.cantidad} {pedido.tipo_pedido_codigo === 'CAJAS_VARIABLES' ? 'caja(s)' : 'un.'}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-white font-semibold">
+                        ${item.precio_unitario_venta.toLocaleString('es-CL')}
+                      </p>
+                      <p className="text-sm text-gray-400">
+                        Subtotal: ${(item.cantidad * item.precio_unitario_venta).toLocaleString('es-CL')}
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-white font-semibold">
-                      ${item.precio_unitario_venta.toLocaleString('es-CL')}
-                    </p>
-                    <p className="text-sm text-gray-400">
-                      Subtotal: ${(item.cantidad * item.precio_unitario_venta).toLocaleString('es-CL')}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
             <div className="mt-4 pt-4 border-t border-slate-600">
               <div className="flex justify-between items-center">

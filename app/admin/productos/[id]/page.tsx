@@ -58,6 +58,7 @@ export default function EditarProductoPage({ params }: { params: { id: string } 
         activo: productoData.activo,
         stock_minimo: productoData.stock_minimo,
         stock_critico: productoData.stock_critico,
+        precio_incluye_iva: productoData.precio_incluye_iva,
       });
     } catch (err) {
       alert('Error al cargar datos');
@@ -408,6 +409,16 @@ export default function EditarProductoPage({ params }: { params: { id: string } 
                   className="w-4 h-4 text-primary bg-slate-700 border-slate-600 rounded focus:ring-primary"
                 />
                 <span>Activo</span>
+              </label>
+
+              <label className="flex items-center space-x-2 text-gray-300">
+                <input
+                  type="checkbox"
+                  checked={formData.precio_incluye_iva !== false}
+                  onChange={(e) => setFormData({ ...formData, precio_incluye_iva: e.target.checked })}
+                  className="w-4 h-4 text-primary bg-slate-700 border-slate-600 rounded focus:ring-primary"
+                />
+                <span>Precio incluye IVA (19%)</span>
               </label>
             </div>
           </div>

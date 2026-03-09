@@ -180,6 +180,7 @@ export interface LoteCreate {
   qr_propio: string;
   peso_original: number;
   peso_actual: number;
+  peso_bruto_kg?: number;
   fecha_vencimiento: string;
   fecha_fabricacion?: string;
   qr_original?: string;
@@ -195,9 +196,11 @@ export interface LoteList {
   lote_proveedor?: string;  // Lote del proveedor
   peso_original: number;
   peso_actual: number;
+  peso_bruto_kg?: number;
   fecha_vencimiento: string;
   disponible_venta: boolean;
   vendido: boolean;
+  reservado: boolean;
   fecha_registro: string;
   producto_nombre: string;
   ubicacion_codigo: string;
@@ -215,6 +218,7 @@ export interface LoteResponse {
   qr_propio: string;
   peso_original: number;
   peso_actual: number;
+  peso_bruto_kg?: number;
   fecha_vencimiento: string;
   fecha_fabricacion?: string;
   fecha_registro: string;
@@ -351,6 +355,7 @@ export const getLotes = async (params?: {
   ubicacion_id?: number;
   disponible_venta?: boolean;
   vendido?: boolean;
+  reservado?: boolean;
   skip?: number;
   limit?: number;
 }): Promise<LoteList[]> => {
@@ -465,4 +470,43 @@ export const obtenerColorEstado = (estado: string): string => {
     case 'FINALIZADO': return 'bg-green-500/20 text-green-400 border border-green-500/30';
     default: return 'bg-gray-500/20 text-gray-400 border border-gray-500/30';
   }
+};
+// ─────────────────────────────────────────────────────────────
+// CARGA MASIVA DE LOTES
+// ─────────────────────────────────────────────────────────────
+
+export interface LoteBulkItem {
+  sku_producto: string;
+  qr_original: string; // Código de barras etiqueta original frigorífico (obligatorio)
+  peso_neto_kg: number;  // Peso neto (ventas / precio por kg)
+  peso_bruto_kg: number; // Peso bruto (carga de camión)
+  fecha_vencimiento: string; // DD/MM/AAAA
+  lote_proveedor?: string;
+  fecha_fabricacion?: string; // DD/MM/AAAA
+}
+
+export interface LoteBulkResultItem {
+  fila: number;
+  sku_producto: string;
+  ok: boolean;
+  codigo_lote?: string;
+  error?: string;
+}
+
+export interface LotesBulkResponse {
+  total: number;
+  creados: number;
+  errores: number;
+  resultados: LoteBulkResultItem[];
+}
+
+export const createLotesBulk = async (
+  enrolamiento_id: number,
+  ubicacion_id: number,
+  lotes: LoteBulkItem[]
+): Promise<LotesBulkResponse> => {
+  return apiRequest('/api/enrolamiento/lotes/bulk', {
+    method: 'POST',
+    body: JSON.stringify({ enrolamiento_id, ubicacion_id, lotes }),
+  });
 };

@@ -16,7 +16,11 @@ export default function NuevoClientePage() {
     telefono: '',
     direccion: '',
     comuna: '',
-    limite_credito: 0
+    limite_credito: 0,
+    rut: '',
+    es_empresa: false,
+    razon_social: '',
+    giro: '',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -139,6 +143,84 @@ export default function NuevoClientePage() {
             onChange={(e) => setFormData({ ...formData, comuna: e.target.value })}
             className="w-full bg-slate-700 text-white rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary"
           />
+        </div>
+
+        {/* Datos Tributarios */}
+        <div className="border-t border-slate-700 pt-4">
+          <h3 className="text-lg font-medium text-white mb-3">Datos Tributarios</h3>
+
+          {/* Tipo: persona natural o empresa */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-300 mb-2">Tipo de cliente</label>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, es_empresa: false })}
+                className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                  !formData.es_empresa
+                    ? 'bg-cyan-600/30 border-cyan-500 text-cyan-300'
+                    : 'bg-slate-700 border-slate-600 text-gray-400 hover:border-slate-500'
+                }`}
+              >
+                👤 Persona Natural
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, es_empresa: true })}
+                className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                  formData.es_empresa
+                    ? 'bg-amber-600/30 border-amber-500 text-amber-300'
+                    : 'bg-slate-700 border-slate-600 text-gray-400 hover:border-slate-500'
+                }`}
+              >
+                🏢 Empresa
+              </button>
+            </div>
+          </div>
+
+          {/* RUT */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              RUT {formData.es_empresa && <span className="text-red-400">*</span>}
+            </label>
+            <input
+              type="text"
+              value={formData.rut || ''}
+              onChange={(e) => setFormData({ ...formData, rut: e.target.value })}
+              className="w-full bg-slate-700 text-white rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary"
+              placeholder="12.345.678-9"
+              required={formData.es_empresa}
+            />
+          </div>
+
+          {/* Razón Social y Giro (solo empresa) */}
+          {formData.es_empresa && (
+            <>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Razón Social <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.razon_social || ''}
+                  onChange={(e) => setFormData({ ...formData, razon_social: e.target.value })}
+                  className="w-full bg-slate-700 text-white rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary"
+                  placeholder="Empresa SpA"
+                  required
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-300 mb-2">Giro</label>
+                <input
+                  type="text"
+                  value={formData.giro || ''}
+                  onChange={(e) => setFormData({ ...formData, giro: e.target.value })}
+                  className="w-full bg-slate-700 text-white rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary"
+                  placeholder="Comercio al por menor"
+                />
+              </div>
+            </>
+          )}
         </div>
 
         {/* Límite de Crédito */}

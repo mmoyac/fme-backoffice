@@ -10,6 +10,7 @@ import {
 } from "@/lib/api/solicitudes";
 import { SolicitudTransferencia, SolicitudTransferenciaCreate, SolicitudTransferenciaUpdate } from "@/types/solicitud";
 
+
 import SolicitudForm from "./SolicitudForm";
 import SolicitudDetalleModal from "./SolicitudDetalleModal";
 import { generarPDFSolicitudHTML } from "./generarPDFSolicitudHTML";
@@ -17,6 +18,12 @@ import { useAuth } from "@/lib/AuthProvider";
 import { useLocalesMap } from "./useLocalesMap";
 import { useEstadosEnrolamientoMap } from "./useEstadosEnrolamientoMap";
 import { useProductosMap } from "./useProductosMap";
+
+type EditRecibidas = {
+  [solicitudId: number]: {
+    [itemId: number]: number;
+  };
+};
 
 export default function SolicitudesTable() {
   const [solicitudes, setSolicitudes] = useState<SolicitudTransferencia[]>([]);
@@ -86,9 +93,10 @@ export default function SolicitudesTable() {
     }
   };
 
+
+
   return (
     <div>
-
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-white">Solicitudes</h1>
         <div className="flex gap-3">
@@ -100,7 +108,6 @@ export default function SolicitudesTable() {
           </button>
         </div>
       </div>
-
 
       {error && <div className="text-red-500 mb-2">{error}</div>}
 
@@ -133,27 +140,31 @@ export default function SolicitudesTable() {
                     {localesMap[s.local_destino_id]?.nombre || s.local_destino_id}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                    <ProductosSolicitadosConStock items={s.items} localOrigenId={s.local_origen_id} productosMap={productosMap} />
+                    <ul className="list-disc ml-4">
+                      {s.items.map(item => (
+                        <li key={item.solicitud_item_id}>
+                          {productosMap[item.producto_id]?.nombre || item.producto_id}
+                          <span className="text-xs text-gray-400"> x {item.cantidad_solicitada}</span>
+                        </li>
+                      ))}
+                    </ul>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
                     {estadosMap[s.estado_id]?.nombre || s.estado_id}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{new Date(s.fecha_creacion).toLocaleString()}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm space-x-2">
-                    {/* Botón PDF solo si está finalizada, pero el ojito siempre visible */}
-                    {/* Botón PDF eliminado */}
-                        <button
-                          className="bg-slate-700 text-primary px-2 py-1 rounded text-xs mr-2 hover:bg-slate-600"
-                          title="Ver detalle"
-                          onClick={() => {
-                            window.solicitudIds = [s.usuario_solicitante_id];
-                            if (s.usuario_finalizador_id) window.solicitudIds.push(s.usuario_finalizador_id);
-                            handleDetalle(s);
-                          }}
-                        >
-                          <span role="img" aria-label="ver">👁️</span>
-                        </button>
-                    {/* Solo mostrar botón 'Comenzar atención' si es local origen y estado PENDIENTE */}
+                    <button
+                      className="bg-slate-700 text-primary px-2 py-1 rounded text-xs mr-2 hover:bg-slate-600"
+                      title="Ver detalle"
+                      onClick={() => {
+                        window.solicitudIds = [s.usuario_solicitante_id];
+                        if (s.usuario_finalizador_id) window.solicitudIds.push(s.usuario_finalizador_id);
+                        handleDetalle(s);
+                      }}
+                    >
+                      <span role="img" aria-label="ver">👁️</span>
+                    </button>
                     {user?.local_defecto_id === s.local_origen_id && estadosMap[s.estado_id]?.codigo === "PENDIENTE" && (
                       <button
                         className="bg-primary text-slate-900 font-semibold px-3 py-1 rounded hover:bg-primary-dark mr-2"
@@ -164,9 +175,6 @@ export default function SolicitudesTable() {
                         Comenzar atención
                       </button>
                     )}
-                    {/* Solo permitir editar si: */}
-                    {/* - Local destino y estado PENDIENTE (puede editar productos/nota) */}
-                    {/* - Local origen y estado EN_PROCESO (puede aprobar cantidades/finalizar) */}
                     {(
                       (user?.local_defecto_id === s.local_destino_id && estadosMap[s.estado_id]?.codigo === "PENDIENTE") ||
                       (user?.local_defecto_id === s.local_origen_id && estadosMap[s.estado_id]?.codigo === "EN_PROCESO")
@@ -214,7 +222,8 @@ export default function SolicitudesTable() {
           solicitud={editing}
           localesMap={localesMap}
           productosMap={productosMap}
-          onClose={() => { setDetalleOpen(false); setEditing(null); }}
+          onClose={() => { setDetalleOpen(false); setEditing(null); fetchSolicitudes(); }}
+          onRecibir={() => fetchSolicitudes()}
         />
       )}
     </div>

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useUsuariosMap } from "./useUsuariosMap";
 import type { SolicitudTransferencia } from "../../types/solicitud";
 
@@ -7,11 +7,58 @@ interface Props {
   localesMap: Record<number, any>;
   productosMap: Record<number, any>;
   onClose: () => void;
+  onRecibir?: () => void;
 }
 
 import { generarPDFSolicitudHTML } from "./generarPDFSolicitudHTML";
 
-const SolicitudDetalleModal: React.FC<Props> = ({ solicitud, localesMap, productosMap, onClose }) => {
+import { useAuth } from "@/lib/AuthProvider";
+import { updateSolicitud } from "@/lib/api/solicitudes";
+
+const SolicitudDetalleModal: React.FC<Props> = ({ solicitud, localesMap, productosMap, onClose, onRecibir }) => {
+  const { user } = useAuth();
+  const [recepcionOpen, setRecepcionOpen] = useState(true);
+  const [cantidades, setCantidades] = useState<{ [producto_id: number]: number }>({});
+  const [loadingRecibir, setLoadingRecibir] = useState(false);
+  const [errorRecibir, setErrorRecibir] = useState<string | null>(null);
+    // Condición para mostrar botón Recibir
+    const puedeRecibir = solicitud.estado_id === 3 && !solicitud.recibido && user?.local_defecto_id === solicitud.local_destino_id;
+    // Inicializar cantidades al abrir el modal
+    React.useEffect(() => {
+      const inicial: { [producto_id: number]: number } = {};
+      solicitud.items.forEach(item => {
+        inicial[item.producto_id] = item.cantidad_recibida ?? item.cantidad_aprobada ?? item.cantidad_solicitada;
+      });
+      setCantidades(inicial);
+      setRecepcionOpen(true);
+    }, [solicitud]);
+
+    const handleCantidadChange = (producto_id: number, value: number) => {
+      setCantidades(prev => ({ ...prev, [producto_id]: value }));
+    };
+
+    const handleConfirmarRecepcion = async () => {
+      setLoadingRecibir(true);
+      setErrorRecibir(null);
+      try {
+        await updateSolicitud(solicitud.solicitud_id, {
+          recibido: true,
+          items: solicitud.items.map(item => ({
+            producto_id: item.producto_id,
+            cantidad_solicitada: item.cantidad_solicitada,
+            cantidad_aprobada: item.cantidad_aprobada,
+            cantidad_recibida: cantidades[item.producto_id]
+          }))
+        });
+        setRecepcionOpen(false);
+        if (onRecibir) onRecibir();
+        onClose();
+      } catch (e: any) {
+        setErrorRecibir(e?.message || "Error al registrar la recepción");
+      } finally {
+        setLoadingRecibir(false);
+      }
+    };
   const usuariosHook = useUsuariosMap();
   const usuariosMap = (usuariosHook as any).usuariosMap || {};
   const error = (usuariosHook as any).error || null;
@@ -118,6 +165,7 @@ const SolicitudDetalleModal: React.FC<Props> = ({ solicitud, localesMap, product
               <th className="py-2 px-3 text-xs text-primary border-b border-slate-700">Producto</th>
               <th className="py-2 px-3 text-xs text-primary border-b border-slate-700">Solicitado</th>
               <th className="py-2 px-3 text-xs text-primary border-b border-slate-700">Aprobado</th>
+              <th className="py-2 px-3 text-xs text-primary border-b border-slate-700">Recibido</th>
             </tr>
           </thead>
           <tbody>
@@ -126,23 +174,59 @@ const SolicitudDetalleModal: React.FC<Props> = ({ solicitud, localesMap, product
                 <td className="py-2 px-3 border-b border-slate-700">{productosMap[item.producto_id]?.nombre || item.producto_id}</td>
                 <td className="py-2 px-3 border-b border-slate-700 text-center">{item.cantidad_solicitada}</td>
                 <td className="py-2 px-3 border-b border-slate-700 text-center">{item.cantidad_aprobada ?? '-'}</td>
+                <td className="py-2 px-3 border-b border-slate-700 text-center">
+                  {recepcionOpen ? (
+                    <input
+                      type="number"
+                      min={0}
+                      max={item.cantidad_aprobada ?? item.cantidad_solicitada}
+                      value={cantidades[item.producto_id] ?? ''}
+                      onChange={e => handleCantidadChange(item.producto_id, Number(e.target.value))}
+                      className="w-20 px-2 py-1 rounded bg-slate-800 border border-slate-600 text-white text-center"
+                    />
+                  ) : (
+                    item.cantidad_recibida ?? '-'
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
-        <div className="flex justify-end gap-2 mt-4">
-          <button
-            className="px-4 py-2 rounded bg-primary text-slate-900 font-semibold hover:bg-primary-dark transition-colors"
-            onClick={handleImprimir}
-          >
-            Imprimir PDF
-          </button>
-          <button
-            className="px-4 py-2 rounded bg-slate-600 text-gray-200 hover:bg-slate-500 transition-colors"
-            onClick={onClose}
-          >
-            Cerrar
-          </button>
+        <div className="flex flex-col gap-2 mt-4">
+          <div className="flex gap-2 justify-end">
+            <button
+              className="px-4 py-2 rounded bg-primary text-slate-900 font-semibold hover:bg-primary-dark transition-colors"
+              onClick={handleImprimir}
+            >
+              Imprimir PDF
+            </button>
+            <button
+              className="px-4 py-2 rounded bg-slate-600 text-gray-200 hover:bg-slate-500 transition-colors"
+              onClick={onClose}
+            >
+              Cerrar
+            </button>
+            {/* El botón Recibir ya no es necesario porque la edición está siempre activa */}
+          </div>
+          {recepcionOpen && (
+            <div className="flex gap-2 justify-end mt-4">
+              {errorRecibir && <div className="text-red-400 mt-2">{errorRecibir}</div>}
+              <button
+                className="px-4 py-2 rounded bg-green-500 text-slate-900 font-semibold hover:bg-green-600 transition-colors"
+                onClick={handleConfirmarRecepcion}
+                disabled={loadingRecibir}
+              >
+                {solicitud.recibido ? 'Actualizar recepción' : 'Guardar recepción'}
+              </button>
+              <button
+                className="px-4 py-2 rounded bg-slate-600 text-gray-200 hover:bg-slate-500 transition-colors"
+                onClick={onClose}
+                disabled={loadingRecibir}
+              >
+                Cancelar
+              </button>
+            </div>
+          )}
         </div>
         <div className="text-xs text-right text-slate-400 mt-2">Visualizado: {new Date().toLocaleString('es-CL')}</div>
       </div>

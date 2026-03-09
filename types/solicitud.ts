@@ -3,6 +3,7 @@ export interface ItemSolicitudTransferencia {
   producto_id: number;
   cantidad_solicitada: number;
   cantidad_aprobada?: number;
+  cantidad_recibida?: number;
   movimiento_inventario_id?: number;
 }
 
@@ -18,12 +19,16 @@ export interface SolicitudTransferencia {
   fecha_creacion: string;
   fecha_actualizacion: string;
   items: ItemSolicitudTransferencia[];
+  recibido: boolean;
+  usuario_receptor_id?: number;
+  fecha_recepcion?: string;
 }
 
 export interface ItemSolicitudTransferenciaCreate {
   producto_id: number;
   cantidad_solicitada: number;
   cantidad_aprobada?: number;
+  cantidad_recibida?: number;
 }
 
 export interface SolicitudTransferenciaCreate {
@@ -42,4 +47,7 @@ export interface SolicitudTransferenciaUpdate {
   nota?: string;
   usuario_finalizador_id?: number;
   items?: ItemSolicitudTransferenciaCreate[];
+  recibido?: boolean;
+  usuario_receptor_id?: number;
+  fecha_recepcion?: string;
 }

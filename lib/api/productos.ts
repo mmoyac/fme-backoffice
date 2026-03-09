@@ -28,6 +28,8 @@ export interface Producto {
   // Información de tipo de venta (peso vs cantidad)
   tipo_venta_codigo: string | null; // UNITARIO, PESO_SUELTO
   tipo_venta_nombre: string | null;
+  // Configuración tributaria
+  precio_incluye_iva: boolean;
 }
 
 export interface ProductoCreate {
@@ -48,6 +50,7 @@ export interface ProductoCreate {
   activo?: boolean;
   stock_minimo?: number;
   stock_critico?: number;
+  precio_incluye_iva?: boolean;
 }
 
 export type ProductoUpdate = Partial<ProductoCreate>;

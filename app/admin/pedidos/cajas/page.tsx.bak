@@ -1,0 +1,970 @@
+﻿'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { AuthService } from '@/lib/auth';
+import { crearCheque, type ChequeCreate } from '@/lib/api/pedidos';
+import { 
+  getMediosPago, 
+  getBancos, 
+  getEstadosCheque, 
+  type MedioPago, 
+  type Banco, 
+  type EstadoCheque 
+} from '@/lib/api/maestras';
+import { getLocalesCliente, type LocalCliente } from '@/lib/api/localesCliente';
+
+// Tipos TypeScript simplificados
+interface Cliente {
+  id: number;
+  nombre: string;
+  email: string;
+  telefono: string;
+  direccion: string;
+}
+
+interface Distribucion {
+  id: string;
+  local_cliente_id: number; // 0 = usar direcciÃ³n principal del cliente
+  cantidad: number;
+}
+
+interface ProveedorConStock {
+  proveedor_id: number;
+  proveedor_nombre: string;
+  precio_kg: number;
+  stock_cajas: number;
+  peso_promedio_kg: number;
+  distribuciones: Distribucion[];
+}
+
+interface ChequeFormulario {
+  id: string;
+  numero_cheque: string;
+  banco_id: number;
+  monto: number;
+  fecha_vencimiento: string;
+  librador_nombre: string;
+  librador_rut: string;
+  observaciones: string;
+}
+
+interface ProductoAgrupado {
+  id: number;
+  nombre: string;
+  sku: string;
+  proveedores: ProveedorConStock[];
+}
+
+export default function PedidoCajasPage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+  
+  // Datos para formularios
+  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [currentUser, setCurrentUser] = useState<{ local_defecto_id?: number } | null>(null);
+  const [productosAgrupados, setProductosAgrupados] = useState<ProductoAgrupado[]>([]);
+  
+  // Estado del pedido simplificado
+  const [clienteId, setClienteId] = useState<number>(0);
+  const [notas, setNotas] = useState('');
+  
+  // Locales del cliente seleccionado
+  const [localesCliente, setLocalesCliente] = useState<LocalCliente[]>([]);
+  const [localClienteId, setLocalClienteId] = useState<number>(0);
+  const [loadingLocales, setLoadingLocales] = useState(false);
+  
+  // Estados para medios de pago y cheques
+  const [mediosPago, setMediosPago] = useState<MedioPago[]>([]);
+  const [bancos, setBancos] = useState<Banco[]>([]);
+  const [estadosCheque, setEstadosCheque] = useState<EstadoCheque[]>([]);
+  const [medioPagoId, setMedioPagoId] = useState<number>(0);
+  const [cheques, setCheques] = useState<ChequeFormulario[]>([]);
+  const [mostrarCheques, setMostrarCheques] = useState(false);
+
+  useEffect(() => {
+    cargarDatos();
+  }, []);
+
+  // Detectar si el medio de pago permite cheques
+  useEffect(() => {
+    const medioSeleccionado = mediosPago.find(m => m.id === medioPagoId);
+    setMostrarCheques(medioSeleccionado?.permite_cheque || false);
+    if (!medioSeleccionado?.permite_cheque) {
+      setCheques([]);
+    }
+  }, [medioPagoId, mediosPago]);
+
+  const cargarDatos = async () => {
+    try {
+      setLoading(true);
+      
+      const headers = AuthService.getAuthHeaders();
+
+      // Cargar perfil del usuario, clientes, precios, stock, pesos promedio y medios de pago
+      const [userRes, clientesRes, preciosRes, stockRes, pesoPromedioRes, mediosData, bancosData, estadosData] = await Promise.all([
+        fetch(`${API_URL}/api/auth/users/me`, { headers }),
+        fetch(`${API_URL}/api/clientes/`, { headers }),
+        fetch(`${API_URL}/api/precios-proveedor/`, { headers }),
+        fetch(`${API_URL}/api/stock-cajas/resumen`, { headers }),
+        fetch(`${API_URL}/api/stock-cajas/peso-promedio`, { headers }),
+        getMediosPago(),
+        getBancos(),
+        getEstadosCheque()
+      ]);
+
+      if (!userRes.ok || !clientesRes.ok || !preciosRes.ok || !stockRes.ok || !pesoPromedioRes.ok) {
+        throw new Error('Error al cargar datos');
+      }
+
+      const [userData, clientesData, preciosData, stockData, pesoPromedioData] = await Promise.all([
+        userRes.json(),
+        clientesRes.json(),
+        preciosRes.json(),
+        stockRes.json(),
+        pesoPromedioRes.json()
+      ]);
+
+      // Combinar precios con stock y peso promedio real - AGRUPADO POR PRODUCTO
+      const productosMap = new Map<number, ProductoAgrupado>();
+      
+      preciosData.forEach((precio: any) => {
+        // Buscar stock para este producto y proveedor
+        const stockInfo = stockData.productos_con_stock.find((stock: any) => 
+          stock.producto_id === precio.producto_id && stock.proveedor_id === precio.proveedor_id
+        );
+        
+        // Buscar peso promedio real para este producto y proveedor
+        const pesoInfo = pesoPromedioData.find((peso: any) => 
+          peso.producto_id === precio.producto_id && peso.proveedor_id === precio.proveedor_id
+        );
+        
+        // Solo procesar si tiene stock
+        if (stockInfo && stockInfo.cajas_disponibles > 0) {
+          const proveedorInfo: ProveedorConStock = {
+            proveedor_id: precio.proveedor_id,
+            proveedor_nombre: precio.proveedor_nombre,
+            precio_kg: precio.precio_kg,
+            stock_cajas: stockInfo.cajas_disponibles,
+            peso_promedio_kg: pesoInfo ? pesoInfo.peso_promedio_kg : 25.0,
+            distribuciones: [{ id: `init_${precio.proveedor_id}_${Date.now()}`, local_cliente_id: 0, cantidad: 0 }]
+          };
+
+          if (productosMap.has(precio.producto_id)) {
+            const producto = productosMap.get(precio.producto_id)!;
+            producto.proveedores.push(proveedorInfo);
+          } else {
+            const nuevoProducto: ProductoAgrupado = {
+              id: precio.producto_id,
+              nombre: precio.producto_nombre,
+              sku: precio.producto_sku || '',
+              proveedores: [proveedorInfo]
+            };
+            productosMap.set(precio.producto_id, nuevoProducto);
+          }
+        }
+      });
+      
+      const productosAgrupadosData = Array.from(productosMap.values());
+
+      setCurrentUser(userData);
+      setClientes(clientesData);
+      setProductosAgrupados(productosAgrupadosData);
+      setMediosPago(mediosData);
+      setBancos(bancosData);
+      setEstadosCheque(estadosData);
+
+    } catch (err) {
+      alert('Error al cargar datos: ' + (err instanceof Error ? err.message : 'Error desconocido'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClienteChange = async (id: number) => {
+    setClienteId(id);
+    setLocalClienteId(0);
+    setLocalesCliente([]);
+    if (id === 0) return;
+    setLoadingLocales(true);
+    try {
+      const data = await getLocalesCliente(id);
+      setLocalesCliente(data.filter(l => l.activo));
+    } catch {
+      // sin locales registrados
+    } finally {
+      setLoadingLocales(false);
+    }
+  };
+
+  const actualizarDistribucion = (productoId: number, proveedorId: number, distribId: string, campo: 'cantidad' | 'local_cliente_id', valor: number) => {
+    setProductosAgrupados(productos =>
+      productos.map(producto => {
+        if (producto.id !== productoId) return producto;
+        return {
+          ...producto,
+          proveedores: producto.proveedores.map(proveedor => {
+            if (proveedor.proveedor_id !== proveedorId) return proveedor;
+            const totalOtras = proveedor.distribuciones
+              .filter(d => d.id !== distribId)
+              .reduce((s, d) => s + d.cantidad, 0);
+            return {
+              ...proveedor,
+              distribuciones: proveedor.distribuciones.map(d => {
+                if (d.id !== distribId) return d;
+                if (campo === 'cantidad') {
+                  // No superar el stock total del proveedor
+                  const max = proveedor.stock_cajas - totalOtras;
+                  return { ...d, cantidad: Math.max(0, Math.min(valor, max)) };
+                }
+                return { ...d, [campo]: valor };
+              })
+            };
+          })
+        };
+      })
+    );
+  };
+
+  const agregarDistribucion = (productoId: number, proveedorId: number) => {
+    setProductosAgrupados(productos =>
+      productos.map(producto => {
+        if (producto.id !== productoId) return producto;
+        return {
+          ...producto,
+          proveedores: producto.proveedores.map(proveedor => {
+            if (proveedor.proveedor_id !== proveedorId) return proveedor;
+            return {
+              ...proveedor,
+              distribuciones: [
+                ...proveedor.distribuciones,
+                { id: `dist_${proveedorId}_${Date.now()}`, local_cliente_id: 0, cantidad: 0 }
+              ]
+            };
+          })
+        };
+      })
+    );
+  };
+
+  const eliminarDistribucion = (productoId: number, proveedorId: number, distribId: string) => {
+    setProductosAgrupados(productos =>
+      productos.map(producto => {
+        if (producto.id !== productoId) return producto;
+        return {
+          ...producto,
+          proveedores: producto.proveedores.map(proveedor => {
+            if (proveedor.proveedor_id !== proveedorId) return proveedor;
+            // Mantener siempre al menos 1 distribuciÃ³n
+            const filtered = proveedor.distribuciones.filter(d => d.id !== distribId);
+            return {
+              ...proveedor,
+              distribuciones: filtered.length > 0 ? filtered : proveedor.distribuciones
+            };
+          })
+        };
+      })
+    );
+  };
+
+  const calcularTotal = () => {
+    return productosAgrupados
+      .flatMap(producto => producto.proveedores)
+      .reduce((total, proveedor) => {
+        const cantidadTotal = proveedor.distribuciones.reduce((s, d) => s + d.cantidad, 0);
+        return total + (cantidadTotal * proveedor.peso_promedio_kg * proveedor.precio_kg);
+      }, 0);
+  };
+
+  // Funciones para manejar cheques
+  const agregarCheque = () => {
+    const nuevoCheque: ChequeFormulario = {
+      id: `cheque_${Date.now()}`,
+      numero_cheque: '',
+      banco_id: 0,
+      monto: 0,
+      fecha_vencimiento: '',
+      librador_nombre: '',
+      librador_rut: '',
+      observaciones: ''
+    };
+    setCheques([...cheques, nuevoCheque]);
+  };
+
+  const eliminarCheque = (id: string) => {
+    setCheques(cheques.filter(c => c.id !== id));
+  };
+
+  const actualizarCheque = (id: string, campo: keyof ChequeFormulario, valor: any) => {
+    setCheques(cheques.map(c => 
+      c.id === id ? { ...c, [campo]: valor } : c
+    ));
+  };
+
+  const confirmarPedido = async () => {
+    if (clienteId === 0) {
+      alert('Debe seleccionar un cliente');
+      return;
+    }
+
+    // Validar que todas las distribuciones con cantidad > 0 tengan local asignado (si el cliente tiene locales)
+    if (localesCliente.length > 0) {
+      const sinLocal = productosAgrupados
+        .flatMap(p => p.proveedores.flatMap(prov => prov.distribuciones))
+        .filter(d => d.cantidad > 0 && d.local_cliente_id === 0);
+      if (sinLocal.length > 0) {
+        alert('Todas las lÃ­neas de distribuciÃ³n deben tener un local de despacho asignado');
+        return;
+      }
+    }
+
+    // Aplanar todas las distribuciones con cantidad > 0
+    const productosConCantidad = productosAgrupados
+      .flatMap(producto =>
+        producto.proveedores.flatMap(proveedor =>
+          proveedor.distribuciones
+            .filter(d => d.cantidad > 0)
+            .map(d => ({
+              id: producto.id,
+              nombre: producto.nombre,
+              sku: producto.sku,
+              precio_kg: proveedor.precio_kg,
+              proveedor_id: proveedor.proveedor_id,
+              proveedor_nombre: proveedor.proveedor_nombre,
+              stock_cajas: proveedor.stock_cajas,
+              peso_promedio_kg: proveedor.peso_promedio_kg,
+              cantidad_solicitada: d.cantidad,
+              local_cliente_id: d.local_cliente_id || null
+            }))
+        )
+      );
+    
+    if (productosConCantidad.length === 0) {
+      alert('Debe seleccionar al menos un producto');
+      return;
+    }
+
+    if (medioPagoId === 0) {
+      alert('Debe seleccionar un medio de pago');
+      return;
+    }
+
+    // Validar cheques si el medio los requiere
+    const medioSeleccionado = mediosPago.find(m => m.id === medioPagoId);
+    if (medioSeleccionado?.permite_cheque && cheques.length === 0) {
+      alert('Debe agregar al menos un cheque para este medio de pago');
+      return;
+    }
+
+    if (!confirm('Â¿Confirmar el pedido de cajas?')) {
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // Crear array de items para el pedido â€” un item por cada distribuciÃ³n
+      const items = productosConCantidad.map(producto => ({
+        sku: producto.sku,
+        producto_id: producto.id,
+        cantidad: producto.cantidad_solicitada, // Cantidad en cajas
+        precio_unitario_venta: producto.peso_promedio_kg * producto.precio_kg, // Precio por caja basado en peso promedio
+        local_cliente_id: producto.local_cliente_id || (localesCliente.length === 1 ? localesCliente[0].id : null)
+      }));
+
+      // Obtener headers de autenticaciÃ³n primero
+      const headers = AuthService.getAuthHeaders();
+      
+      // Obtener datos del cliente seleccionado
+      const cliente = clientes.find(c => c.id === clienteId);
+      if (!cliente) {
+        throw new Error('Cliente no encontrado');
+      }
+
+      // Construir resumen de despacho por local
+      const localesUsados = new Map<number, string>();
+      productosConCantidad.forEach(p => {
+        if (p.local_cliente_id) {
+          const local = localesCliente.find(l => l.id === p.local_cliente_id);
+          if (local) localesUsados.set(local.id, local.nombre);
+        }
+      });
+      const notaLocal = localesUsados.size > 0
+        ? 'Despacho a: ' + Array.from(localesUsados.values()).join(', ')
+        : '';
+      // Usar la direcciÃ³n del primer local con cantidad, o la del cliente
+      const primerLocalId = productosConCantidad.find(p => p.local_cliente_id)?.local_cliente_id;
+      const primerLocal = primerLocalId ? localesCliente.find(l => l.id === primerLocalId) : null;
+      const direccionEntrega = primerLocal ? primerLocal.direccion : (cliente.direccion || 'Sin direcciÃ³n');
+
+      // Para pedidos de backoffice, usar el local WEB (Tienda Online)
+      // Esto permite confirmar pedidos sin tener caja abierta
+      // Buscar el local WEB del tenant actual
+      const localesResponse = await fetch(`${API_URL}/api/locales/`, { headers });
+      if (!localesResponse.ok) {
+        throw new Error('Error al cargar locales');
+      }
+      const locales = await localesResponse.json();
+      const localWeb = locales.find((l: any) => l.codigo === 'WEB');
+      
+      if (!localWeb) {
+        throw new Error('No se encontrÃ³ el local WEB. Contacte al administrador.');
+      }
+
+      const pedidoData = {
+        cliente_id: clienteId,
+        cliente_nombre: cliente.nombre,
+        cliente_email: cliente.email,
+        cliente_telefono: cliente.telefono || '',
+        direccion_entrega: direccionEntrega,
+        local_id: localWeb.id, // Usar local WEB en lugar de local fÃ­sico
+        medio_pago_id: medioPagoId,
+        tipo_pedido_id: 2, // CAJAS_VARIABLES - Pedido de cajas de carne
+        items: items,
+        notas: [notaLocal, notas].filter(Boolean).join(' | ') || `Pedido de cajas variables - ${new Date().toLocaleDateString()}`
+      };
+
+      const response = await fetch(`${API_URL}/api/pedidos/backoffice`, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(pedidoData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Error al crear pedido');
+      }
+
+      const pedidoCreado = await response.json();
+
+      // Si hay cheques, crearlos
+      if (mostrarCheques && cheques.length > 0) {
+        const estadoPendiente = estadosCheque.find(e => e.codigo === 'PENDIENTE');
+        if (!estadoPendiente) {
+          throw new Error('No se encontrÃ³ el estado PENDIENTE para cheques');
+        }
+        
+        const promesasCheques = cheques.map(cheque => {
+          const chequeData: ChequeCreate & { pedido_id: number, estado_id: number } = {
+            numero_cheque: cheque.numero_cheque,
+            banco_id: cheque.banco_id,
+            monto: cheque.monto,
+            fecha_emision: new Date().toISOString(),
+            fecha_vencimiento: new Date(cheque.fecha_vencimiento).toISOString(),
+            librador_nombre: cheque.librador_nombre,
+            librador_rut: cheque.librador_rut || undefined,
+            observaciones: cheque.observaciones || undefined,
+            pedido_id: pedidoCreado.pedido_id,
+            estado_id: estadoPendiente.id
+          };
+          
+          return crearCheque(chequeData);
+        });
+        
+        await Promise.all(promesasCheques);
+      }
+      alert(`âœ… Pedido creado exitosamente\n\nID: ${pedidoCreado.pedido_id}\nNÃºmero: ${pedidoCreado.numero_pedido}\nTotal: $${pedidoCreado.monto_total?.toLocaleString('es-CL') || 0}`);
+      
+      // Limpiar formulario
+      setClienteId(0);
+      setLocalClienteId(0);
+      setLocalesCliente([]);
+      setMedioPagoId(0);
+      setNotas('');
+      setCheques([]);
+      setProductosAgrupados(productos =>
+        productos.map(producto => ({
+          ...producto,
+          proveedores: producto.proveedores.map(proveedor => ({
+            ...proveedor,
+            distribuciones: [{ id: `reset_${proveedor.proveedor_id}_${Date.now()}`, local_cliente_id: 0, cantidad: 0 }]
+          }))
+        }))
+      );
+
+    } catch (err) {
+      alert('Error al crear pedido: ' + (err instanceof Error ? err.message : 'Error desconocido'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-slate-400">Cargando datos...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const totalPedido = calcularTotal();
+  const totalCajas = productosAgrupados
+    .flatMap(p => p.proveedores)
+    .reduce((sum, proveedor) => sum + proveedor.distribuciones.reduce((s, d) => s + d.cantidad, 0), 0);
+  const totalPesoReal = productosAgrupados
+    .flatMap(p => p.proveedores)
+    .reduce((sum, proveedor) => {
+      const cantTotal = proveedor.distribuciones.reduce((s, d) => s + d.cantidad, 0);
+      return sum + (cantTotal * proveedor.peso_promedio_kg);
+    }, 0);
+
+  return (
+    <div className="space-y-6">
+      {/* Estilos globales para ocultar flechas de inputs number */}
+      <style jsx global>{`
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        
+        input[type="number"] {
+          -moz-appearance: textfield;
+        }
+      `}</style>
+
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-white">ðŸ“¦ Pedido de Cajas Variables</h1>
+          <p className="text-gray-400 mt-2">
+            Seleccione la cantidad de cajas que necesita de cada corte de carne
+          </p>
+        </div>
+        <button
+          onClick={() => router.back()}
+          className="bg-slate-600 hover:bg-slate-500 text-white px-4 py-2 rounded transition-colors"
+        >
+          â† Volver
+        </button>
+      </div>
+
+      {/* InformaciÃ³n del cliente */}
+      <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
+        <h3 className="text-lg font-semibold text-white mb-4">ðŸ‘¤ Cliente</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Cliente *
+            </label>
+            <select
+              value={clienteId}
+              onChange={(e) => handleClienteChange(Number(e.target.value))}
+              className="w-full bg-slate-700 border border-slate-600 text-white rounded px-3 py-2 focus:ring-2 focus:ring-primary"
+            >
+              <option value={0}>Seleccionar cliente...</option>
+              {clientes.map(cliente => (
+                <option key={cliente.id} value={cliente.id}>
+                  {cliente.nombre} - {cliente.email}
+                </option>
+              ))}
+            </select>
+            
+            {/* Selector de local de despacho - solo informativo (asig. por Ã­tem) */}
+            {clienteId > 0 && (
+              <div className="mt-3">
+                {loadingLocales ? (
+                  <div className="text-gray-400 text-sm">Cargando locales...</div>
+                ) : localesCliente.length === 0 ? (
+                  <div className="bg-red-500/10 border border-red-500/50 text-red-400 rounded px-3 py-2 text-sm">
+                    â›” Este cliente no tiene locales de despacho. Registre locales en la ficha del cliente antes de continuar.
+                  </div>
+                ) : localesCliente.length === 1 ? (
+                  <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded px-3 py-2 text-sm">
+                    ðŸ“ Local: <strong>{localesCliente[0].nombre}</strong> â€” se asignarÃ¡ a todos los Ã­tems automÃ¡ticamente.
+                  </div>
+                ) : (
+                  <div className="bg-primary/10 border border-primary/30 text-primary rounded px-3 py-2 text-sm">
+                    ðŸ“ {localesCliente.length} locales disponibles. Asigne el local por cada Ã­tem en la secciÃ³n de cortes.
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          
+          {/* Medio de pago */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Medio de Pago *
+            </label>
+            <select
+              value={medioPagoId}
+              onChange={(e) => setMedioPagoId(Number(e.target.value))}
+              className="w-full bg-slate-700 border border-slate-600 text-white rounded px-3 py-2 focus:ring-2 focus:ring-primary"
+              required
+            >
+              <option value={0}>Seleccionar medio de pago...</option>
+              {mediosPago.map(medio => (
+                <option key={medio.id} value={medio.id}>
+                  {medio.nombre} {medio.permite_cheque && '(Permite cheques)'}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Notas del Pedido
+            </label>
+            <textarea
+              value={notas}
+              onChange={(e) => setNotas(e.target.value)}
+              rows={3}
+              placeholder="Notas opcionales del pedido..."
+              className="w-full bg-slate-700 border border-slate-600 text-white rounded px-3 py-2 focus:ring-2 focus:ring-primary"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Lista de productos con stock */}
+      <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
+        <h3 className="text-lg font-semibold text-white mb-4">ðŸ¥© Cortes Disponibles con Stock</h3>
+        
+        {clienteId === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            ðŸ‘† Seleccione un cliente para ver los cortes disponibles.
+          </div>
+        ) : loadingLocales ? (
+          <div className="text-center py-8 text-gray-400">Cargando locales del cliente...</div>
+        ) : localesCliente.length === 0 ? (
+          <div className="text-center py-8">
+            <div className="text-red-400 mb-2 font-semibold">â›” Este cliente no tiene locales de despacho registrados.</div>
+            <p className="text-sm text-gray-500">Registre al menos un local en la ficha del cliente antes de crear el pedido.</p>
+          </div>
+        ) : productosAgrupados.length === 0 ? (
+          <div className="text-center py-8">
+            <div className="text-gray-400 mb-4">No hay productos con stock y precio configurado</div>
+            <p className="text-sm text-gray-500">
+              AsegÃºrese de que haya stock disponible y precios configurados por proveedor
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {productosAgrupados.map((producto) => (
+              <div key={producto.id} 
+                   className="bg-slate-700 rounded-lg p-6 border border-slate-600">
+                
+                {/* Cabecera del producto */}
+                <div className="mb-4">
+                  <h4 className="font-bold text-white text-xl mb-1">{producto.nombre}</h4>
+                  <p className="text-sm text-gray-400">{producto.sku}</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {producto.proveedores.length} proveedor{producto.proveedores.length !== 1 ? 'es' : ''} disponible{producto.proveedores.length !== 1 ? 's' : ''}
+                  </p>
+                </div>
+                
+                {/* Proveedores para este producto */}
+                <div className="space-y-3">
+                  {producto.proveedores.map((proveedor) => (
+                    <div key={proveedor.proveedor_id}
+                         className="bg-slate-600 rounded-lg p-4 border border-slate-500">
+
+                      {/* Header del proveedor */}
+                      <div className="flex flex-wrap items-center gap-4 mb-4">
+                        <div className="flex-1">
+                          <h5 className="font-semibold text-primary text-lg">{proveedor.proveedor_nombre}</h5>
+                          <p className="text-xs text-gray-400">Peso promedio: {proveedor.peso_promedio_kg.toFixed(2)} kg/caja</p>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-lg font-bold text-white">${proveedor.precio_kg.toLocaleString('es-CL')}</div>
+                          <div className="text-xs text-gray-400">por kg</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-lg font-bold text-emerald-400">{proveedor.stock_cajas}</div>
+                          <div className="text-xs text-gray-400">cajas disp.</div>
+                        </div>
+                        {(() => {
+                          const total = proveedor.distribuciones.reduce((s, d) => s + d.cantidad, 0);
+                          return total > 0 ? (
+                            <div className="text-center">
+                              <div className="text-lg font-bold text-yellow-400">
+                                ${(total * proveedor.peso_promedio_kg * proveedor.precio_kg).toLocaleString('es-CL')}
+                              </div>
+                              <div className="text-xs text-gray-400">
+                                {total} cajas Â· {(total * proveedor.peso_promedio_kg).toFixed(1)} kg est.
+                              </div>
+                            </div>
+                          ) : null;
+                        })()}
+                      </div>
+
+                      {/* Distribuciones por local */}
+                      <div className="space-y-2">
+                        {proveedor.distribuciones.map((dist) => {
+                          const totalOtras = proveedor.distribuciones
+                            .filter(d => d.id !== dist.id)
+                            .reduce((s, d) => s + d.cantidad, 0);
+                          const maxCant = proveedor.stock_cajas - totalOtras;
+                          return (
+                            <div key={dist.id} className="flex flex-wrap items-center gap-2 bg-slate-700 rounded p-2">
+                              {/* Local selector */}
+                              <div className="flex-1 min-w-[200px]">
+                                {localesCliente.length === 1 ? (
+                                  <span className="text-emerald-400 text-sm font-medium">ðŸ“ {localesCliente[0].nombre}</span>
+                                ) : (
+                                  <select
+                                    value={dist.local_cliente_id}
+                                    onChange={(e) => actualizarDistribucion(producto.id, proveedor.proveedor_id, dist.id, 'local_cliente_id', Number(e.target.value))}
+                                    className="w-full bg-slate-600 border border-slate-500 text-white rounded px-2 py-1 text-sm focus:ring-1 focus:ring-primary"
+                                  >
+                                    <option value={0}>ðŸ“ Local de despacho...</option>
+                                    {localesCliente.map(local => (
+                                      <option key={local.id} value={local.id}>{local.nombre}</option>
+                                    ))}
+                                  </select>
+                                )}
+                              </div>
+
+                              {/* Controles cantidad */}
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => actualizarDistribucion(producto.id, proveedor.proveedor_id, dist.id, 'cantidad', dist.cantidad - 1)}
+                                  disabled={dist.cantidad === 0}
+                                  className="w-10 h-10 bg-slate-500 hover:bg-slate-400 disabled:opacity-40 text-white rounded-lg text-xl font-bold transition-colors"
+                                >-</button>
+                                <div className="text-center min-w-[50px]">
+                                  <div className="text-xl font-bold text-white">{dist.cantidad}</div>
+                                  <div className="text-xs text-gray-400">cajas</div>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => actualizarDistribucion(producto.id, proveedor.proveedor_id, dist.id, 'cantidad', dist.cantidad + 1)}
+                                  disabled={dist.cantidad >= maxCant}
+                                  className="w-10 h-10 bg-primary hover:bg-primary/80 disabled:opacity-40 text-white rounded-lg text-xl font-bold transition-colors"
+                                >+</button>
+                              </div>
+
+                              {/* Eliminar lÃ­nea */}
+                              {proveedor.distribuciones.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => eliminarDistribucion(producto.id, proveedor.proveedor_id, dist.id)}
+                                  className="text-red-400 hover:text-red-300 text-sm transition-colors"
+                                  title="Eliminar lÃ­nea"
+                                >ðŸ—‘ï¸</button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Agregar otro local - solo si hay mÃ¡s de 1 local */}
+                      {localesCliente.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => agregarDistribucion(producto.id, proveedor.proveedor_id)}
+                          className="mt-3 text-primary hover:text-primary/80 text-sm transition-colors"
+                        >
+                          + Agregar otro local
+                        </button>
+                      )}
+
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* SecciÃ³n de cheques (si el medio de pago lo permite) */}
+      {mostrarCheques && (
+        <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold text-white">ðŸ’³ Cheques</h3>
+            <button
+              type="button"
+              onClick={agregarCheque}
+              className="bg-primary hover:bg-primary/80 text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              + Agregar Cheque
+            </button>
+          </div>
+
+          {cheques.length === 0 ? (
+            <div className="text-center py-8">
+              <div className="text-gray-400 mb-2">âš ï¸ Debe agregar al menos un cheque para este medio de pago</div>
+              <button
+                type="button"
+                onClick={agregarCheque}
+                className="bg-primary hover:bg-primary/80 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                Agregar Primer Cheque
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {cheques.map((cheque, index) => (
+                <div key={cheque.id} className="bg-slate-700 rounded-lg p-4 border border-slate-600">
+                  <div className="flex justify-between items-center mb-3">
+                    <h4 className="font-medium text-white">Cheque #{index + 1}</h4>
+                    <button
+                      type="button"
+                      onClick={() => eliminarCheque(cheque.id)}
+                      className="text-red-400 hover:text-red-300 transition-colors"
+                    >
+                      ðŸ—‘ï¸ Eliminar
+                    </button>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm text-gray-300 mb-1">NÃºmero de Cheque *</label>
+                      <input
+                        type="text"
+                        value={cheque.numero_cheque}
+                        onChange={(e) => actualizarCheque(cheque.id, 'numero_cheque', e.target.value)}
+                        placeholder="NÃºmero del cheque"
+                        className="w-full bg-slate-600 border border-slate-500 text-white rounded px-3 py-2 focus:ring-2 focus:ring-primary"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm text-gray-300 mb-1">Banco *</label>
+                      <select
+                        value={cheque.banco_id}
+                        onChange={(e) => actualizarCheque(cheque.id, 'banco_id', Number(e.target.value))}
+                        className="w-full bg-slate-600 border border-slate-500 text-white rounded px-3 py-2 focus:ring-2 focus:ring-primary"
+                        required
+                      >
+                        <option value={0}>Seleccionar banco...</option>
+                        {bancos.map(banco => (
+                          <option key={banco.id} value={banco.id}>{banco.nombre}</option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm text-gray-300 mb-1">Monto *</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={cheque.monto}
+                        onChange={(e) => actualizarCheque(cheque.id, 'monto', Number(e.target.value))}
+                        placeholder="0"
+                        className="w-full bg-slate-600 border border-slate-500 text-white rounded px-3 py-2 focus:ring-2 focus:ring-primary"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm text-gray-300 mb-1">Fecha Vencimiento *</label>
+                      <input
+                        type="date"
+                        value={cheque.fecha_vencimiento}
+                        onChange={(e) => actualizarCheque(cheque.id, 'fecha_vencimiento', e.target.value)}
+                        className="w-full bg-slate-600 border border-slate-500 text-white rounded px-3 py-2 focus:ring-2 focus:ring-primary"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm text-gray-300 mb-1">Librador *</label>
+                      <input
+                        type="text"
+                        value={cheque.librador_nombre}
+                        onChange={(e) => actualizarCheque(cheque.id, 'librador_nombre', e.target.value)}
+                        placeholder="Nombre del librador"
+                        className="w-full bg-slate-600 border border-slate-500 text-white rounded px-3 py-2 focus:ring-2 focus:ring-primary"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm text-gray-300 mb-1">RUT Librador</label>
+                      <input
+                        type="text"
+                        value={cheque.librador_rut}
+                        onChange={(e) => actualizarCheque(cheque.id, 'librador_rut', e.target.value)}
+                        placeholder="12345678-9"
+                        className="w-full bg-slate-600 border border-slate-500 text-white rounded px-3 py-2 focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4">
+                    <label className="block text-sm text-gray-300 mb-1">Observaciones</label>
+                    <textarea
+                      value={cheque.observaciones}
+                      onChange={(e) => actualizarCheque(cheque.id, 'observaciones', e.target.value)}
+                      placeholder="Observaciones adicionales..."
+                      rows={2}
+                      className="w-full bg-slate-600 border border-slate-500 text-white rounded px-3 py-2 focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Resumen del pedido */}
+      {totalCajas > 0 && (
+        <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
+          <h3 className="text-lg font-semibold text-white mb-4">ðŸ“‹ Resumen del Pedido</h3>
+          
+          <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-white">{totalCajas}</div>
+              <div className="text-sm text-gray-400">Total Cajas</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-yellow-400">{totalPesoReal.toFixed(1)} kg</div>
+              <div className="text-sm text-gray-400">Peso Real</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-primary">${totalPedido.toLocaleString('es-CL')}</div>
+              <div className="text-sm text-gray-400">Total Estimado</div>
+            </div>
+          </div>
+
+          <div className="flex justify-end space-x-4">
+            <button
+              onClick={() => {
+                setProductosAgrupados(productos => 
+                  productos.map(p => ({ ...p, cantidad_solicitada: 0 }))
+                );
+              }}
+              className="bg-slate-600 hover:bg-slate-500 text-white px-8 py-3 rounded-lg transition-colors font-medium text-base"
+            >
+              ðŸ—‘ï¸ Vaciar Carrito
+            </button>
+            <button
+              onClick={confirmarPedido}
+              disabled={saving || clienteId === 0}
+              className="bg-primary hover:bg-primary-dark disabled:bg-slate-600 disabled:cursor-not-allowed text-slate-900 font-bold px-10 py-3 rounded-lg transition-colors text-base"
+            >
+              {saving ? 'â³ Procesando...' : 'âœ… Confirmar Pedido'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Nota informativa */}
+      <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
+        <div className="flex items-start space-x-3">
+          <div className="text-blue-400">â„¹ï¸</div>
+          <div>
+            <h4 className="text-sm font-medium text-blue-400 mb-1">InformaciÃ³n Importante</h4>
+            <p className="text-xs text-blue-300">
+              â€¢ Los precios y pesos mostrados son REALES basados en el peso promedio de las cajas en inventario<br/>
+              â€¢ Al confirmar el pedido, se asignarÃ¡n automÃ¡ticamente las cajas con fecha de vencimiento mÃ¡s prÃ³xima<br/>
+              â€¢ El peso final serÃ¡ el peso real de las cajas asignadas (puede variar ligeramente del promedio)<br/>
+              â€¢ El stock se descontarÃ¡ automÃ¡ticamente una vez confirmado
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
