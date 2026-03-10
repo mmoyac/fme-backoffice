@@ -1,11 +1,10 @@
 // Componente para la etapa final: cliente, pago y procesamiento
 import { useState, useEffect } from 'react';
-import { ArrowLeftIcon, CheckCircleIcon, UserIcon, DocumentTextIcon, PlusIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { ArrowLeftIcon, CheckCircleIcon, UserIcon, DocumentTextIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { BoletaTermica } from './BoletaTermica';
 import { obtenerTiposDocumento, TipoDocumento } from '../../lib/api/configuracion';
 import { useTenant } from '../../lib/TenantContext';
-import { createCliente, type ClienteCreate, type Cliente } from '../../lib/api/clientes';
-import { DireccionAutocomplete } from '../ui/DireccionAutocomplete';
+import { type Cliente } from '../../lib/api/clientes';
 
 // ⚙️ CONFIGURACIÓN: Códigos de tipo de documento
 // Debe coincidir con la configuración del archivo page.tsx
@@ -77,20 +76,6 @@ export function EtapaFinalizacion({
   const [clientesFiltrados, setClientesFiltrados] = useState<Cliente[]>([]);
   const [mostrarSugerencias, setMostrarSugerencias] = useState(false);
   
-  // Estados para modal de crear cliente
-  const [mostrarModalCliente, setMostrarModalCliente] = useState(false);
-  const [nuevoCliente, setNuevoCliente] = useState<ClienteCreate>({
-    nombre: '',
-    email: '',
-    telefono: '',
-    direccion: ''
-  });
-  const [creandoCliente, setCreandoCliente] = useState(false);
-  const [errorCreacion, setErrorCreacion] = useState('');
-  
-  // Estado para verificar email duplicado
-  const [emailDuplicado, setEmailDuplicado] = useState<Cliente | null>(null);
-
   // Cargar tipos de documento al montar el componente
   useEffect(() => {
     const cargarTiposDocumento = async () => {
@@ -134,18 +119,6 @@ export function EtapaFinalizacion({
     }
   }, [busquedaCliente, clientes]);
   
-  // Verificar si el email ingresado ya existe
-  useEffect(() => {
-    if (!cliente.es_anonimo && cliente.email && cliente.email.trim() !== '' && !cliente.id) {
-      const clienteConEmail = clientes.find(c => 
-        c.email && c.email.toLowerCase() === cliente.email.toLowerCase()
-      );
-      setEmailDuplicado(clienteConEmail || null);
-    } else {
-      setEmailDuplicado(null);
-    }
-  }, [cliente.email, cliente.es_anonimo, cliente.id, clientes]);
-  
   // Función para seleccionar cliente de la lista
   const seleccionarCliente = (clienteSeleccionado: Cliente) => {
     console.log('👤 Cliente seleccionado:', clienteSeleccionado.nombre, 'es_empresa:', clienteSeleccionado.es_empresa);
@@ -165,50 +138,18 @@ export function EtapaFinalizacion({
     setBusquedaCliente(clienteSeleccionado.nombre);
     setMostrarSugerencias(false);
     
-    // SIEMPRE forzar documento por defecto cuando se selecciona un cliente
-    // El usuario puede cambiar manualmente a FACTURA si lo necesita
+    // Auto-seleccionar tipo de documento según el tipo de cliente
     if (tiposDocumento.length > 0) {
-      const documentoDefault = tiposDocumento.find(tipo => tipo.codigo === CODIGO_DOCUMENTO_POS_DEFAULT);
-      if (documentoDefault) {
-        setTipoDocumentoId(documentoDefault.id);
-        console.log(`🧾 Cliente seleccionado → Estableciendo ${documentoDefault.nombre} por defecto (el usuario puede cambiar si lo necesita)`);
+      const codigoAuto = clienteSeleccionado.es_empresa ? CODIGO_FACTURA : CODIGO_DOCUMENTO_POS_DEFAULT;
+      const documentoAuto = tiposDocumento.find(tipo => tipo.codigo === codigoAuto);
+      if (documentoAuto) {
+        setTipoDocumentoId(documentoAuto.id);
+        console.log(`🧾 Cliente ${clienteSeleccionado.es_empresa ? 'empresa' : 'persona'} → Estableciendo ${documentoAuto.nombre} automáticamente`);
       }
     }
   };
   
-  // Función para crear nuevo cliente
-  const handleCrearCliente = async () => {
-    try {
-      setCreandoCliente(true);
-      setErrorCreacion('');
-      
-      // Validaciones básicas
-      if (!nuevoCliente.nombre.trim()) {
-        setErrorCreacion('El nombre es obligatorio');
-        return;
-      }
-      
-      const clienteCreado = await createCliente(nuevoCliente);
-      console.log('✅ Cliente creado:', clienteCreado);
-      
-      // Seleccionar el cliente recién creado
-      seleccionarCliente(clienteCreado);
-      
-      // Cerrar modal y limpiar formulario
-      setMostrarModalCliente(false);
-      setNuevoCliente({ nombre: '', email: '', telefono: '', direccion: '' });
-      
-      // Notificar al padre para recargar la lista
-      if (onClienteCreado) {
-        onClienteCreado();
-      }
-    } catch (error: any) {
-      console.error('❌ Error creando cliente:', error);
-      setErrorCreacion(error.message || 'Error al crear el cliente');
-    } finally {
-      setCreandoCliente(false);
-    }
-  };
+
 
   // Función para generar datos de vista previa de boleta
   const generarDatosVistaPrevia = () => {
@@ -346,14 +287,7 @@ export function EtapaFinalizacion({
                   )}
                 </div>
                 
-                {/* Botón para crear nuevo cliente */}
-                <button
-                  onClick={() => setMostrarModalCliente(true)}
-                  className="mt-3 w-full flex items-center justify-center space-x-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
-                >
-                  <PlusIcon className="h-5 w-5" />
-                  <span>Crear Nuevo Cliente</span>
-                </button>
+
                 
                 {/* Mostrar información del cliente seleccionado */}
                 {cliente.id && (
@@ -432,131 +366,20 @@ export function EtapaFinalizacion({
               )}
             </div>
             
-            {/* Formulario de cliente (si no es anónimo) */}
-            {!cliente.es_anonimo && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Nombre Completo *
-                  </label>
-                  <input
-                    type="text"
-                    value={cliente.nombre}
-                    onChange={(e) => setCliente({...cliente, nombre: e.target.value})}
-                    className="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-white placeholder-slate-400"
-                    placeholder="Ingrese el nombre"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Teléfono
-                  </label>
-                  <input
-                    type="tel"
-                    value={cliente.telefono}
-                    onChange={(e) => setCliente({...cliente, telefono: e.target.value})}
-                    className="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-white placeholder-slate-400"
-                    placeholder="+56 9 xxxx xxxx"
-                  />
-                </div>
-                
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    value={cliente.email}
-                    onChange={(e) => setCliente({...cliente, email: e.target.value})}
-                    className={`w-full p-3 bg-slate-700 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-white placeholder-slate-400 ${
-                      emailDuplicado ? 'border-yellow-500' : 'border-slate-600'
-                    }`}
-                    placeholder="cliente@email.com"
-                  />
-                  
-                  {/* Advertencia de email duplicado */}
-                  {emailDuplicado && (
-                    <div className="mt-2 p-3 bg-yellow-900/30 border border-yellow-500/50 rounded-lg">
-                      <div className="flex items-start space-x-2">
-                        <span className="text-yellow-400 text-lg">⚠️</span>
-                        <div className="flex-1">
-                          <p className="text-yellow-300 text-sm font-medium">
-                            Este email ya está registrado
-                          </p>
-                          <p className="text-yellow-200 text-xs mt-1">
-                            Cliente: <span className="font-semibold">{emailDuplicado.nombre}</span>
-                          </p>
-                          <button
-                            onClick={() => {
-                              seleccionarCliente(emailDuplicado);
-                              setEmailDuplicado(null);
-                            }}
-                            className="mt-2 px-3 py-1 bg-yellow-600 hover:bg-yellow-700 text-white text-xs font-medium rounded transition-colors"
-                          >
-                            ✓ Usar este cliente
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                
-                {/* Campos tributarios (solo si es factura) */}
-                {cliente.es_empresa && tiposDocumento.find(t => t.id === tipoDocumentoId)?.codigo === 'FAC' && (
-                  <>
-                    <div className="md:col-span-2 pt-4 border-t border-slate-600">
-                      <h4 className="text-sm font-medium text-slate-300 mb-3 flex items-center">
-                        <DocumentTextIcon className="h-4 w-4 mr-2 text-yellow-500" />
-                        Datos para Facturación
-                      </h4>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">
-                        RUT Empresa * 
-                      </label>
-                      <input
-                        type="text"
-                        value={cliente.rut || ''}
-                        onChange={(e) => setCliente({...cliente, rut: e.target.value})}
-                        className="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-white placeholder-slate-400"
-                        placeholder="12.345.678-9"
-                        required
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">
-                        Razón Social *
-                      </label>
-                      <input
-                        type="text"
-                        value={cliente.razon_social || ''}
-                        onChange={(e) => setCliente({...cliente, razon_social: e.target.value})}
-                        className="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-white placeholder-slate-400"
-                        placeholder="Nombre de la empresa"
-                        required
-                      />
-                    </div>
-                    
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-slate-300 mb-2">
-                        Giro Comercial
-                      </label>
-                      <input
-                        type="text"
-                        value={cliente.giro || ''}
-                        onChange={(e) => setCliente({...cliente, giro: e.target.value})}
-                        className="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-white placeholder-slate-400"
-                        placeholder="Actividad comercial de la empresa"
-                      />
-                    </div>
-                  </>
-                )}
+            {/* Info del cliente seleccionado (solo lectura) */}
+            {!cliente.es_anonimo && cliente.id && cliente.es_empresa && tiposDocumento.find(t => t.id === tipoDocumentoId)?.codigo === 'FAC' && (
+              <div className="mt-2 p-4 bg-slate-700/50 border border-slate-600 rounded-lg space-y-1">
+                <p className="text-xs font-medium text-slate-400 flex items-center mb-2">
+                  <DocumentTextIcon className="h-4 w-4 mr-1 text-yellow-500" />
+                  Datos para Facturación
+                </p>
+                {cliente.rut && <p className="text-sm text-white">RUT: <span className="text-slate-300">{cliente.rut}</span></p>}
+                {cliente.razon_social && <p className="text-sm text-white">Razón Social: <span className="text-slate-300">{cliente.razon_social}</span></p>}
+                {cliente.giro && <p className="text-sm text-white">Giro: <span className="text-slate-300">{cliente.giro}</span></p>}
+                {!cliente.rut && <p className="text-xs text-yellow-400">⚠️ Cliente sin RUT registrado — editar en el panel de Clientes</p>}
               </div>
             )}
-            
+
             {cliente.es_anonimo && (
               <div className="bg-slate-700 rounded-lg p-4">
                 <p className="text-slate-300 text-sm">
@@ -834,126 +657,6 @@ export function EtapaFinalizacion({
         </div>
       </div>
       
-      {/* Modal para crear nuevo cliente */}
-      {mostrarModalCliente && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            {/* Header del modal */}
-            <div className="flex items-center justify-between p-6 border-b border-slate-700">
-              <h3 className="text-xl font-bold text-white flex items-center space-x-2">
-                <PlusIcon className="h-6 w-6 text-teal-400" />
-                <span>Crear Nuevo Cliente</span>
-              </h3>
-              <button
-                onClick={() => {
-                  setMostrarModalCliente(false);
-                  setErrorCreacion('');
-                }}
-                className="text-slate-400 hover:text-white transition-colors"
-              >
-                <XMarkIcon className="h-6 w-6" />
-              </button>
-            </div>
-            
-            {/* Formulario */}
-            <div className="p-6 space-y-4">
-              {errorCreacion && (
-                <div className="bg-red-900/20 border border-red-600/30 rounded-lg p-3">
-                  <p className="text-red-400 text-sm">❌ {errorCreacion}</p>
-                </div>
-              )}
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Nombre Completo * 
-                  </label>
-                  <input
-                    type="text"
-                    value={nuevoCliente.nombre}
-                    onChange={(e) => setNuevoCliente({...nuevoCliente, nombre: e.target.value})}
-                    className="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-white placeholder-slate-400"
-                    placeholder="Ingrese el nombre completo"
-                    autoFocus
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    value={nuevoCliente.email || ''}
-                    onChange={(e) => setNuevoCliente({...nuevoCliente, email: e.target.value})}
-                    className="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-white placeholder-slate-400"
-                    placeholder="cliente@email.com"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Teléfono
-                  </label>
-                  <input
-                    type="tel"
-                    value={nuevoCliente.telefono || ''}
-                    onChange={(e) => setNuevoCliente({...nuevoCliente, telefono: e.target.value})}
-                    className="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-white placeholder-slate-400"
-                    placeholder="+56 9 xxxx xxxx"
-                  />
-                </div>
-                
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Dirección 📍
-                  </label>
-                  <DireccionAutocomplete
-                    value={nuevoCliente.direccion || ''}
-                    onChange={(value) => setNuevoCliente({...nuevoCliente, direccion: value})}
-                    placeholder="Ingrese dirección (autocompletado)"
-                    className="p-3"
-                  />
-                  <p className="text-xs text-slate-400 mt-1">
-                    💡 Comience a escribir para ver sugerencias de direcciones
-                  </p>
-                </div>
-              </div>
-            </div>
-            
-            {/* Footer del modal */}
-            <div className="flex items-center justify-end space-x-3 p-6 border-t border-slate-700">
-              <button
-                onClick={() => {
-                  setMostrarModalCliente(false);
-                  setErrorCreacion('');
-                }}
-                disabled={creandoCliente}
-                className="px-4 py-2 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-600 text-white font-medium rounded-lg transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleCrearCliente}
-                disabled={creandoCliente || !nuevoCliente.nombre.trim()}
-                className="px-6 py-2 bg-teal-600 hover:bg-teal-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors flex items-center space-x-2"
-              >
-                {creandoCliente ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    <span>Creando...</span>
-                  </>
-                ) : (
-                  <>
-                    <CheckCircleIcon className="h-5 w-5" />
-                    <span>Crear Cliente</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

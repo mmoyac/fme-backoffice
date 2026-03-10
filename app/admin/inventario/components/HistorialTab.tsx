@@ -61,6 +61,7 @@ export function HistorialTab() {
       'TRANSFERENCIA': { label: 'Transferencia', color: 'bg-blue-500' },
       'PEDIDO': { label: 'Pedido', color: 'bg-purple-500' },
       'AJUSTE': { label: 'Ajuste', color: 'bg-yellow-500' },
+      'MERMA': { label: 'Merma', color: 'bg-orange-500' },
       'ENTRADA_INICIAL': { label: 'Entrada Inicial', color: 'bg-green-500' }
     };
     return tipos[tipo] || { label: tipo, color: 'bg-gray-500' };
@@ -131,6 +132,7 @@ export function HistorialTab() {
               <option value="TRANSFERENCIA">Transferencia</option>
               <option value="PEDIDO">Pedido</option>
               <option value="AJUSTE">Ajuste</option>
+              <option value="MERMA">Merma</option>
             </select>
           </div>
         </div>

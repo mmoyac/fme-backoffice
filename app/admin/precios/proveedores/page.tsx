@@ -9,6 +9,7 @@ interface PrecioProveedorConDetalles {
   producto_id: number;
   proveedor_id: number;
   precio_kg: number;
+  precio_minimo_kg: number | null;
   fecha_vigencia: string;
   activo: boolean;
   notas?: string;
@@ -34,6 +35,7 @@ interface PrecioProveedorCreate {
   producto_id: number;
   proveedor_id: number;
   precio_kg: number;
+  precio_minimo_kg?: number | null;
   notas?: string;
 }
 
@@ -53,6 +55,7 @@ export default function PreciosProveedorPage() {
     producto_id: 0,
     proveedor_id: 0,
     precio_kg: 0,
+    precio_minimo_kg: null,
     notas: ''
   });
 
@@ -125,7 +128,7 @@ export default function PreciosProveedorPage() {
 
       setModalAbierto(false);
       setEditandoId(null);
-      setFormData({ producto_id: 0, proveedor_id: 0, precio_kg: 0, notas: '' });
+      setFormData({ producto_id: 0, proveedor_id: 0, precio_kg: 0, precio_minimo_kg: null, notas: '' });
       cargarDatos();
 
     } catch (err) {
@@ -163,11 +166,12 @@ export default function PreciosProveedorPage() {
         producto_id: precio.producto_id,
         proveedor_id: precio.proveedor_id,
         precio_kg: precio.precio_kg,
+        precio_minimo_kg: precio.precio_minimo_kg ?? null,
         notas: precio.notas || ''
       });
     } else {
       setEditandoId(null);
-      setFormData({ producto_id: 0, proveedor_id: 0, precio_kg: 0, notas: '' });
+      setFormData({ producto_id: 0, proveedor_id: 0, precio_kg: 0, precio_minimo_kg: null, notas: '' });
     }
     setModalAbierto(true);
   };
@@ -231,7 +235,7 @@ export default function PreciosProveedorPage() {
                     Precio/kg
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                    Fecha Vigencia
+                    Precio Mínimo/kg
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                     Estado
@@ -256,6 +260,15 @@ export default function PreciosProveedorPage() {
                       <div className="text-lg font-bold text-primary">
                         ${precio.precio_kg.toLocaleString('es-CL')}
                       </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {precio.precio_minimo_kg !== null ? (
+                        <div className="text-base font-semibold text-amber-400">
+                          ${precio.precio_minimo_kg.toLocaleString('es-CL')}
+                        </div>
+                      ) : (
+                        <div className="text-sm text-gray-500">— sin límite</div>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-300">
@@ -351,9 +364,32 @@ export default function PreciosProveedorPage() {
                   step="0.01"
                   min="0"
                   required
-                  placeholder="Ej: 5500"
+                  placeholder="Ej: 6850"
                   className="w-full bg-slate-700 border border-slate-600 text-white rounded px-3 py-2 focus:ring-2 focus:ring-primary"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Precio mínimo por kg{' '}
+                  <span className="text-gray-500 font-normal">(opcional — habilita descuentos del vendedor)</span>
+                </label>
+                <input
+                  type="number"
+                  value={formData.precio_minimo_kg ?? ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, precio_minimo_kg: e.target.value === '' ? null : Number(e.target.value) }))}
+                  step="0.01"
+                  min="0"
+                  max={formData.precio_kg || undefined}
+                  placeholder="Ej: 6650 (dejar vacío para no permitir descuentos)"
+                  className="w-full bg-slate-700 border border-slate-600 text-white rounded px-3 py-2 focus:ring-2 focus:ring-amber-400"
+                />
+                {formData.precio_minimo_kg !== null && formData.precio_kg > 0 && (
+                  <p className="text-xs text-amber-400 mt-1">
+                    El vendedor podrá bajar hasta ${Number(formData.precio_minimo_kg).toLocaleString('es-CL')}/kg
+                    (descuento máx. ${(formData.precio_kg - Number(formData.precio_minimo_kg)).toLocaleString('es-CL')}/kg)
+                  </p>
+                )}
               </div>
 
               <div>

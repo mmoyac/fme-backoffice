@@ -7,6 +7,7 @@ import { AuthService } from '@/lib/auth';
 import {
   listarPreventas,
   cancelarPreventa,
+  eliminarItemPreventa,
   getPdfUrl,
   getFrigorificoPdfUrl,
   type PreventaOut,
@@ -57,6 +58,7 @@ export default function ListadoPreventasPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [cancelando, setCancelando] = useState<number | null>(null);
+  const [eliminandoItem, setEliminandoItem] = useState<number | null>(null);
   const [expandido, setExpandido] = useState<number | null>(null);
   const [expandidoHistorico, setExpandidoHistorico] = useState<number | null>(null);
 
@@ -90,6 +92,21 @@ export default function ListadoPreventasPage() {
       cargar();
     } catch (e: any) { alert(e.message); }
     finally { setCancelando(null); }
+  };
+
+  const handleEliminarItem = async (itemId: number, pedidoId: number) => {
+    const pedido = preventas.find(p => p.id === pedidoId);
+    const esUltimo = pedido ? pedido.items.length === 1 : false;
+    const msg = esUltimo
+      ? '¿Eliminar el único corte? Esto cancelará la pre-venta completa.'
+      : '¿Eliminar este corte del pedido y liberar su stock?';
+    if (!confirm(msg)) return;
+    setEliminandoItem(itemId);
+    try {
+      await eliminarItemPreventa(itemId);
+      cargar();
+    } catch (e: any) { alert(e.message); }
+    finally { setEliminandoItem(null); }
   };
 
   const abrirPdf = (proveedorId?: number) => {
@@ -140,12 +157,6 @@ export default function ListadoPreventasPage() {
             <h2 className="text-white font-semibold">
               {preventas.length} pedidos &mdash; {totalCajas} cajas totales
             </h2>
-            <button
-              onClick={() => abrirPdf()}
-              className="bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm px-3 py-1.5 rounded-lg"
-            >
-              PDF todos los proveedores
-            </button>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {proveedores.map((prov) => {
@@ -155,12 +166,6 @@ export default function ListadoPreventasPage() {
                   <div className="text-white text-sm font-medium truncate">{prov.nombre}</div>
                   <div className="text-cyan-400 font-bold text-2xl my-1">{info?.cajas ?? 0}</div>
                   <div className="text-slate-400 text-xs mb-2">cajas</div>
-                  <button
-                    onClick={() => abrirPdf(prov.id)}
-                    className="text-xs bg-slate-600 hover:bg-slate-500 text-slate-200 px-2 py-1 rounded w-full"
-                  >
-                    PDF
-                  </button>
                 </div>
               );
             })}
@@ -233,6 +238,7 @@ export default function ListadoPreventasPage() {
                           <th className="text-right py-1">Pedidas</th>
                           <th className="text-right py-1">Asignadas</th>
                           <th className="text-right py-1">Monto</th>
+                          <th className="py-1" />
                         </tr>
                       </thead>
                       <tbody>
@@ -250,6 +256,16 @@ export default function ListadoPreventasPage() {
                               </td>
                               <td className="py-2 text-right text-slate-300">
                                 {monto > 0 ? `$${monto.toLocaleString('es-CL', { maximumFractionDigits: 0 })}` : '—'}
+                              </td>
+                              <td className="py-2 pl-3">
+                                <button
+                                  onClick={() => handleEliminarItem(item.id, p.id)}
+                                  disabled={eliminandoItem === item.id}
+                                  className="text-xs text-red-400 hover:text-red-300 disabled:opacity-40 px-1.5 py-0.5 rounded border border-red-900 hover:border-red-700 transition-colors"
+                                  title={p.items.length === 1 ? 'Eliminar corte (cancela la pre-venta)' : 'Eliminar este corte y liberar stock'}
+                                >
+                                  {eliminandoItem === item.id ? '...' : '×'}
+                                </button>
                               </td>
                             </tr>
                           );

@@ -202,39 +202,35 @@ export default function POSPedidoPage() {
         setUsuarioActual(usuario);
         console.log('👤 Usuario autenticado:', usuario);
         
-        const [productosData, clientesData, localesData, mediosData, unidadesData] = await Promise.all([
-          getCatalogoProductos(), // Usar catálogo que incluye stock_total
+        const [clientesData, localesData, mediosData, unidadesData] = await Promise.all([
           getClientes(),
           getLocales(),
           getMediosPago(),
           getUnidadesMedida()
         ]);
         
-        console.log('📦 Productos obtenidos:', productosData.length);
-        
-        setProductos(productosData.filter((p: any) => p.stock_total > 0)); // Solo productos con stock
         setClientes(clientesData);
-        setLocales(localesData);  // Usar todos los locales temporalmente
+        setLocales(localesData);
         setMediosPago(mediosData);
         setUnidadesMedida(unidadesData);
         
-        console.log('🏪 Todos los locales:', localesData);
+        console.log('🏪 Locales disponibles:', localesData.map((l: any) => `${l.id}:${l.codigo}`));
         
-        // Seleccionar local por defecto del usuario
-        const localesVenta = localesData; // Usar todos los locales disponibles
+        // Seleccionar local físico por defecto del usuario
+        // Prioridad: local_defecto_id > primer local NO-WEB > primer local disponible
+        const localesFisicos = localesData.filter((l: any) => l.codigo !== 'WEB');
         
         let localSeleccionado = null;
         if (usuario?.local_defecto_id) {
           localSeleccionado = usuario.local_defecto_id;
-        } else if (localesVenta.length > 0) {
-          localSeleccionado = localesVenta[0].id;
+        } else if (localesFisicos.length > 0) {
+          localSeleccionado = localesFisicos[0].id;
         } else if (localesData.length > 0) {
           localSeleccionado = localesData[0].id;
         }
         
         if (localSeleccionado) {
           setLocalId(localSeleccionado);
-          // Verificar si hay caja abierta en el local seleccionado
           await verificarCajaAbierta(localSeleccionado);
         } else {
           console.warn('⚠️ No hay locales disponibles en absoluto');
@@ -251,7 +247,7 @@ export default function POSPedidoPage() {
 
   // Recargar productos cuando cambie el local seleccionado
   useEffect(() => {
-    if (localId && locales.length > 0) {
+    if (localId) {
       cargarProductosLocal(localId);
       // Verificar caja cuando cambia el local
       verificarCajaAbierta(localId);

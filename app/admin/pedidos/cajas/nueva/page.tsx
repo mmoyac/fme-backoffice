@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { AuthService } from '@/lib/auth';
@@ -15,6 +15,7 @@ interface PrecioProveedor {
   proveedor_id: number;
   proveedor_nombre: string;
   precio_kg: number;
+  precio_minimo_kg: number | null;
 }
 
 interface ProductoConPrecios {
@@ -37,6 +38,8 @@ interface ItemFormulario {
   proveedor_id: number;
   cantidad: number;
   precio_kg: number;
+  precio_minimo_kg: number | null;
+  precio_acordado_kg: number | null; // null = usar precio base
   local_cliente_id: number | null;
   stock_disponible: number | null; // null = no cargado aún
 }
@@ -57,13 +60,17 @@ export default function NuevaPreventaPage() {
   const [productos, setProductos] = useState<ProductoConPrecios[]>([]);
   const [localesCliente, setLocalesCliente] = useState<LocalCliente[]>([]);
   const [loading, setLoading] = useState(true);
+  // búsqueda autocomplete por item: itemId -> texto
+  const [searchCorte, setSearchCorte] = useState<Record<string, string>>({});
+  const [openCorte, setOpenCorte] = useState<string | null>(null);
+  const corteRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const [clienteId, setClienteId] = useState<number | null>(null);
   const [localId, setLocalId] = useState<number | null>(null);
   const [notas, setNotas] = useState('');
   const [tipoDocId, setTipoDocId] = useState<number>(2); // 1=FAC, 2=BOL
   const [items, setItems] = useState<ItemFormulario[]>([
-    { id: genId(), producto_id: 0, proveedor_id: 0, cantidad: 1, precio_kg: 0, local_cliente_id: null, stock_disponible: null },
+    { id: genId(), producto_id: 0, proveedor_id: 0, cantidad: 1, precio_kg: 0, precio_minimo_kg: null, precio_acordado_kg: null, local_cliente_id: null, stock_disponible: null },
   ]);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
@@ -85,7 +92,10 @@ export default function NuevaPreventaPage() {
         const locsActivos = locs.filter((l: Local) => l.activo !== false);
         setClientes(cls);
         setLocales(locsActivos);
-        setProductos(prods.filter((p: ProductoConPrecios) => p.precios_proveedores.length > 0));
+        setProductos(prods
+          .filter((p: ProductoConPrecios) => p.precios_proveedores.length > 0)
+          .sort((a: ProductoConPrecios, b: ProductoConPrecios) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }))
+        );
         // Seleccionar local por defecto del usuario logueado
         if (usuario?.local_defecto_id) {
           setLocalId(usuario.local_defecto_id);
@@ -122,6 +132,18 @@ export default function NuevaPreventaPage() {
 
   const getStockForProducto = (producto_id: number): Record<number, number> =>
     stockMap[producto_id] ?? {};
+
+  // Devuelve cuántas cajas están efectivamente disponibles para el ítem dado,
+  // descontando lo que otros ítems del formulario ya están reclamando.
+  const getEffectiveStock = (producto_id: number, proveedor_id: number, excludeItemId: string): number | null => {
+    if (!producto_id || !proveedor_id) return null;
+    const raw = stockMap[producto_id]?.[proveedor_id] ?? null;
+    if (raw === null) return null;
+    const alreadyClaimed = items
+      .filter(i => i.id !== excludeItemId && i.producto_id === producto_id && i.proveedor_id === proveedor_id)
+      .reduce((sum, i) => sum + i.cantidad, 0);
+    return Math.max(0, raw - alreadyClaimed);
+  };
 
   const cargarLocalesCliente = async (id: number) => {
     try {
@@ -171,7 +193,9 @@ export default function NuevaPreventaPage() {
           const proveedores = getProveedoresForProducto(item.producto_id);
           const prov = proveedores.find((p) => p.proveedor_id === value);
           updated.precio_kg = prov?.precio_kg ?? 0;
-          const stock = getStock(item.producto_id, value);
+          updated.precio_minimo_kg = prov?.precio_minimo_kg ?? null;
+          updated.precio_acordado_kg = null; // reset precio acordado al cambiar proveedor
+          const stock = getEffectiveStock(item.producto_id, value, id);
           updated.stock_disponible = stock;
           // Ajustar cantidad si excede stock
           if (stock !== null && updated.cantidad > stock) {
@@ -179,7 +203,7 @@ export default function NuevaPreventaPage() {
           }
         }
         if (field === 'cantidad') {
-          const stock = getStock(item.producto_id, item.proveedor_id);
+          const stock = getEffectiveStock(item.producto_id, item.proveedor_id, id);
           if (stock !== null) updated.cantidad = Math.min(value, stock);
         }
         return updated;
@@ -187,11 +211,14 @@ export default function NuevaPreventaPage() {
     );
   };
 
-  const addItem = () =>
+  const addItem = () => {
+    const newId = genId();
     setItems((prev) => [
       ...prev,
-      { id: genId(), producto_id: 0, proveedor_id: 0, cantidad: 1, precio_kg: 0, local_cliente_id: null, stock_disponible: null },
+      { id: newId, producto_id: 0, proveedor_id: 0, cantidad: 1, precio_kg: 0, precio_minimo_kg: null, precio_acordado_kg: null, local_cliente_id: null, stock_disponible: null },
     ]);
+    setSearchCorte((prev) => ({ ...prev, [newId]: '' }));
+  };
 
   const removeItem = (id: string) => setItems((prev) => prev.filter((i) => i.id !== id));
 
@@ -199,7 +226,7 @@ export default function NuevaPreventaPage() {
     setItems((prev) =>
       prev.map((item) => {
         if (item.id !== id) return item;
-        const stock = getStock(item.producto_id, item.proveedor_id);
+        const stock = getEffectiveStock(item.producto_id, item.proveedor_id, item.id);
         const nueva = Math.max(1, item.cantidad + delta);
         return { ...item, cantidad: stock !== null ? Math.min(nueva, stock) : nueva };
       })
@@ -218,7 +245,8 @@ export default function NuevaPreventaPage() {
         i.proveedor_id > 0 &&
         i.cantidad > 0 &&
         i.local_cliente_id !== null &&
-        (getStock(i.producto_id, i.proveedor_id) === null || i.cantidad <= (getStock(i.producto_id, i.proveedor_id) ?? Infinity))
+        (getEffectiveStock(i.producto_id, i.proveedor_id, i.id) === null || i.cantidad <= (getEffectiveStock(i.producto_id, i.proveedor_id, i.id) ?? Infinity)) &&
+        (i.precio_acordado_kg === null || (i.precio_minimo_kg !== null && i.precio_acordado_kg >= i.precio_minimo_kg && i.precio_acordado_kg <= i.precio_kg))
     );
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -238,6 +266,7 @@ export default function NuevaPreventaPage() {
             proveedor_id: i.proveedor_id,
             cantidad: i.cantidad,
             local_cliente_id: i.local_cliente_id ?? undefined,
+            precio_acordado_kg: i.precio_acordado_kg ?? undefined,
           })
         ),
       });
@@ -399,19 +428,48 @@ export default function NuevaPreventaPage() {
                   </div>
 
                   {/* Corte */}
-                  <div>
+                  <div ref={(el) => { corteRefs.current[item.id] = el; }} className="relative">
                     <label className={labelClass}>Corte / Producto *</label>
-                    <select
-                      value={item.producto_id || ''}
-                      onChange={(e) => updateItem(item.id, 'producto_id', Number(e.target.value))}
+                    <input
+                      type="text"
+                      autoComplete="off"
+                      placeholder="Buscar corte..."
+                      value={openCorte === item.id
+                        ? (searchCorte[item.id] ?? '')
+                        : (productos.find(p => p.id === item.producto_id)?.nombre ?? '')
+                      }
+                      onFocus={() => {
+                        setOpenCorte(item.id);
+                        setSearchCorte(prev => ({ ...prev, [item.id]: '' }));
+                      }}
+                      onChange={(e) => setSearchCorte(prev => ({ ...prev, [item.id]: e.target.value }))}
+                      onBlur={() => setTimeout(() => setOpenCorte(null), 150)}
                       className={inputClass}
-                      required
-                    >
-                      <option value="">— Seleccionar corte —</option>
-                      {productos.map((p) => (
-                        <option key={p.id} value={p.id}>{p.nombre}</option>
-                      ))}
-                    </select>
+                    />
+                    {openCorte === item.id && (() => {
+                      const q = (searchCorte[item.id] ?? '').toLowerCase();
+                      const filtrados = productos.filter(p => p.nombre.toLowerCase().includes(q));
+                      return (
+                        <ul className="absolute z-50 left-0 right-0 mt-1 bg-slate-800 border border-slate-600 rounded-xl shadow-xl max-h-56 overflow-y-auto">
+                          {filtrados.length === 0 ? (
+                            <li className="px-4 py-3 text-slate-400 text-sm">Sin resultados</li>
+                          ) : filtrados.map(p => (
+                            <li
+                              key={p.id}
+                              onMouseDown={() => {
+                                updateItem(item.id, 'producto_id', p.id);
+                                setOpenCorte(null);
+                              }}
+                              className={`px-4 py-2.5 cursor-pointer text-sm hover:bg-slate-700 ${
+                                item.producto_id === p.id ? 'text-cyan-400 font-semibold' : 'text-white'
+                              }`}
+                            >
+                              {p.nombre}
+                            </li>
+                          ))}
+                        </ul>
+                      );
+                    })()}
                   </div>
 
                   {/* Proveedor */}
@@ -426,7 +484,7 @@ export default function NuevaPreventaPage() {
                     >
                       <option value="">— Seleccionar proveedor —</option>
                       {proveedores.map((pv) => {
-                        const stockProv = getStockForProducto(item.producto_id)[pv.proveedor_id] ?? null;
+                        const stockProv = getEffectiveStock(item.producto_id, pv.proveedor_id, item.id);
                         const sinStock = stockProv !== null && stockProv === 0;
                         return (
                           <option key={pv.proveedor_id} value={pv.proveedor_id} disabled={sinStock}>
@@ -437,7 +495,7 @@ export default function NuevaPreventaPage() {
                     </select>
                     {/* Badge de stock */}
                     {item.proveedor_id > 0 && (() => {
-                      const stock = getStock(item.producto_id, item.proveedor_id);
+                      const stock = getEffectiveStock(item.producto_id, item.proveedor_id, item.id);
                       if (stock === null) return null;
                       const color = stock === 0 ? 'text-red-400 bg-red-900/30 border-red-800'
                         : stock <= 3 ? 'text-amber-400 bg-amber-900/30 border-amber-800'
@@ -506,12 +564,60 @@ export default function NuevaPreventaPage() {
                     );
                   })()}
 
+                  {/* Precio acordado (solo si hay precio mínimo configurado) */}
+                  {item.precio_kg > 0 && item.precio_minimo_kg !== null && (
+                    <div>
+                      <label className={labelClass}>
+                        Precio Acordado{' '}
+                        <span className="text-slate-500 font-normal">(opcional)</span>
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <span className="text-slate-400 text-sm">$</span>
+                        <input
+                          type="number"
+                          min={item.precio_minimo_kg}
+                          max={item.precio_kg}
+                          step={1}
+                          value={item.precio_acordado_kg ?? ''}
+                          onChange={(e) => {
+                            const val = e.target.value === '' ? null : Number(e.target.value);
+                            setItems((prev) =>
+                              prev.map((it) =>
+                                it.id === item.id ? { ...it, precio_acordado_kg: val } : it
+                              )
+                            );
+                          }}
+                          placeholder={`${item.precio_kg.toLocaleString('es-CL')} (base)`}
+                          className="flex-1 bg-slate-700 border border-slate-600 text-white rounded-xl px-4 py-2.5 text-base focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
+                        />
+                        <span className="text-slate-400 text-sm">/kg</span>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Rango permitido: <span className="text-amber-400 font-semibold">${item.precio_minimo_kg.toLocaleString('es-CL')}</span>
+                        {' '}–{' '}
+                        <span className="text-cyan-400 font-semibold">${item.precio_kg.toLocaleString('es-CL')}</span> /kg
+                      </p>
+                      {/* Validación en tiempo real */}
+                      {item.precio_acordado_kg !== null && (
+                        item.precio_acordado_kg < item.precio_minimo_kg ? (
+                          <p className="text-red-400 text-xs mt-1">⚠️ Por debajo del precio mínimo permitido</p>
+                        ) : item.precio_acordado_kg > item.precio_kg ? (
+                          <p className="text-amber-400 text-xs mt-1">ℹ️ No puede superar el precio base</p>
+                        ) : (
+                          <p className="text-emerald-400 text-xs mt-1">
+                            ✓ Descuento de ${(item.precio_kg - item.precio_acordado_kg).toLocaleString('es-CL')}/kg aplicado
+                          </p>
+                        )
+                      )}
+                    </div>
+                  )}
+
                   {/* Cantidad con +/- — ancho completo */}
                   <div>
                     <label className={labelClass}>
                       Cantidad de Cajas *
                       {(() => {
-                        const stock = getStock(item.producto_id, item.proveedor_id);
+                        const stock = getEffectiveStock(item.producto_id, item.proveedor_id, item.id);
                         if (stock === null || !item.proveedor_id) return null;
                         return (
                           <span className="text-slate-500 font-normal ml-2 text-xs">
@@ -531,7 +637,7 @@ export default function NuevaPreventaPage() {
                       <input
                         type="number"
                         min={1}
-                        max={getStock(item.producto_id, item.proveedor_id) ?? undefined}
+                        max={getEffectiveStock(item.producto_id, item.proveedor_id, item.id) ?? undefined}
                         step={1}
                         value={item.cantidad}
                         onChange={(e) => updateItem(item.id, 'cantidad', Number(e.target.value))}
@@ -542,7 +648,7 @@ export default function NuevaPreventaPage() {
                         type="button"
                         onClick={() => stepCantidad(item.id, 1)}
                         disabled={(() => {
-                          const stock = getStock(item.producto_id, item.proveedor_id);
+                          const stock = getEffectiveStock(item.producto_id, item.proveedor_id, item.id);
                           return stock !== null && item.cantidad >= stock;
                         })()}
                         className="w-14 h-14 flex-shrink-0 flex items-center justify-center bg-slate-700 hover:bg-slate-600 active:bg-slate-500 disabled:opacity-40 border border-slate-600 rounded-xl text-white text-2xl font-bold"
@@ -552,7 +658,7 @@ export default function NuevaPreventaPage() {
                     </div>
                     {/* Alerta si excede stock */}
                     {(() => {
-                      const stock = getStock(item.producto_id, item.proveedor_id);
+                      const stock = getEffectiveStock(item.producto_id, item.proveedor_id, item.id);
                       if (stock !== null && item.cantidad > stock) {
                         return (
                           <p className="text-red-400 text-xs mt-1">

@@ -1,7 +1,11 @@
 'use client';
 
 import React from 'react';
-import { Truck, Package, MapPin, Clock, CarFront } from 'lucide-react';
+import { Truck, Package, MapPin, Clock, CarFront, BarChart3 } from 'lucide-react';
+
+
+
+
 
 export default function DespachoPage() {
   return (
@@ -143,6 +147,24 @@ export default function DespachoPage() {
               </p>
             </div>
             <CarFront className="h-8 w-8 text-emerald-500" />
+          </div>
+        </a>
+
+        {/* Resumen de cajas por vendedor */}
+        <a
+          href="/admin/despacho/resumen-cajas"
+          className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Resumen de Cajas por Vendedor
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
+                Cajas vendidas por fecha y vendedor
+              </p>
+            </div>
+            <BarChart3 className="h-8 w-8 text-emerald-500" />
           </div>
         </a>
       </div>

@@ -22,6 +22,7 @@ export interface ItemPreventaCreate {
   proveedor_id: number;
   cantidad: number;
   local_cliente_id?: number | null;
+  precio_acordado_kg?: number | null;
 }
 
 export interface PreventaCreate {
@@ -152,6 +153,13 @@ export const cancelarPreventa = async (id: number): Promise<void> => {
   });
 };
 
+export const eliminarItemPreventa = async (itemId: number): Promise<void> => {
+  return apiRequest(`/api/preventa/item/${itemId}`, {
+    method: 'DELETE',
+    headers: AuthService.getAuthHeaders(),
+  });
+};
+
 export const getPdfUrl = (fecha?: string, proveedor_id?: number): string => {
   const params = new URLSearchParams();
   if (fecha) params.set('fecha', fecha);
@@ -194,6 +202,44 @@ export const asignarCajaAPedido = async (lote_id: number, item_pedido_id: number
 export const desasignarCaja = async (asignacion_id: number): Promise<void> => {
   return apiRequest(`/api/preventa/picking/asignacion/${asignacion_id}`, {
     method: 'DELETE',
+    headers: AuthService.getAuthHeaders(),
+  });
+};
+
+export interface ResumenCajasPedido {
+  pedido_id: number;
+  numero_pedido: string;
+  cliente: string;
+  cajas: number;
+  monto_total: number;
+  estado: string;
+}
+
+export interface ResumenCajasVendedor {
+  vendedor_id: number;
+  vendedor_nombre: string;
+  cantidad_cajas: number;
+  cantidad_pedidos: number;
+  pedidos: ResumenCajasPedido[];
+}
+
+export interface ResumenCajasCorte {
+  producto_id: number;
+  corte: string;
+  total_cajas: number;
+}
+
+export interface ResumenCajasPorFecha {
+  fecha: string;
+  total_cajas: number;
+  total_pedidos: number;
+  por_vendedor: ResumenCajasVendedor[];
+  por_corte: ResumenCajasCorte[];
+}
+
+export const getResumenCajas = async (fecha?: string): Promise<ResumenCajasPorFecha> => {
+  const params = fecha ? `?fecha=${fecha}` : '';
+  return apiRequest(`/api/preventa/resumen-cajas${params}`, {
     headers: AuthService.getAuthHeaders(),
   });
 };

@@ -71,13 +71,6 @@ export default function PedidosPage() {
             <span className="mr-2">🛒</span>
             POS Tablet
           </Link>
-          <Link 
-            href="/admin/pedidos/cajas"
-            className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg transition-colors font-semibold flex items-center"
-          >
-            <span className="mr-2">📦</span>
-            + Pedido Cajas
-          </Link>
         </div>
       </div>
 

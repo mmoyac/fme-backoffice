@@ -9,6 +9,7 @@ interface Tenant {
     nombre: string;
     dominio_principal: string | null;
     subdomain: string | null;
+    google_sheet_id: string | null;
     activo: boolean;
     correlativo_pedido: number;
     created_at: string;
@@ -80,6 +81,7 @@ export default function TenantsPage() {
                 nombre: editingTenant.nombre,
                 dominio_principal: typeof editingTenant.dominio_principal === 'string' ? editingTenant.dominio_principal : '',
                 subdomain: typeof editingTenant.subdomain === 'string' ? editingTenant.subdomain : '',
+                google_sheet_id: typeof editingTenant.google_sheet_id === 'string' ? editingTenant.google_sheet_id : '',
                 activo: editingTenant.activo,
                 correlativo_pedido: editingTenant.correlativo_pedido,
             };
@@ -435,6 +437,23 @@ export default function TenantsPage() {
                                     className="w-full p-2 border border-slate-600 bg-slate-700 text-white rounded focus:ring-2 focus:ring-primary"
                                     placeholder="subdominio"
                                 />
+                            </div>
+
+                            {/* Google Sheet ID */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-1">
+                                    📊 Google Sheet ID (sincronización de datos)
+                                </label>
+                                <input
+                                    type="text"
+                                    value={editingTenant.google_sheet_id || ''}
+                                    onChange={(e) => setEditingTenant({ ...editingTenant, google_sheet_id: e.target.value })}
+                                    className="w-full p-2 border border-slate-600 bg-slate-700 text-white rounded focus:ring-2 focus:ring-primary font-mono text-sm"
+                                    placeholder="1gxiX266yYZBQaQpobFPjW0eWm8k..."
+                                />
+                                <p className="text-xs text-gray-400 mt-1">
+                                    ID del spreadsheet de Google Sheets (lo que aparece en la URL entre /d/ y /edit)
+                                </p>
                             </div>
 
                             {/* Correlativo de pedidos */}

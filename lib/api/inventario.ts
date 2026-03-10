@@ -54,3 +54,26 @@ export async function getStockProductoLocal(productoId: number, localId: number)
   return inventario.cantidad_stock || 0;
 }
 
+export async function ajusteMerma(
+  productoId: number,
+  localId: number,
+  cantidad: number,
+  motivo: string
+): Promise<{ stock_anterior: number; cantidad_descontada: number; stock_nuevo: number; usuario: string }> {
+  const params = new URLSearchParams({
+    producto_id: String(productoId),
+    local_id: String(localId),
+    cantidad: String(cantidad),
+    motivo,
+  });
+  const response = await fetch(`${API_URL}/api/inventario/ajuste-merma?${params}`, {
+    method: 'POST',
+    headers: AuthService.getAuthHeaders(),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.detail || 'Error al registrar la merma');
+  }
+  return response.json();
+}
+

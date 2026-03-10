@@ -1,5 +1,5 @@
 // Componentes de las etapas del POS
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import { PlusIcon, MinusIcon, XMarkIcon, ShoppingCartIcon } from '@heroicons/react/24/outline';
 import { getPrecioProductoLocal } from '@/lib/api/precios';
@@ -39,6 +39,57 @@ export function EtapaProductos({
   const [busqueda, setBusqueda] = useState<string>('');
   const [preciosProducto, setPreciosProducto] = useState<any[]>([]);
   const [loadingPrecios, setLoadingPrecios] = useState(false);
+  
+  // Escáner de código de barras
+  const [scanFeedback, setScanFeedback] = useState<{ tipo: 'ok' | 'error'; texto: string } | null>(null);
+  const scanBufferRef = useRef('');
+  const scanTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const procesarCodigoBarra = useCallback((codigo: string) => {
+    const trimmed = codigo.trim();
+    if (!trimmed) return;
+    // Buscar por codigo_barra primero, luego por SKU
+    const encontrado = productos.find(
+      p => p.codigo_barra === trimmed || p.sku === trimmed
+    );
+    if (encontrado) {
+      setProductoSeleccionado(encontrado);
+      setBusqueda('');
+      setScanFeedback({ tipo: 'ok', texto: `✓ ${encontrado.nombre}` });
+    } else {
+      setScanFeedback({ tipo: 'error', texto: `Sin resultado: "${trimmed}"` });
+    }
+    setTimeout(() => setScanFeedback(null), 2000);
+  }, [productos, setProductoSeleccionado]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignorar si el foco está en un input/textarea distinto al escáner
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+      if (e.key === 'Enter') {
+        if (scanBufferRef.current.length > 0) {
+          procesarCodigoBarra(scanBufferRef.current);
+          scanBufferRef.current = '';
+        }
+        return;
+      }
+      if (e.key.length === 1) {
+        scanBufferRef.current += e.key;
+        if (scanTimerRef.current) clearTimeout(scanTimerRef.current);
+        // Si no llega Enter en 100ms, limpiar buffer (tecleo manual)
+        scanTimerRef.current = setTimeout(() => {
+          scanBufferRef.current = '';
+        }, 100);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      if (scanTimerRef.current) clearTimeout(scanTimerRef.current);
+    };
+  }, [procesarCodigoBarra]);
   
   // Cargar precios cuando se selecciona un producto
   useEffect(() => {
@@ -145,6 +196,19 @@ export function EtapaProductos({
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* Panel izquierdo: Filtros y productos */}
       <div className="lg:col-span-2 space-y-4">
+
+        {/* Indicador de escaneo */}
+        <div className={`rounded-lg px-4 py-2 text-sm font-medium flex items-center gap-2 transition-all duration-300 ${
+          scanFeedback
+            ? scanFeedback.tipo === 'ok'
+              ? 'bg-green-900/40 border border-green-500/50 text-green-300'
+              : 'bg-red-900/40 border border-red-500/50 text-red-300'
+            : 'bg-slate-800 border border-slate-700 text-slate-500'
+        }`}>
+          <span className="text-base">📷</span>
+          <span>{scanFeedback ? scanFeedback.texto : 'Listo para escanear código de barras'}</span>
+        </div>
+
         {/* Filtros */}
         <div className="bg-slate-800 rounded-lg shadow-sm p-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
