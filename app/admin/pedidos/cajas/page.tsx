@@ -61,6 +61,8 @@ export default function ListadoPreventasPage() {
   const [eliminandoItem, setEliminandoItem] = useState<number | null>(null);
   const [expandido, setExpandido] = useState<number | null>(null);
   const [expandidoHistorico, setExpandidoHistorico] = useState<number | null>(null);
+  const [esAdmin, setEsAdmin] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -81,6 +83,10 @@ export default function ListadoPreventasPage() {
 
   useEffect(() => {
     if (!AuthService.isAuthenticated()) { router.push('/login'); return; }
+    AuthService.getCurrentUser().then((u) => {
+      setEsAdmin(u.role?.nombre?.toLowerCase() === 'admin');
+      setCurrentUserId(u.id ?? null);
+    }).catch(() => {});
     cargar();
   }, [cargar]);
 
@@ -199,10 +205,15 @@ export default function ListadoPreventasPage() {
                   className="w-full text-left px-5 py-4 flex items-center gap-4 hover:bg-slate-700/40"
                 >
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-wrap">
                       <span className="text-white font-mono font-bold">{p.numero_pedido}</span>
                       <span className="text-slate-300 text-sm">{p.cliente_nombre}</span>
                       <span className="text-slate-500 text-xs">{formatFecha(p.fecha_pedido)}</span>
+                      {esAdmin && p.vendedor_nombre && (
+                        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-violet-900/40 border border-violet-700 text-violet-300">
+                          👤 {p.vendedor_nombre}
+                        </span>
+                      )}
                     </div>
                     <div className="flex flex-wrap gap-1.5 mt-1">
                       {p.items.map((i) => (
@@ -289,17 +300,19 @@ export default function ListadoPreventasPage() {
       )}
 
       {/* ── Historial de pedidos confirmados del día ── */}
-      {historico.length > 0 && (
+      {(() => {
+        const historicoFiltrado = esAdmin ? historico : historico.filter(p => p.usuario_id === currentUserId);
+        return historicoFiltrado.length > 0 && (
         <div className="mt-8">
           <div className="flex items-center gap-3 mb-3">
             <h2 className="text-white font-semibold text-lg">Historial confirmados</h2>
             <span className="text-xs bg-emerald-900/50 text-emerald-400 border border-emerald-800 px-2 py-0.5 rounded-full">
-              {historico.length} pedido{historico.length !== 1 ? 's' : ''}
+              {historicoFiltrado.length} pedido{historicoFiltrado.length !== 1 ? 's' : ''}
             </span>
             <span className="text-xs text-slate-500">Solo lectura</span>
           </div>
           <div className="space-y-2">
-            {historico.map((p) => {
+            {historicoFiltrado.map((p) => {
               const isExp = expandidoHistorico === p.id;
               const totalCaj = p.items?.reduce((s, i) => s + i.cantidad, 0) ?? 0;
               const totalKg = p.items?.reduce((s, i) => s + (i.peso_total_kg ?? 0), 0) ?? 0;
@@ -313,6 +326,11 @@ export default function ListadoPreventasPage() {
                       <div className="flex items-center gap-3 flex-wrap">
                         <span className="text-white font-mono font-semibold">{p.numero_pedido}</span>
                         <span className="text-slate-300 text-sm">{p.cliente?.nombre || ''}</span>
+                        {esAdmin && p.usuario_nombre && (
+                          <span className="text-xs bg-slate-700 text-cyan-400 border border-slate-600 px-2 py-0.5 rounded-full">
+                            {p.usuario_nombre}
+                          </span>
+                        )}
                         <span className="text-slate-500 text-xs">{formatFecha(p.fecha_pedido)}</span>
                         <span className="text-xs bg-emerald-900/60 text-emerald-400 border border-emerald-800 px-1.5 py-0.5 rounded">
                           ✓ CONFIRMADO
@@ -385,7 +403,8 @@ export default function ListadoPreventasPage() {
             })}
           </div>
         </div>
-      )}
+      );
+      })()}
     </div>
   );
 }

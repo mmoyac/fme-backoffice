@@ -30,6 +30,7 @@ export interface PreventaCreate {
   local_id: number;
   notas?: string;
   tipo_documento_tributario_id?: number;
+  medio_pago_id?: number;
   items: ItemPreventaCreate[];
 }
 
@@ -67,6 +68,10 @@ export interface PreventaOut {
   fecha_pedido: string;
   notas: string | null;
   monto_total: number;
+  vendedor_id: number | null;
+  vendedor_nombre: string | null;
+  medio_pago_id: number | null;
+  medio_pago_nombre: string | null;
   items: ItemPreventaOut[];
 }
 

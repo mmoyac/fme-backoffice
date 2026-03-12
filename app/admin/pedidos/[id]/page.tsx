@@ -343,6 +343,8 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
 
   const togglePagado = async () => {
     if (!pedido) return;
+    // Las facturas solo se pueden pagar desde el módulo de Facturas
+    if (pedido.tipo_documento_tributario_id === 1) return;
 
     try {
       setGuardando(true);
@@ -998,6 +1000,21 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
                   }
                 </p>
               </div>
+            ) : pedido.tipo_documento_tributario_id === 1 ? (
+              <div className="space-y-3">
+                <div className={`w-full px-4 py-3 rounded-lg font-semibold text-center ${pedido.pagado
+                  ? 'bg-green-500 text-white'
+                  : 'bg-blue-500/20 border border-blue-500 text-blue-400'
+                  }`}>
+                  {pedido.pagado ? '✓ Pagado' : '⏳ Pendiente de Pago'}
+                </div>
+                <p className="text-sm text-gray-400 text-center">
+                  Este pedido tiene factura. El pago debe registrarse desde el módulo de{' '}
+                  <a href="/admin/facturas" className="text-blue-400 hover:underline font-medium">
+                    Facturas
+                  </a>.
+                </p>
+              </div>
             ) : (
               <button
                 onClick={togglePagado}
@@ -1165,6 +1182,14 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
                   </div>
                 </div>
               </div>
+            ) : pedido.tipo_documento_tributario_id === 1 ? (
+              // Factura: el medio de pago se asigna desde el módulo de Facturas
+              <p className="text-sm text-gray-400 text-center py-2">
+                El medio de pago se registra desde el módulo de{' '}
+                <a href="/admin/facturas" className="text-blue-400 hover:underline font-medium">
+                  Facturas
+                </a>.
+              </p>
             ) : (
               // Mostrar selector para asignar medio de pago
               <div className="space-y-3">

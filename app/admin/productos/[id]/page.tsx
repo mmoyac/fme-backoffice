@@ -59,6 +59,7 @@ export default function EditarProductoPage({ params }: { params: { id: string } 
         stock_minimo: productoData.stock_minimo,
         stock_critico: productoData.stock_critico,
         precio_incluye_iva: productoData.precio_incluye_iva,
+        descuento_contado: productoData.descuento_contado ?? undefined,
       });
     } catch (err) {
       alert('Error al cargar datos');
@@ -420,6 +421,27 @@ export default function EditarProductoPage({ params }: { params: { id: string } 
                 />
                 <span>Precio incluye IVA (19%)</span>
               </label>
+
+              {/* Descuento Contado */}
+              <div className="pt-1">
+                <label className="block text-sm font-medium text-gray-300 mb-1">
+                  Descuento Contado <span className="text-gray-500 font-normal">(opcional)</span>
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={0.1}
+                    value={formData.descuento_contado ?? ''}
+                    onChange={(e) => setFormData({ ...formData, descuento_contado: e.target.value === '' ? null : Number(e.target.value) })}
+                    placeholder="0"
+                    className="w-28 bg-slate-700 border border-slate-600 text-white rounded px-3 py-2 focus:ring-2 focus:ring-primary"
+                  />
+                  <span className="text-slate-400 text-sm">%</span>
+                  <span className="text-slate-500 text-xs">Se aplica durante picking si el medio de pago es al contado</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>

@@ -30,6 +30,7 @@ export interface Producto {
   tipo_venta_nombre: string | null;
   // Configuración tributaria
   precio_incluye_iva: boolean;
+  descuento_contado: number | null; // % de descuento cuando el pago es al contado
 }
 
 export interface ProductoCreate {
@@ -51,6 +52,7 @@ export interface ProductoCreate {
   stock_minimo?: number;
   stock_critico?: number;
   precio_incluye_iva?: boolean;
+  descuento_contado?: number | null;
 }
 
 export type ProductoUpdate = Partial<ProductoCreate>;

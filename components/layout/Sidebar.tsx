@@ -88,8 +88,11 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
               <div key={i} className="h-12 bg-slate-700/50 rounded-lg animate-pulse" />
             ))
           ) : (
-            menuItems.map((item) => {
-              const isActive = pathname?.startsWith(item.href);
+            (() => {
+              const exactMatch = menuItems.some(m => pathname === m.href);
+              return menuItems.map((item) => {
+              const isActive = pathname === item.href ||
+                (!exactMatch && (pathname?.startsWith(item.href + '/') ?? false));
               return (
                 <Link
                   key={item.href}
@@ -104,7 +107,8 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                   <span>{item.nombre}</span>
                 </Link>
               );
-            })
+            });
+            })()
           )}
         </nav>
 

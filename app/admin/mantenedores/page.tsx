@@ -12,6 +12,7 @@ import TiposPedidoList from "./components/TiposPedidoList";
 import TiposVehiculoList from "./components/TiposVehiculoList";
 import EstadosEnrolamientoList from "./components/EstadosEnrolamientoList";
 import UbicacionesList from "./components/UbicacionesList";
+import MediosPagoList from "./components/MediosPagoList";
 
 export default function MantenedoresPage() {
     const [activeTab, setActiveTab] = useState("categorias");
@@ -135,6 +136,15 @@ export default function MantenedoresPage() {
                             }`}
                     >
                         📦 Tipos Pedido
+                    </button>
+                    <button
+                        onClick={() => setActiveTab("medios_pago")}
+                        className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === "medios_pago"
+                            ? "border-primary text-primary"
+                            : "border-transparent text-gray-400 hover:text-gray-300 hover:border-slate-600"
+                            }`}
+                    >
+                        💳 Medios de Pago
                     </button>
                     <button
                         onClick={() => setActiveTab("config_landing")}
@@ -280,6 +290,16 @@ export default function MantenedoresPage() {
                             Gestiona los tipos de pedido y sus locales de despacho por defecto
                         </p>
                         <TiposPedidoList />
+                    </div>
+                )}
+
+                {activeTab === "medios_pago" && (
+                    <div>
+                        <h2 className="text-xl font-semibold text-white mb-2">Medios de Pago</h2>
+                        <p className="text-gray-400 mb-4">
+                            Configura los medios de pago y marca cuáles son al contado para aplicar descuentos en preventas
+                        </p>
+                        <MediosPagoList />
                     </div>
                 )}
 

@@ -421,6 +421,7 @@ export default function FacturasPage() {
                 <tr className="border-b border-slate-700 bg-slate-900/50">
                   <th className="text-left text-slate-400 text-xs font-semibold px-4 py-3 uppercase tracking-wider">N° Pedido</th>
                   <th className="text-left text-slate-400 text-xs font-semibold px-4 py-3 uppercase tracking-wider">Cliente / RUT</th>
+                  <th className="text-left text-slate-400 text-xs font-semibold px-4 py-3 uppercase tracking-wider">Vendedor</th>
                   <th className="text-left text-slate-400 text-xs font-semibold px-4 py-3 uppercase tracking-wider">Fecha</th>
                   <th className="text-left text-slate-400 text-xs font-semibold px-4 py-3 uppercase tracking-wider">Monto</th>
                   <th className="text-left text-slate-400 text-xs font-semibold px-4 py-3 uppercase tracking-wider">Estado Pago</th>
@@ -449,6 +450,13 @@ export default function FacturasPage() {
                       )}
                       {factura.cliente?.giro && (
                         <p className="text-slate-500 text-xs truncate max-w-[180px]">{factura.cliente.giro}</p>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      {factura.usuario_nombre ? (
+                        <p className="text-white text-sm">{factura.usuario_nombre}</p>
+                      ) : (
+                        <span className="text-slate-500 text-xs italic">—</span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-slate-300 text-sm whitespace-nowrap">

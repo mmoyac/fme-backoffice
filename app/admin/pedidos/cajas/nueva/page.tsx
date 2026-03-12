@@ -7,6 +7,7 @@ import { AuthService } from '@/lib/auth';
 import { crearPreventa, type ItemPreventaCreate } from '@/lib/api/preventa';
 import { getClientes, type Cliente } from '@/lib/api/clientes';
 import { getLocales, type Local } from '@/lib/api/locales';
+import { getMediosPago, type MedioPago } from '@/lib/api/maestras';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -23,6 +24,7 @@ interface ProductoConPrecios {
   nombre: string;
   sku: string;
   precio_incluye_iva: boolean;
+  descuento_contado: number | null;
   precios_proveedores: PrecioProveedor[];
 }
 
@@ -49,8 +51,9 @@ function genId() {
 }
 
 const inputClass =
-  'w-full bg-slate-700 border border-slate-600 text-white rounded-xl px-4 py-3 text-base focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400';
+  'w-full bg-slate-700 border border-slate-600 text-white rounded-xl px-4 py-3 text-base focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all';
 const labelClass = 'block text-sm font-medium text-slate-300 mb-1.5';
+const glowClass = 'ring-2 ring-cyan-400 !border-cyan-400 shadow-[0_0_14px_2px_rgba(94,200,242,0.35)]';
 
 export default function NuevaPreventaPage() {
   const router = useRouter();
@@ -69,6 +72,8 @@ export default function NuevaPreventaPage() {
   const [localId, setLocalId] = useState<number | null>(null);
   const [notas, setNotas] = useState('');
   const [tipoDocId, setTipoDocId] = useState<number>(2); // 1=FAC, 2=BOL
+  const [mediosPago, setMediosPago] = useState<MedioPago[]>([]);
+  const [medioPagoId, setMedioPagoId] = useState<number | null>(null);
   const [items, setItems] = useState<ItemFormulario[]>([
     { id: genId(), producto_id: 0, proveedor_id: 0, cantidad: 1, precio_kg: 0, precio_minimo_kg: null, precio_acordado_kg: null, local_cliente_id: null, stock_disponible: null },
   ]);
@@ -84,14 +89,18 @@ export default function NuevaPreventaPage() {
       AuthService.getCurrentUser(),
       getClientes(),
       getLocales(),
+      getMediosPago(),
       fetch(`${API_URL}/api/precios-proveedor/productos`, {
         headers: AuthService.getAuthHeaders(),
       }).then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); }),
     ])
-      .then(([usuario, cls, locs, prods]) => {
+      .then(([usuario, cls, locs, medios, prods]) => {
         const locsActivos = locs.filter((l: Local) => l.activo !== false);
+        const mediosActivos: MedioPago[] = (medios as MedioPago[]).filter((m) => m.activo);
         setClientes(cls);
         setLocales(locsActivos);
+        setMediosPago(mediosActivos);
+        // No pre-seleccionar: vendedor debe elegir conscientemente
         setProductos(prods
           .filter((p: ProductoConPrecios) => p.precios_proveedores.length > 0)
           .sort((a: ProductoConPrecios, b: ProductoConPrecios) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }))
@@ -238,6 +247,7 @@ export default function NuevaPreventaPage() {
   const puedeGuardar =
     clienteId !== null &&
     localId !== null &&
+    medioPagoId !== null &&
     items.length > 0 &&
     items.every(
       (i) =>
@@ -260,6 +270,7 @@ export default function NuevaPreventaPage() {
         local_id: localId!,
         notas: notas || undefined,
         tipo_documento_tributario_id: tipoDocId,
+        medio_pago_id: medioPagoId!,
         items: items.map(
           (i): ItemPreventaCreate => ({
             producto_id: i.producto_id,
@@ -285,6 +296,10 @@ export default function NuevaPreventaPage() {
     );
   }
 
+  const firstIncompleteIdx = clienteId
+    ? items.findIndex(i => !i.producto_id || !i.proveedor_id || i.local_cliente_id === null)
+    : -1;
+
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 pb-32">
       {/* Header */}
@@ -308,24 +323,6 @@ export default function NuevaPreventaPage() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-5">
-        {/* Cliente */}
-        <div>
-          <label className={labelClass}>Cliente *</label>
-          <select
-            value={clienteId ?? ''}
-            onChange={(e) => handleClienteChange(Number(e.target.value) || null)}
-            className={inputClass}
-            required
-          >
-            <option value="">— Seleccionar cliente —</option>
-            {clientes.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.nombre}{c.telefono ? ` · ${c.telefono}` : ''}
-              </option>
-            ))}
-          </select>
-        </div>
-
         {/* Local de Venta — asignado automáticamente al usuario logueado */}
         <div>
           <label className={labelClass}>Local de Venta</label>
@@ -338,13 +335,32 @@ export default function NuevaPreventaPage() {
           </div>
         </div>
 
+        {/* Cliente */}
+        <div>
+          <label className={labelClass}>Cliente *</label>
+          <select
+            value={clienteId ?? ''}
+            onChange={(e) => handleClienteChange(Number(e.target.value) || null)}
+            className={`${inputClass} ${!clienteId ? glowClass : ''}`}
+            required
+          >
+            <option value="">— Seleccionar cliente —</option>
+            {clientes.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nombre}{c.telefono ? ` · ${c.telefono}` : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+
         {/* Tipo de Documento */}
         <div>
-          <label className={labelClass}>Tipo de Documento</label>
-          <div className="flex gap-3">
+          <label className={`${labelClass} ${!clienteId ? 'opacity-40' : ''}`}>Tipo de Documento</label>
+          <div className={`flex gap-3 ${!clienteId ? 'opacity-40 pointer-events-none' : ''}`}>
             <button
               type="button"
               onClick={() => setTipoDocId(2)}
+              disabled={!clienteId}
               className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl border font-semibold text-sm transition-colors ${
                 tipoDocId === 2
                   ? 'bg-cyan-600 border-cyan-500 text-white'
@@ -356,6 +372,7 @@ export default function NuevaPreventaPage() {
             <button
               type="button"
               onClick={() => setTipoDocId(1)}
+              disabled={!clienteId}
               className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl border font-semibold text-sm transition-colors ${
                 tipoDocId === 1
                   ? 'bg-purple-600 border-purple-500 text-white'
@@ -365,6 +382,9 @@ export default function NuevaPreventaPage() {
               📄 Factura
             </button>
           </div>
+          {!clienteId && (
+            <p className="text-slate-500 text-xs mt-1.5">↑ Selecciona primero el cliente</p>
+          )}
           {tipoDocId === 1 && clienteId && (() => {
             const cliente = clientes.find((c) => c.id === clienteId);
             if (cliente?.es_empresa) return null;
@@ -385,27 +405,89 @@ export default function NuevaPreventaPage() {
           })()}
         </div>
 
+        {/* Medio de Pago */}
+        <div>
+          <label className={`${labelClass} ${!clienteId ? 'opacity-40' : ''}`}>
+            Medio de Pago *
+            {clienteId && !medioPagoId && (
+              <span className="ml-2 text-amber-400 font-normal text-xs">← selecciona uno para continuar</span>
+            )}
+          </label>
+          <div className={`flex flex-col gap-2 ${!clienteId ? 'opacity-40 pointer-events-none' : ''}`}>
+            {mediosPago.map((mp) => {
+              const selected = medioPagoId === mp.id;
+              return (
+                <button
+                  key={mp.id}
+                  type="button"
+                  onClick={() => setMedioPagoId(mp.id)}
+                  disabled={!clienteId}
+                  className={`flex items-center gap-3 py-3 px-4 rounded-xl border text-sm transition-all disabled:cursor-not-allowed text-left ${
+                    selected
+                      ? 'bg-cyan-600/20 border-cyan-500 text-white ring-1 ring-cyan-500'
+                      : 'bg-slate-800 border-slate-600 text-slate-300 hover:border-slate-400 hover:bg-slate-700'
+                  }`}
+                >
+                  <span className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${
+                    selected ? 'border-cyan-400 bg-cyan-400' : 'border-slate-500'
+                  }`} />
+                  <span className="text-lg leading-none">{mp.es_contado ? '💵' : '📋'}</span>
+                  <span className="flex-1">
+                    <span className="font-semibold">{mp.nombre}</span>
+                    {mp.es_contado && (
+                      <span className="ml-2 text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded px-1.5 py-0.5">
+                        Al contado
+                      </span>
+                    )}
+                  </span>
+                  {selected && (
+                    <span className="text-cyan-400 text-sm font-bold">✓</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          {clienteId && medioPagoId && (() => {
+            const mp = mediosPago.find((m) => m.id === medioPagoId);
+            if (mp?.es_contado) return (
+              <p className="text-emerald-400 text-xs mt-1.5">✅ Precio al contado — se aplicará descuento en picking si está configurado</p>
+            );
+            return null;
+          })()}
+        </div>
+
         {/* Notas */}
         <div>
-          <label className={labelClass}>Notas <span className="text-slate-500 font-normal">(opcional)</span></label>
+          <label className={`${labelClass} ${!clienteId ? 'opacity-40' : ''}`}>Notas <span className="text-slate-500 font-normal">(opcional)</span></label>
           <input
             type="text"
             value={notas}
             onChange={(e) => setNotas(e.target.value)}
             placeholder="Horario de entrega, instrucciones..."
-            className={inputClass}
+            disabled={!clienteId}
+            className={`${inputClass} disabled:opacity-40`}
           />
         </div>
 
         {/* Items */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-white font-semibold text-base">
+            <h2 className={`font-semibold text-base ${!clienteId ? 'text-slate-500' : 'text-white'}`}>
               Cortes Pedidos
-              <span className="text-slate-400 font-normal text-sm ml-2">({items.length})</span>
+              <span className="text-slate-500 font-normal text-sm ml-2">({items.length})</span>
             </h2>
           </div>
 
+          {/* Bloqueo si no hay cliente */}
+          {!clienteId ? (
+            <div className="flex flex-col items-center justify-center gap-3 bg-slate-800/50 border-2 border-dashed border-slate-700 rounded-xl py-10 px-6 text-center">
+              <span className="text-3xl">👆</span>
+              <p className="text-slate-400 text-sm font-medium">
+                Selecciona un cliente para comenzar a agregar cortes
+              </p>
+            </div>
+          ) : (
+          <>
           <div className="space-y-3">
             {items.map((item, idx) => {
               const proveedores = getProveedoresForProducto(item.producto_id);
@@ -427,6 +509,32 @@ export default function NuevaPreventaPage() {
                     )}
                   </div>
 
+                  {/* Progreso del corte */}
+                  {(() => {
+                    const paso = item.producto_id === 0 ? 0 : item.proveedor_id === 0 ? 1 : item.local_cliente_id === null ? 2 : 3;
+                    const steps = ['Corte', 'Proveedor', 'Local', 'Cantidad'];
+                    return (
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {steps.map((label, i) => (
+                          <div key={i} className="flex items-center gap-0.5">
+                            <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full border transition-colors ${
+                              i < paso
+                                ? 'bg-emerald-900/30 border-emerald-700 text-emerald-400'
+                                : i === paso
+                                ? 'bg-cyan-900/40 border-cyan-600 text-cyan-300'
+                                : 'border-slate-700 text-slate-600'
+                            }`}>
+                              {i < paso ? '✓ ' : ''}{label}
+                            </span>
+                            {i < steps.length - 1 && (
+                              <span className="text-slate-700 text-[10px] mx-0.5">›</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+
                   {/* Corte */}
                   <div ref={(el) => { corteRefs.current[item.id] = el; }} className="relative">
                     <label className={labelClass}>Corte / Producto *</label>
@@ -444,7 +552,7 @@ export default function NuevaPreventaPage() {
                       }}
                       onChange={(e) => setSearchCorte(prev => ({ ...prev, [item.id]: e.target.value }))}
                       onBlur={() => setTimeout(() => setOpenCorte(null), 150)}
-                      className={inputClass}
+                      className={`${inputClass} ${idx === firstIncompleteIdx && item.producto_id === 0 ? glowClass : ''}`}
                     />
                     {openCorte === item.id && (() => {
                       const q = (searchCorte[item.id] ?? '').toLowerCase();
@@ -479,7 +587,7 @@ export default function NuevaPreventaPage() {
                       value={item.proveedor_id || ''}
                       onChange={(e) => updateItem(item.id, 'proveedor_id', Number(e.target.value))}
                       disabled={!item.producto_id}
-                      className={`${inputClass} disabled:opacity-40`}
+                      className={`${inputClass} disabled:opacity-40 ${idx === firstIncompleteIdx && item.producto_id > 0 && !item.proveedor_id ? glowClass : ''}`}
                       required
                     >
                       <option value="">— Seleccionar proveedor —</option>
@@ -507,6 +615,9 @@ export default function NuevaPreventaPage() {
                         </div>
                       );
                     })()}
+                    {item.producto_id === 0 && (
+                      <p className="text-slate-500 text-xs mt-1.5">↑ Selecciona primero el corte</p>
+                    )}
                   </div>
 
                   {/* Local de entrega del cliente */}
@@ -530,8 +641,8 @@ export default function NuevaPreventaPage() {
                           )
                         )
                       }
-                      disabled={!clienteId || localesCliente.length === 0}
-                      className={`${inputClass} disabled:opacity-40`}
+                      disabled={!item.proveedor_id || !clienteId || localesCliente.length === 0}
+                      className={`${inputClass} disabled:opacity-40 ${idx === firstIncompleteIdx && item.proveedor_id > 0 && item.local_cliente_id === null ? glowClass : ''}`}
                       required
                     >
                       <option value="">— Seleccionar local de entrega —</option>
@@ -541,25 +652,56 @@ export default function NuevaPreventaPage() {
                         </option>
                       ))}
                     </select>
+                    {!item.proveedor_id && item.producto_id > 0 && (
+                      <p className="text-slate-500 text-xs mt-1.5">↑ Selecciona primero el proveedor</p>
+                    )}
                   </div>
 
                   {/* Precio referencia */}
                   {item.precio_kg > 0 && (() => {
                     const prod = productos.find((p) => p.id === item.producto_id);
                     const incluyeIva = prod?.precio_incluye_iva !== false;
+                    const dcto = prod?.descuento_contado ?? 0;
+                    const medioSeleccionado = mediosPago.find((m) => m.id === medioPagoId);
+                    const esContado = medioSeleccionado?.es_contado === true;
+                    const precioContado = dcto > 0 ? Math.round(item.precio_kg * (1 - dcto / 100)) : null;
                     return (
-                      <div className="flex items-center gap-2 text-sm text-slate-400">
-                        <span>Precio ref:</span>
-                        <span className="text-cyan-300 font-semibold">
-                          ${item.precio_kg.toLocaleString('es-CL')}/kg
-                        </span>
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${
-                          incluyeIva
-                            ? 'text-emerald-300 bg-emerald-900/30 border-emerald-700'
-                            : 'text-amber-300 bg-amber-900/30 border-amber-700'
-                        }`}>
-                          {incluyeIva ? 'IVA incluido' : 'Precio neto + IVA'}
-                        </span>
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-2 text-sm text-slate-400">
+                          <span>Precio ref:</span>
+                          <span className={`font-semibold ${
+                            esContado && precioContado !== null ? 'text-slate-500 line-through text-xs' : 'text-cyan-300'
+                          }`}>
+                            ${item.precio_kg.toLocaleString('es-CL')}/kg
+                          </span>
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${
+                            incluyeIva
+                              ? 'text-emerald-300 bg-emerald-900/30 border-emerald-700'
+                              : 'text-amber-300 bg-amber-900/30 border-amber-700'
+                          }`}>
+                            {incluyeIva ? 'IVA incluido' : 'Precio neto + IVA'}
+                          </span>
+                        </div>
+                        {precioContado !== null && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <span className="text-slate-400">Precio contado:</span>
+                            <span className={`font-bold ${
+                              esContado ? 'text-emerald-300' : 'text-slate-500'
+                            }`}>
+                              ${precioContado.toLocaleString('es-CL')}/kg
+                            </span>
+                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${
+                              esContado
+                                ? 'text-emerald-300 bg-emerald-900/30 border-emerald-700'
+                                : 'text-slate-500 bg-slate-800 border-slate-700'
+                            }`}>
+                              {dcto}% dcto
+                            </span>
+                            {!esContado && (
+                              <span className="text-slate-600 text-xs italic">solo si pago al contado</span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     );
                   })()}
@@ -614,6 +756,10 @@ export default function NuevaPreventaPage() {
 
                   {/* Cantidad con +/- — ancho completo */}
                   <div>
+                    {!item.local_cliente_id && item.proveedor_id > 0 && (
+                      <p className="text-slate-500 text-xs mb-2">↑ Selecciona primero el local de entrega</p>
+                    )}
+                    <div className={!item.local_cliente_id ? 'opacity-40 pointer-events-none select-none' : ''}>
                     <label className={labelClass}>
                       Cantidad de Cajas *
                       {(() => {
@@ -668,6 +814,7 @@ export default function NuevaPreventaPage() {
                       }
                       return null;
                     })()}
+                    </div>
                   </div>
                 </div>
               );
@@ -682,6 +829,8 @@ export default function NuevaPreventaPage() {
           >
             + Agregar otro corte
           </button>
+          </>
+          )}
         </div>
       </form>
 
@@ -692,7 +841,23 @@ export default function NuevaPreventaPage() {
             <div className="text-white font-semibold text-sm">
               {items.length} corte{items.length !== 1 ? 's' : ''} · {totalCajas} caja{totalCajas !== 1 ? 's' : ''}
             </div>
-            <div className="text-slate-500 text-xs">Precio final al confirmar picking</div>
+            {!puedeGuardar ? (
+              <div className="text-amber-400 text-xs truncate">
+                ⚠️ {(() => {
+                  if (!clienteId) return 'Selecciona un cliente';
+                  for (let i = 0; i < items.length; i++) {
+                    const it = items[i];
+                    const n = items.length > 1 ? ` (corte ${i + 1})` : '';
+                    if (!it.producto_id) return `Elige el corte${n}`;
+                    if (!it.proveedor_id) return `Elige el proveedor${n}`;
+                    if (it.local_cliente_id === null) return `Elige local de entrega${n}`;
+                  }
+                  return 'Completa todos los campos';
+                })()}
+              </div>
+            ) : (
+              <div className="text-slate-500 text-xs">Precio final al confirmar picking</div>
+            )}
           </div>
           <Link
             href="/admin/pedidos/cajas"

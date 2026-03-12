@@ -338,6 +338,7 @@ export interface MedioPago {
     codigo: string;
     nombre: string;
     permite_cheque: boolean;
+    es_contado: boolean;
     activo: boolean;
 }
 
@@ -346,6 +347,26 @@ export async function getMediosPago(): Promise<MedioPago[]> {
         headers: AuthService.getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Error al cargar medios de pago');
+    return response.json();
+}
+
+export async function createMedioPago(data: Omit<MedioPago, 'id'>): Promise<MedioPago> {
+    const response = await fetch(`${API_URL}/api/maestras/medios-pago`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...AuthService.getAuthHeaders() },
+        body: JSON.stringify(data),
+    });
+    if (!response.ok) throw new Error('Error al crear medio de pago');
+    return response.json();
+}
+
+export async function updateMedioPago(id: number, data: Partial<Omit<MedioPago, 'id'>>): Promise<MedioPago> {
+    const response = await fetch(`${API_URL}/api/maestras/medios-pago/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...AuthService.getAuthHeaders() },
+        body: JSON.stringify(data),
+    });
+    if (!response.ok) throw new Error('Error al actualizar medio de pago');
     return response.json();
 }
 

@@ -18,6 +18,7 @@ interface User {
     role: Role;
     is_active: boolean;
     local_defecto_id?: number;
+    porcentaje_comision?: number | null;
 }
 
 interface MenuItem {
@@ -163,7 +164,8 @@ export default function UsuariosPage() {
                     nombre_completo: editingUser.nombre_completo,
                     role_id: editingUser.role_id,
                     is_active: editingUser.is_active,
-                    local_defecto_id: editingUser.local_defecto_id
+                    local_defecto_id: editingUser.local_defecto_id,
+                    porcentaje_comision: editingUser.porcentaje_comision ?? null,
                 })
             });
             if (res.ok) {
@@ -310,6 +312,22 @@ export default function UsuariosPage() {
                                             className="mr-2"
                                         />
                                         <label htmlFor="is_active" className="text-white">Usuario Activo</label>
+                                    </div>
+                                    <div className="flex flex-col gap-1">
+                                        <label className="text-slate-400 text-xs">% Comisión sobre neto (dejar vacío = sin comisión)</label>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            min="0"
+                                            max="100"
+                                            className="bg-slate-900 border border-slate-600 p-2 rounded text-white"
+                                            placeholder="Ej: 1.50"
+                                            value={editingUser.porcentaje_comision ?? ''}
+                                            onChange={e => setEditingUser({
+                                                ...editingUser,
+                                                porcentaje_comision: e.target.value === '' ? null : Number(e.target.value)
+                                            })}
+                                        />
                                     </div>
                                     <div className="col-span-2 flex gap-2">
                                         <button type="submit" className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded">Actualizar</button>
