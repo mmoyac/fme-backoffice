@@ -13,6 +13,7 @@ import TiposVehiculoList from "./components/TiposVehiculoList";
 import EstadosEnrolamientoList from "./components/EstadosEnrolamientoList";
 import UbicacionesList from "./components/UbicacionesList";
 import MediosPagoList from "./components/MediosPagoList";
+import CanalesVentaList from "./components/CanalesVentaList";
 
 export default function MantenedoresPage() {
     const [activeTab, setActiveTab] = useState<string | null>(null);
@@ -31,6 +32,7 @@ export default function MantenedoresPage() {
         { id: "tipos_documento",       icono: "📄",  titulo: "Tipos Documento",          desc: "Factura, Boleta, Guía, etc." },
         { id: "tipos_pedido",          icono: "📦",  titulo: "Tipos Pedido",             desc: "Tipos de pedido y locales de despacho" },
         { id: "medios_pago",           icono: "💳",  titulo: "Medios de Pago",           desc: "Medios de pago y descuentos al contado" },
+        { id: "canales_venta",         icono: "📡",  titulo: "Canales de Venta",         desc: "POS, Landing, WhatsApp, Teléfono y otros" },
         { id: "config_landing",        icono: "🌐",  titulo: "Config. Landing",          desc: "Apariencia de la landing page" },
         { id: "usuarios",              icono: "👤",  titulo: "Usuarios",                 desc: "Usuarios, roles y permisos" },
         { id: "tenants",               icono: "🏢",  titulo: "Tenants (SaaS)",           desc: "Gestión de clientes de la plataforma" },
@@ -203,6 +205,16 @@ export default function MantenedoresPage() {
                             Configura los medios de pago y marca cuáles son al contado para aplicar descuentos en preventas
                         </p>
                         <MediosPagoList />
+                    </div>
+                )}
+
+                {activeTab === "canales_venta" && (
+                    <div>
+                        <h2 className="text-xl font-semibold text-white mb-2">Canales de Venta</h2>
+                        <p className="text-gray-400 mb-4">
+                            Gestiona los canales de origen de ventas. Los 4 canales del sistema (POS, LANDING, WHATSAPP, TELEFONO) no pueden eliminarse.
+                        </p>
+                        <CanalesVentaList />
                     </div>
                 )}
 
