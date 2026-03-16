@@ -130,7 +130,8 @@ export default function ProductosPage() {
         </div>
       ) : (
         <div className="bg-slate-800 rounded-lg overflow-hidden">
-          <table className="w-full">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[800px]">
             <thead className="bg-slate-700">
               <tr>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">SKU</th>
@@ -181,6 +182,7 @@ export default function ProductosPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

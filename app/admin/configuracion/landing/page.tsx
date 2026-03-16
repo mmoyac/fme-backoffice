@@ -84,6 +84,9 @@ export default function ConfiguracionLandingPage() {
         mostrar_precios: data.mostrar_precios,
         mostrar_stock: data.mostrar_stock,
         habilitar_carrito: data.habilitar_carrito,
+        costo_fijo_delivery: data.costo_fijo_delivery ?? null,
+        costo_por_km_delivery: data.costo_por_km_delivery ?? null,
+        monto_minimo_delivery_gratis: data.monto_minimo_delivery_gratis ?? null,
       });
     } catch (err) {
       console.error('Error cargando configuración:', err);
@@ -753,6 +756,52 @@ export default function ConfiguracionLandingPage() {
                 💡 <strong>Modo Catálogo:</strong> Si desactivas todas las opciones, tendrás una landing page de solo catálogo 
                 sin precios, stock ni opción de compra. Perfecta para mostrar productos sin venta online.
               </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Sección: Delivery */}
+        <div className="bg-slate-800 rounded-lg p-6">
+          <h2 className="text-xl font-bold text-white mb-4">🚚 Configuración de Delivery</h2>
+          <p className="text-slate-400 text-sm mb-4">
+            Define las tarifas de delivery para la tienda online. El costo se muestra informativo al cliente y se registra en el pedido, pero <strong>nunca se suma al total de la venta</strong>.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">Costo fijo ($)</label>
+              <input
+                type="number"
+                value={formData.costo_fijo_delivery ?? ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, costo_fijo_delivery: e.target.value ? parseFloat(e.target.value) : null }))}
+                className="w-full p-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
+                placeholder="2000"
+                min={0}
+              />
+              <p className="text-xs text-slate-400 mt-1">Monto base por despacho</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">Costo por km ($)</label>
+              <input
+                type="number"
+                value={formData.costo_por_km_delivery ?? ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, costo_por_km_delivery: e.target.value ? parseFloat(e.target.value) : null }))}
+                className="w-full p-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
+                placeholder="150"
+                min={0}
+              />
+              <p className="text-xs text-slate-400 mt-1">Cargo adicional por kilómetro</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">Monto mínimo para delivery gratis ($)</label>
+              <input
+                type="number"
+                value={formData.monto_minimo_delivery_gratis ?? ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, monto_minimo_delivery_gratis: e.target.value ? parseFloat(e.target.value) : null }))}
+                className="w-full p-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
+                placeholder="50000"
+                min={0}
+              />
+              <p className="text-xs text-slate-400 mt-1">Dejar vacío para nunca ofrecer delivery gratis</p>
             </div>
           </div>
         </div>

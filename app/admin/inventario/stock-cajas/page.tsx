@@ -41,6 +41,8 @@ interface ResumenStock {
   productos_con_stock: StockCajas[];
 }
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
 export default function StockCajasPage() {
   const [loading, setLoading] = useState(true);
   const [stockItems, setStockItems] = useState<StockCajas[]>([]);
@@ -69,20 +71,20 @@ export default function StockCajasPage() {
       };
 
       if (vistaActiva === 'resumen') {
-        const response = await fetch('http://localhost:8000/api/stock-cajas/resumen', { headers });
+        const response = await fetch(`${API_URL}/api/stock-cajas/resumen`, { headers });
         if (response.ok) {
           const data = await response.json();
           setResumen(data);
         }
       } else if (vistaActiva === 'stock') {
-        const url = `http://localhost:8000/api/stock-cajas/?solo_con_stock=${filtroSoloConStock}`;
+        const url = `${API_URL}/api/stock-cajas/?solo_con_stock=${filtroSoloConStock}`;
         const response = await fetch(url, { headers });
         if (response.ok) {
           const data = await response.json();
           setStockItems(data);
         }
       } else if (vistaActiva === 'movimientos') {
-        const response = await fetch('http://localhost:8000/api/stock-cajas/movimientos?limit=50', { headers });
+        const response = await fetch(`${API_URL}/api/stock-cajas/movimientos?limit=50`, { headers });
         if (response.ok) {
           const data = await response.json();
           setMovimientos(data);
@@ -109,7 +111,7 @@ export default function StockCajasPage() {
     try {
       const token = AuthService.getToken();
       const response = await fetch(
-        `http://localhost:8000/api/stock-cajas/ajustar/${itemSeleccionado.producto_id}/${itemSeleccionado.proveedor_id}`,
+        `${API_URL}/api/stock-cajas/ajustar/${itemSeleccionado.producto_id}/${itemSeleccionado.proveedor_id}`,
         {
           method: 'PUT',
           headers: {

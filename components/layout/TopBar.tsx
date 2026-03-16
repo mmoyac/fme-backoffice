@@ -5,26 +5,24 @@ import { useTenant } from '@/lib/TenantContext';
 
 interface TopBarProps {
     onMenuClick: () => void;
+    sidebarCollapsed?: boolean;
 }
 
-export default function TopBar({ onMenuClick }: TopBarProps) {
+export default function TopBar({ onMenuClick, sidebarCollapsed }: TopBarProps) {
     const { user, logout } = useAuth();
     const { config } = useTenant();
 
     return (
         <header className="bg-slate-800 border-b border-slate-700 h-16 flex items-center justify-between px-4 shrink-0">
-            {/* Left: Mobile Menu & Brand */}
-            <div className="flex items-center">
-                <button
-                    onClick={onMenuClick}
-                    className="md:hidden p-2 text-slate-300 hover:bg-slate-700 rounded-lg mr-4"
-                >
-                    <span className="text-2xl">☰</span>
-                </button>
-                {/* Mostrar nombre del tenant actual */}
+            {/* Left: Brand (mobile) */}
+            <div className="flex items-center gap-3">
                 <span className="md:hidden text-lg font-bold text-primary">
                     {config?.branding.nombre_comercial || config?.tenant.nombre || 'Backoffice'}
                 </span>
+                {/* Indicador de sidebar colapsado en desktop */}
+                {sidebarCollapsed && (
+                    <span className="hidden md:block text-sm text-gray-400">☰ Menú colapsado</span>
+                )}
             </div>
 
             {/* Right: User Info & Logout */}

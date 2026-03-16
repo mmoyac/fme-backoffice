@@ -75,6 +75,7 @@ interface ItemCarrito {
   cantidad: number;
   precio_unitario: number;
   subtotal: number;
+  peso_bruto: number | null; // kg por unidad — requerido para pedidos con delivery
 }
 
 interface ClienteFormulario {
@@ -143,6 +144,16 @@ export default function POSPedidoPage() {
   const [infoCaja, setInfoCaja] = useState<any>(null);
   const [errorCaja, setErrorCaja] = useState<string>('');
 
+  // Estados para modal de abrir caja directamente desde el POS
+  const [showAbrirCajaModal, setShowAbrirCajaModal] = useState<boolean>(false);
+  const [montoInicialCaja, setMontoInicialCaja] = useState<number>(0);
+  const [observacionesApertura, setObservacionesApertura] = useState<string>('');
+  const [abriendo, setAbriendo] = useState<boolean>(false);
+
+  // Delivery
+  const [requiereDelivery, setRequiereDelivery] = useState<boolean>(false);
+  const [costoDeliveryFinal, setCostoDeliveryFinal] = useState<number | null>(null);
+
   const router = useRouter();
   
   // Función para recargar lista de clientes
@@ -188,6 +199,44 @@ export default function POSPedidoPage() {
       setCajaAbierta(false);
       setErrorCaja('Error al verificar el estado de la caja');
       return false;
+    }
+  };
+
+  // Función para abrir caja directamente desde el POS
+  const handleAbrirCajaDirecto = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!localId) {
+      alert('No hay local seleccionado');
+      return;
+    }
+    setAbriendo(true);
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/caja/turno/abrir`,
+        {
+          method: 'POST',
+          headers: { ...AuthService.getAuthHeaders(), 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            local_id: localId,
+            monto_inicial: montoInicialCaja,
+            observaciones_apertura: observacionesApertura || undefined
+          })
+        }
+      );
+      if (response.ok) {
+        setShowAbrirCajaModal(false);
+        setMontoInicialCaja(0);
+        setObservacionesApertura('');
+        // Refresca estado de caja inmediatamente
+        await verificarCajaAbierta(localId);
+      } else {
+        const error = await response.json();
+        alert(`Error al abrir caja: ${error.detail || 'Error desconocido'}`);
+      }
+    } catch (err) {
+      alert('Error de conexión al intentar abrir caja');
+    } finally {
+      setAbriendo(false);
     }
   };
 
@@ -397,7 +446,8 @@ export default function POSPedidoPage() {
           tipo_venta_codigo: productoSeleccionado.tipo_venta_codigo || 'UNITARIO',
           cantidad: cantidad,
           precio_unitario: precioUnitario,
-          subtotal: Math.round(cantidad * precioUnitario)
+          subtotal: Math.round(cantidad * precioUnitario),
+          peso_bruto: productoSeleccionado.peso_bruto ?? null,
         };
         console.log('➕ Agregando nuevo item:', nuevoItem);
         setCarrito([...carrito, nuevoItem]);
@@ -610,6 +660,9 @@ export default function POSPedidoPage() {
         cliente_es_empresa: datosCliente.es_empresa,
         notas: notas || undefined,
         puntos_usar: 0,
+        requiere_delivery: !cliente.es_anonimo && !!cliente.id && requiereDelivery,
+        canal_venta_id: 1, // POS
+        costo_delivery: requiereDelivery && costoDeliveryFinal !== null ? costoDeliveryFinal : undefined,
         items: itemsPedido
       };
 
@@ -660,6 +713,7 @@ export default function POSPedidoPage() {
         medio_pago: medioPagoSeleccionado?.nombre || 'Efectivo',
         vendedor: usuarioActual?.nombre_completo || 'Sistema POS',
         puntos_ganados: puntosEstimados?.total_puntos || 0,
+        costo_delivery: requiereDelivery ? costoDeliveryFinal : undefined,
         // Información del tenant para el footer
         tenant_nombre: tenantConfig?.branding.nombre_comercial || tenantConfig?.tenant.nombre || 'Tienda',
         tenant_sitio: tenantConfig?.tenant.dominio_principal || tenantConfig?.footer?.email || undefined
@@ -709,6 +763,7 @@ export default function POSPedidoPage() {
       es_anonimo: true
     });
     setNotas('');
+    setRequiereDelivery(false);
     // Mantener local y medio de pago seleccionados para próximo pedido
   };
 
@@ -782,6 +837,11 @@ export default function POSPedidoPage() {
               <span className="font-medium text-teal-400">
                 {locales.find(l => l.id === localId)?.nombre || 'Local no encontrado'}
               </span>
+              {locales.find(l => l.id === localId)?.direccion && (
+                <span className="text-xs text-slate-400">
+                  📍 {locales.find(l => l.id === localId)?.direccion}
+                </span>
+              )}
               <span className="text-xs text-slate-500 bg-slate-700 px-2 py-1 rounded">
                 {usuarioActual?.local_defecto_id === localId ? 'Local asignado' : 'Local temporal'}
               </span>
@@ -814,16 +874,16 @@ export default function POSPedidoPage() {
               </div>
             </div>
             
-            {/* Botón para ir a abrir caja */}
-            <a
-              href="/admin/caja"
+            {/* Botón para abrir caja directamente desde el POS */}
+            <button
+              onClick={() => setShowAbrirCajaModal(true)}
               className="flex-shrink-0 inline-flex items-center space-x-2 px-4 py-2 bg-red-700 hover:bg-red-800 text-white text-sm font-medium rounded-lg transition-colors"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
               </svg>
               <span>Abrir Caja</span>
-            </a>
+            </button>
           </div>
         </div>
       )}
@@ -940,6 +1000,9 @@ export default function POSPedidoPage() {
             usuarioActual={usuarioActual}
             puntosEstimados={puntosEstimados}
             onClienteCreado={recargarClientes}
+            requiereDelivery={requiereDelivery}
+            setRequiereDelivery={setRequiereDelivery}
+            onCostoDeliveryCalculado={setCostoDeliveryFinal}
           />
         )}
       </div>
@@ -951,6 +1014,85 @@ export default function POSPedidoPage() {
           onImprimir={cerrarBoleta}
           visible={mostrarBoleta}
         />
+      )}
+
+      {/* Modal: Abrir Caja directamente desde el POS */}
+      {showAbrirCajaModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+          <div className="bg-slate-800 rounded-xl p-6 w-full max-w-md mx-4 shadow-2xl border border-slate-600">
+            <div className="flex justify-between items-center mb-5">
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                </svg>
+                Abrir Turno de Caja
+              </h3>
+              <button
+                onClick={() => setShowAbrirCajaModal(false)}
+                className="text-slate-400 hover:text-white transition-colors text-2xl leading-none"
+              >
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleAbrirCajaDirecto} className="space-y-4">
+              {/* Local */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1">Local</label>
+                <div className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-cyan-400 font-semibold">
+                  🏪 {locales.find(l => l.id === localId)?.nombre ?? `Local #${localId}`}
+                </div>
+              </div>
+
+              {/* Monto inicial */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1">
+                  Monto Inicial <span className="text-slate-500 font-normal">(efectivo en caja)</span>
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={montoInicialCaja}
+                  onChange={e => setMontoInicialCaja(Number(e.target.value))}
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-cyan-400"
+                  placeholder="0"
+                />
+              </div>
+
+              {/* Observaciones */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1">
+                  Observaciones <span className="text-slate-500 font-normal">(opcional)</span>
+                </label>
+                <textarea
+                  value={observacionesApertura}
+                  onChange={e => setObservacionesApertura(e.target.value)}
+                  rows={2}
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-cyan-400 resize-none"
+                  placeholder="Ej: Apertura turno mañana..."
+                />
+              </div>
+
+              <div className="flex gap-3 pt-1">
+                <button
+                  type="submit"
+                  disabled={abriendo}
+                  className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white py-2 px-4 rounded-lg font-semibold transition-colors"
+                >
+                  {abriendo ? 'Abriendo...' : '🔓 Abrir Caja'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAbrirCajaModal(false)}
+                  className="flex-1 bg-slate-600 hover:bg-slate-500 text-white py-2 px-4 rounded-lg transition-colors"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

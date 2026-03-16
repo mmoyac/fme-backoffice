@@ -98,7 +98,7 @@ export default function DashboardPage() {
       titulo: 'Tablero de Rutas',
       descripcion: 'Hojas de ruta, despachos, vehículos y seguimiento de entregas',
       icono: '🚚',
-      ruta: '/admin/despacho',
+      ruta: '/admin/despacho/tablero',
       color: 'from-purple-500 to-violet-500',
       metricas: rutasData ? [
         { label: 'En Ruta Ahora', valor: rutasData.enRuta.toString(), icon: '🚛' },

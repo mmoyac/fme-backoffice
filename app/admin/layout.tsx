@@ -18,6 +18,7 @@ export default function AdminLayout({
   const pathname = usePathname();
   const { user, loading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [authorized, setAuthorized] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -83,23 +84,36 @@ export default function AdminLayout({
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={() => setSidebarCollapsed(c => !c)}
       />
 
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          className="fixed inset-0 z-40 bg-black/60 md:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       <main className="flex-1 flex flex-col w-full relative">
-        <TopBar onMenuClick={() => setSidebarOpen(true)} />
+        <TopBar onMenuClick={() => setSidebarOpen(true)} sidebarCollapsed={sidebarCollapsed} />
 
-        <div className="p-8 pb-32">
+        <div className="p-4 md:p-8 pb-24 md:pb-32">
           {children}
         </div>
       </main>
+
+      {/* Barra inferior mobile */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-slate-800 border-t border-slate-700">
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="w-full flex flex-col items-center justify-center py-3 text-gray-400 hover:text-white active:bg-slate-700 transition-colors"
+        >
+          <span className="text-2xl leading-none">☰</span>
+          <span className="text-xs mt-1">Menú</span>
+        </button>
+      </div>
     </div>
   );
 }

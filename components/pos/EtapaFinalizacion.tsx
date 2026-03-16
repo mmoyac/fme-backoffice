@@ -1,6 +1,30 @@
 // Componente para la etapa final: cliente, pago y procesamiento
 import { useState, useEffect } from 'react';
 import { ArrowLeftIcon, CheckCircleIcon, UserIcon, DocumentTextIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
+
+
+async function geocodeAddress(address: string): Promise<[number, number]> {
+  const response = await fetch(
+    `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address)}.json?access_token=${process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN}&country=cl&limit=1`
+  );
+  if (!response.ok) throw new Error('Error en geocodificación');
+  const data = await response.json();
+  if (!data.features?.length) throw new Error('Dirección no encontrada');
+  return data.features[0].center;
+}
+
+async function calcularRuta(origen: [number, number], destino: [number, number]) {
+  const response = await fetch(
+    `https://api.mapbox.com/directions/v5/mapbox/driving/${origen[0]},${origen[1]};${destino[0]},${destino[1]}?access_token=${process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN}&geometries=geojson`
+  );
+  if (!response.ok) throw new Error('Error calculando ruta');
+  const data = await response.json();
+  if (!data.routes?.length) throw new Error('No se encontró ruta');
+  return {
+    distanciaKm: data.routes[0].distance / 1000,
+    tiempoMinutos: Math.round(data.routes[0].duration / 60),
+  };
+}
 import { BoletaTermica } from './BoletaTermica';
 import { obtenerTiposDocumento, TipoDocumento } from '../../lib/api/configuracion';
 import { useTenant } from '../../lib/TenantContext';
@@ -36,6 +60,10 @@ interface EtapaFinalizacionProps {
   puntosEstimados: any;
   // Callback para recargar clientes después de crear uno nuevo
   onClienteCreado?: () => void;
+  // Delivery
+  requiereDelivery: boolean;
+  setRequiereDelivery: (v: boolean) => void;
+  onCostoDeliveryCalculado?: (costo: number | null) => void;
 }
 
 export function EtapaFinalizacion({
@@ -59,13 +87,22 @@ export function EtapaFinalizacion({
   carrito,
   usuarioActual,
   puntosEstimados,
-  onClienteCreado
+  onClienteCreado,
+  requiereDelivery,
+  setRequiereDelivery,
+  onCostoDeliveryCalculado
 }: EtapaFinalizacionProps) {
   // Contexto de tenant
   const { config: tenantConfig } = useTenant();
 
   // Estado para mostrar vista previa de boleta
   const [mostrarVistaPrevia, setMostrarVistaPrevia] = useState(false);
+
+  // Estados para cálculo de delivery
+  const [calculandoDelivery, setCalculandoDelivery] = useState(false);
+  const [costoDelivery, setCostoDelivery] = useState<{ distanciaKm: number; tiempoMinutos: number; costoTotal: number } | null>(null);
+  const [errorDelivery, setErrorDelivery] = useState('');
+  const [productosSinPeso, setProductosSinPeso] = useState<string[]>([]);
   
   // Estado para tipos de documento
   const [tiposDocumento, setTiposDocumento] = useState<TipoDocumento[]>([]);
@@ -101,6 +138,64 @@ export function EtapaFinalizacion({
     cargarTiposDocumento();
   }, []);
   
+  // Tarifas de delivery desde tenant config (con fallback a valores por defecto)
+  const costoFijoDelivery = (tenantConfig as any)?.delivery?.costo_fijo ?? 2000;
+  const costoPorKmDelivery = (tenantConfig as any)?.delivery?.costo_por_km ?? 150;
+  const montoMinimoGratis = (tenantConfig as any)?.delivery?.monto_minimo_gratis ?? null;
+
+  // Delivery gratis si el carrito supera el mínimo configurado
+  const deliveryGratis = montoMinimoGratis !== null && totalCarrito >= montoMinimoGratis;
+
+  // Calcular costo de delivery cuando se activa
+  useEffect(() => {
+    if (!requiereDelivery) {
+      setCostoDelivery(null);
+      setErrorDelivery('');
+      onCostoDeliveryCalculado?.(null);
+      return;
+    }
+
+    // Si aplica delivery gratis, no hace falta calcular distancia
+    if (deliveryGratis) {
+      setCostoDelivery({ distanciaKm: 0, tiempoMinutos: 0, costoTotal: 0 });
+      onCostoDeliveryCalculado?.(0);
+      return;
+    }
+
+    const localOrigen = locales.find(l => l.id === localId);
+    const direccionOrigen = localOrigen?.direccion;
+    const direccionDestino = cliente.direccion;
+
+    if (!direccionOrigen || !direccionDestino) {
+      setErrorDelivery(!direccionOrigen ? 'El local no tiene dirección registrada' : 'El cliente no tiene dirección registrada');
+      setCostoDelivery(null);
+      onCostoDeliveryCalculado?.(null);
+      return;
+    }
+
+    setCalculandoDelivery(true);
+    setErrorDelivery('');
+    setCostoDelivery(null);
+
+    (async () => {
+      try {
+        const [coordsOrigen, coordsDestino] = await Promise.all([
+          geocodeAddress(direccionOrigen),
+          geocodeAddress(direccionDestino),
+        ]);
+        const { distanciaKm, tiempoMinutos } = await calcularRuta(coordsOrigen, coordsDestino);
+        const costoTotal = costoFijoDelivery + Math.round(distanciaKm * costoPorKmDelivery);
+        setCostoDelivery({ distanciaKm: Math.round(distanciaKm * 100) / 100, tiempoMinutos, costoTotal });
+        onCostoDeliveryCalculado?.(costoTotal);
+      } catch (err) {
+        setErrorDelivery(err instanceof Error ? err.message : 'Error calculando delivery');
+        onCostoDeliveryCalculado?.(null);
+      } finally {
+        setCalculandoDelivery(false);
+      }
+    })();
+  }, [requiereDelivery, localId, cliente.direccion, deliveryGratis]);
+
   // Filtrar clientes según búsqueda
   useEffect(() => {
     if (busquedaCliente.trim().length > 0) {
@@ -298,6 +393,7 @@ export function EtapaFinalizacion({
                         <div className="text-white mt-1">{cliente.nombre}</div>
                         {cliente.email && <div className="text-sm text-slate-300">📧 {cliente.email}</div>}
                         {cliente.telefono && <div className="text-sm text-slate-300">📱 {cliente.telefono}</div>}
+                        {cliente.direccion && <div className="text-sm text-slate-300">📍 {cliente.direccion}</div>}
                       </div>
                       <button
                         onClick={() => {
@@ -443,9 +539,74 @@ export function EtapaFinalizacion({
                 placeholder="Instrucciones especiales, comentarios, etc..."
               />
             </div>
+
+            {/* Delivery — solo disponible con cliente registrado */}
+            <div className="mt-4">
+              <button
+                type="button"
+                disabled={cliente.es_anonimo || !cliente.id}
+                onClick={() => {
+                  if (cliente.es_anonimo || !cliente.id) return;
+                  if (!requiereDelivery) {
+                    // Validar peso_bruto antes de activar delivery
+                    const sinPeso = carrito
+                      .filter((item: any) => !item.peso_bruto || item.peso_bruto <= 0)
+                      .map((item: any) => `${item.sku} - ${item.nombre}`);
+                    setProductosSinPeso(sinPeso);
+                    if (sinPeso.length > 0) return; // Bloquear si hay productos sin peso
+                  } else {
+                    setProductosSinPeso([]);
+                  }
+                  setRequiereDelivery(!requiereDelivery);
+                }}
+                className={`w-full flex items-center justify-between p-4 rounded-lg border-2 transition-colors ${
+                  cliente.es_anonimo || !cliente.id
+                    ? 'border-slate-700 bg-slate-800/50 opacity-50 cursor-not-allowed'
+                    : requiereDelivery
+                      ? 'border-cyan-500 bg-cyan-900/30 cursor-pointer'
+                      : 'border-slate-600 bg-slate-700 hover:border-slate-500 cursor-pointer'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">🚚</span>
+                  <div className="text-left">
+                    <p className={`font-semibold text-sm ${
+                      requiereDelivery ? 'text-cyan-300' : 'text-white'
+                    }`}>Requiere Delivery</p>
+                    <p className="text-xs text-slate-400">
+                      {cliente.es_anonimo || !cliente.id
+                        ? 'Selecciona un cliente registrado para activar'
+                        : 'El pedido quedará CONFIRMADO para programar despacho'}
+                    </p>
+                  </div>
+                </div>
+                <div className={`w-12 h-6 rounded-full transition-colors relative ${
+                  requiereDelivery ? 'bg-cyan-500' : 'bg-slate-600'
+                }`}>
+                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                    requiereDelivery ? 'translate-x-7' : 'translate-x-1'
+                  }`} />
+                </div>
+              </button>
+
+              {/* Alerta bloqueante: productos sin peso_bruto */}
+              {productosSinPeso.length > 0 && (
+                <div className="mt-3 p-3 bg-red-900/40 border border-red-500/60 rounded-lg">
+                  <p className="text-red-400 text-sm font-semibold mb-1">
+                    ⚠️ No se puede activar delivery — productos sin peso configurado:
+                  </p>
+                  <ul className="text-xs text-red-300 list-disc list-inside space-y-0.5">
+                    {productosSinPeso.map((p, i) => <li key={i}>{p}</li>)}
+                  </ul>
+                  <p className="text-xs text-red-400 mt-2">
+                    El administrador debe configurar el peso bruto de estos productos antes de continuar.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
-        
+
         {/* Panel lateral: Resumen y procesamiento */}
         <div className="space-y-4">
           {/* Resumen final */}
@@ -474,6 +635,44 @@ export function EtapaFinalizacion({
                 </span>
               </div>
               
+              {/* Delivery badge */}
+              {requiereDelivery && (
+                <div className={`p-3 rounded-lg border-2 space-y-1 text-sm ${deliveryGratis ? 'bg-green-900/30 border-green-500/60' : 'bg-cyan-900/30 border-cyan-500/60'}`}>
+                  <div className="flex justify-between">
+                    <span className="font-medium text-white">🚚 Delivery:</span>
+                    {deliveryGratis && (
+                      <span className="font-bold text-green-400">GRATIS 🎉</span>
+                    )}
+                    {!deliveryGratis && calculandoDelivery && (
+                      <span className="text-cyan-400 flex items-center gap-1">
+                        <span className="animate-spin inline-block w-3 h-3 border-2 border-cyan-400 border-t-transparent rounded-full"></span>
+                        Calculando...
+                      </span>
+                    )}
+                    {!deliveryGratis && !calculandoDelivery && costoDelivery && (
+                      <span className="font-bold text-cyan-400">${costoDelivery.costoTotal.toLocaleString('es-CL')}</span>
+                    )}
+                    {!deliveryGratis && !calculandoDelivery && !costoDelivery && !errorDelivery && (
+                      <span className="text-cyan-400">Programado</span>
+                    )}
+                  </div>
+                  {deliveryGratis && montoMinimoGratis && (
+                    <p className="text-xs text-green-400">Venta sobre ${montoMinimoGratis.toLocaleString('es-CL')} — delivery sin costo</p>
+                  )}
+                  {!deliveryGratis && costoDelivery && costoDelivery.distanciaKm > 0 && (
+                    <div className="text-xs text-slate-400 space-y-0.5">
+                      <div className="flex justify-between">
+                        <span>{costoDelivery.distanciaKm} km · {costoDelivery.tiempoMinutos} min</span>
+                        <span>Base ${costoFijoDelivery.toLocaleString('es-CL')} + ${Math.round(costoDelivery.distanciaKm * costoPorKmDelivery).toLocaleString('es-CL')}</span>
+                      </div>
+                    </div>
+                  )}
+                  {errorDelivery && (
+                    <p className="text-xs text-red-400">⚠️ {errorDelivery}</p>
+                  )}
+                </div>
+              )}
+
               {/* Tipo de documento - MUY VISIBLE */}
               <div className={`flex justify-between text-sm p-3 rounded-lg border-2 ${
                 tiposDocumento.find(t => t.id === tipoDocumentoId)?.codigo === CODIGO_FACTURA
@@ -640,7 +839,7 @@ export function EtapaFinalizacion({
               ) : (
                 <>
                   <CheckCircleIcon className="w-5 h-5" />
-                  <span>Crear Pedido</span>
+                  <span>{requiereDelivery ? 'Confirmar con Delivery' : 'Crear Pedido'}</span>
                 </>
               )}
             </button>

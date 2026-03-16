@@ -8,6 +8,8 @@ import {
   obtenerHojaRuta,
   marcarEnRuta,
   marcarEntregado,
+  calcularCobrosChofer,
+  pagarChofer,
   type HojaRuta,
 } from '@/lib/api/hojas_ruta';
 
@@ -28,6 +30,7 @@ export default function HojaRutaDetallePage() {
   const [enviando, setEnviando] = useState<number | null>(null);
   const [notasModal, setNotasModal] = useState<{ itemId: number; pedidoNumero: string } | null>(null);
   const [notasTexto, setNotasTexto] = useState('');
+  const [procesandoPago, setProcesandoPago] = useState(false);
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -59,6 +62,24 @@ export default function HojaRutaDetallePage() {
   const abrirModalEntrega = (itemId: number, pedidoNumero: string) => {
     setNotasModal({ itemId, pedidoNumero });
     setNotasTexto('');
+  };
+
+  const handleCalcularCobro = async () => {
+    if (!hoja) return;
+    try {
+      await calcularCobrosChofer(hoja.id);
+      cargar();
+    } catch (e: any) { alert(e.message); }
+  };
+
+  const handlePagarChofer = async () => {
+    if (!hoja) return;
+    if (!confirm('¿Confirmar pago al chofer?')) return;
+    setProcesandoPago(true);
+    try {
+      await pagarChofer(hoja.id);
+      cargar();
+    } catch (e: any) { alert(e.message); } finally { setProcesandoPago(false); }
   };
 
   const confirmarEntrega = async () => {
@@ -203,6 +224,9 @@ export default function HojaRutaDetallePage() {
                       <span className={`font-mono font-semibold text-sm ${entregado ? 'text-slate-400 line-through' : 'text-white'}`}>
                         {pedido?.numero_pedido ?? `#${item.pedido_id}`}
                       </span>
+                      {pedido && !pedido.es_pagado && !entregado && (
+                        <span className="text-xs bg-amber-900/50 text-amber-400 border border-amber-700 px-2 py-0.5 rounded-full">⚠️ No pagado</span>
+                      )}
                       {entregado && (
                         <span className="text-xs bg-emerald-900/50 text-emerald-400 border border-emerald-800 px-2 py-0.5 rounded-full">
                           ✅ Entregado
@@ -257,6 +281,58 @@ export default function HojaRutaDetallePage() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Cobro al chofer */}
+      {hoja.tipo_cobro_chofer && (
+        <div className="bg-slate-800 border border-slate-700 rounded-xl px-6 py-5 mt-6">
+          <h2 className="text-white font-semibold mb-3">💰 Cobro al chofer</h2>
+          <div className="flex flex-wrap gap-4 items-center">
+            <div className="text-slate-400 text-sm">
+              Tipo: <span className="text-white font-medium">{hoja.tipo_cobro_chofer === 'FIJO' ? 'Precio fijo' : 'Por kg entregado'}</span>
+            </div>
+            {hoja.tarifa_chofer !== null && (
+              <div className="text-slate-400 text-sm">
+                Tarifa: <span className="text-cyan-400 font-medium">
+                  ${Math.round(hoja.tarifa_chofer).toLocaleString('es-CL')}
+                  {hoja.tipo_cobro_chofer === 'POR_KG' ? '/kg' : ''}
+                </span>
+              </div>
+            )}
+            {hoja.monto_cobro_chofer !== null ? (
+              <div className="text-slate-400 text-sm">
+                Total a pagar: <span className="text-white font-bold text-lg">
+                  ${Math.round(hoja.monto_cobro_chofer).toLocaleString('es-CL')}
+                </span>
+              </div>
+            ) : hoja.tipo_cobro_chofer === 'POR_KG' && hoja.estado === 'COMPLETADA' ? (
+              <button
+                onClick={handleCalcularCobro}
+                className="bg-slate-700 hover:bg-slate-600 text-cyan-400 text-sm px-3 py-1.5 rounded-lg border border-slate-600"
+              >
+                Calcular monto final
+              </button>
+            ) : null}
+          </div>
+
+          {hoja.cobro_chofer_pagado ? (
+            <div className="mt-3 flex items-center gap-2">
+              <span className="bg-emerald-900/50 text-emerald-400 border border-emerald-800 text-sm px-3 py-1.5 rounded-lg">
+                ✅ Pagado el {hoja.fecha_pago_chofer ? new Date(hoja.fecha_pago_chofer).toLocaleDateString('es-CL') : '—'}
+              </span>
+            </div>
+          ) : hoja.monto_cobro_chofer !== null ? (
+            <div className="mt-3">
+              <button
+                onClick={handlePagarChofer}
+                disabled={procesandoPago}
+                className="bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 text-white font-semibold px-4 py-2 rounded-lg text-sm"
+              >
+                {procesandoPago ? 'Procesando...' : '💰 Marcar como pagado'}
+              </button>
+            </div>
+          ) : null}
         </div>
       )}
 

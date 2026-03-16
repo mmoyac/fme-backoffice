@@ -74,7 +74,12 @@ export interface ConfiguracionLanding {
     mostrar_precios: boolean;
     mostrar_stock: boolean;
     habilitar_carrito: boolean;
-    
+
+    // Configuración de Delivery
+    costo_fijo_delivery?: number | null;
+    costo_por_km_delivery?: number | null;
+    monto_minimo_delivery_gratis?: number | null;
+
     created_at: string;
     updated_at: string;
 }
@@ -104,6 +109,9 @@ export interface ConfiguracionLandingCreate {
     mostrar_precios?: boolean;
     mostrar_stock?: boolean;
     habilitar_carrito?: boolean;
+    costo_fijo_delivery?: number | null;
+    costo_por_km_delivery?: number | null;
+    monto_minimo_delivery_gratis?: number | null;
 }
 
 export interface ConfiguracionLandingUpdate extends Partial<Omit<ConfiguracionLandingCreate, 'tenant_id'>> {

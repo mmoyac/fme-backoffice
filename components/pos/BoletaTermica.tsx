@@ -29,6 +29,7 @@ interface DatosBoleta {
   medio_pago: string;
   vendedor?: string;
   puntos_ganados?: number; // Nuevos puntos ganados
+  costo_delivery?: number | null; // Costo de delivery (cobro aparte, no suma al total)
   // Información del tenant
   tenant_nombre?: string;
   tenant_sitio?: string;
@@ -182,6 +183,14 @@ export function BoletaTermica({ datos, onImprimir, visible }: BoletaTermicaProps
                   <span className="text-gray-600 font-medium">Total:</span>
                   <span className="font-bold text-green-600 text-lg">${formatearPrecio(datos.total)}</span>
                 </div>
+                {datos.costo_delivery !== undefined && datos.costo_delivery !== null && (
+                  <div className="flex justify-between items-center bg-cyan-50 p-2 rounded border border-cyan-200">
+                    <span className="text-cyan-700 font-medium">🚚 Delivery (cobro aparte):</span>
+                    <span className="font-bold text-cyan-600">
+                      {datos.costo_delivery === 0 ? 'GRATIS 🎉' : `$${formatearPrecio(datos.costo_delivery)}`}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600 font-medium">Productos:</span>
                   <span className="font-semibold text-gray-800">{datos.items.length} items</span>
@@ -303,10 +312,16 @@ export function BoletaTermica({ datos, onImprimir, visible }: BoletaTermicaProps
             <span>TOTAL:</span>
             <span>${formatearPrecio(datos.total)}</span>
           </div>
+          {datos.costo_delivery !== undefined && datos.costo_delivery !== null && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', marginTop: '1mm', borderTop: '1px dashed black', paddingTop: '1mm' }}>
+              <span>DELIVERY (cobro aparte):</span>
+              <span>{datos.costo_delivery === 0 ? 'GRATIS' : `$${formatearPrecio(datos.costo_delivery)}`}</span>
+            </div>
+          )}
         </div>
-        
+
         <div className="separador"></div>
-        
+
         {/* Medio de pago */}
         <div>
           <div>Forma de Pago: {datos.medio_pago}</div>

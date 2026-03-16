@@ -14,6 +14,7 @@ export interface Producto {
   unidad_medida_id: number;
   precio_compra: number | null;
   costo_fabricacion: number | null;
+  peso_bruto: number | null;
   es_vendible: boolean;
   es_vendible_web: boolean;
   es_ingrediente: boolean;
@@ -44,6 +45,7 @@ export interface ProductoCreate {
   unidad_medida_id: number;
   precio_compra?: number;
   costo_fabricacion?: number;
+  peso_bruto?: number | null;
   es_vendible?: boolean;
   es_vendible_web?: boolean;
   es_ingrediente?: boolean;

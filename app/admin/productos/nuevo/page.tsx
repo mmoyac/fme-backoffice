@@ -26,6 +26,7 @@ export default function NuevoProductoPage() {
     unidad_medida_id: 0,
     precio_compra: undefined,
     costo_fabricacion: undefined,
+    peso_bruto: undefined,
     es_vendible: true,
     es_vendible_web: false,
     es_ingrediente: false,
@@ -286,6 +287,22 @@ export default function NuevoProductoPage() {
                 <p className="text-xs text-gray-500 mt-1">
                   {formData.tiene_receta ? 'Se calcula automáticamente desde la receta' : 'Para productos elaborados sin receta'}
                 </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Peso Bruto (kg)
+                </label>
+                <input
+                  type="number"
+                  step="0.001"
+                  min="0"
+                  value={formData.peso_bruto ?? ''}
+                  onChange={(e) => setFormData({ ...formData, peso_bruto: e.target.value ? Number(e.target.value) : undefined })}
+                  className="w-full bg-slate-700 text-white px-4 py-2 rounded-lg border border-slate-600 focus:border-primary focus:outline-none"
+                  placeholder="Ej: 0.850"
+                />
+                <p className="text-xs text-gray-500 mt-1">Peso del producto + empaque. Usado para asignar carga a vehículos de delivery.</p>
               </div>
             </div>
           </div>
