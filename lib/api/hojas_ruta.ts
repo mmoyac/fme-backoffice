@@ -25,6 +25,7 @@ export interface PedidoResumen {
   cliente_telefono?: string | null;
   direccion?: string | null;
   monto_total: number;
+  costo_delivery: number;
   estado?: string;
   es_pagado: boolean;
   kg_brutos: number;
@@ -99,11 +100,14 @@ export interface HojaRutaCreate {
 
 // ─── API functions ───────────────────────────────────────────────────
 
-export const listarPedidosDisponibles = (): Promise<PedidoResumen[]> =>
-  apiRequest('/api/hojas-ruta/pedidos-disponibles');
+export const listarPedidosDisponibles = (todosLocales = false): Promise<PedidoResumen[]> =>
+  apiRequest(`/api/hojas-ruta/pedidos-disponibles${todosLocales ? '?todos_locales=true' : ''}`);
 
-export const listarHojasRuta = (estado?: string): Promise<HojaRuta[]> => {
-  const qs = estado ? `?estado=${estado}` : '';
+export const listarHojasRuta = (estado?: string, todosLocales = false): Promise<HojaRuta[]> => {
+  const params = new URLSearchParams();
+  if (estado) params.set('estado', estado);
+  if (todosLocales) params.set('todos_locales', 'true');
+  const qs = params.toString() ? `?${params.toString()}` : '';
   return apiRequest(`/api/hojas-ruta/${qs}`);
 };
 

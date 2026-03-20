@@ -62,7 +62,7 @@ export default function TableroDespachoPage() {
     setLoading(true);
     setError('');
     try {
-      const [h, p] = await Promise.all([listarHojasRuta(), listarPedidosDisponibles()]);
+      const [h, p] = await Promise.all([listarHojasRuta(undefined, true), listarPedidosDisponibles(true)]);
       setHojas(h);
       setPedidosSinRuta(p);
     } catch (e: any) {

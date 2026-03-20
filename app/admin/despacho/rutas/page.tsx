@@ -701,6 +701,11 @@ export default function HojasRutaPage() {
                             <div className="text-slate-500 text-xs">
                               ${p.monto_total.toLocaleString('es-CL', { maximumFractionDigits: 0 })}
                             </div>
+                            {p.costo_delivery > 0 && (
+                              <div className="text-emerald-400 text-xs">
+                                +${p.costo_delivery.toLocaleString('es-CL', { maximumFractionDigits: 0 })} delivery
+                              </div>
+                            )}
                           </div>
                         </label>
                       );

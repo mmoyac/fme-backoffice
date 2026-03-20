@@ -1,7 +1,7 @@
 // Formulario para crear/editar solicitudes de transferencia
 
 import { SolicitudTransferencia, SolicitudTransferenciaCreate } from "../../types/solicitud";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { generarPDFSolicitudHTML } from "./generarPDFSolicitudHTML";
 import SolicitudPDFResumen from "./SolicitudPDFResumen";
 import { useAuth } from "@/lib/AuthProvider";
@@ -9,6 +9,7 @@ import { getEstadosEnrolamiento } from "@/lib/api/recepcion";
 import { getLocales, Local } from "@/lib/api/locales";
 import { useProductosList } from "./useProductosList";
 import { useStockEdicionSolicitud } from "./useStockEdicionSolicitud";
+import ProductCombobox from "./ProductCombobox";
 
 interface Props {
   solicitud?: SolicitudTransferencia | null;
@@ -28,7 +29,11 @@ const SolicitudForm: React.FC<Props> = ({ solicitud, onSubmit, onCancel }) => {
   const [estado, setEstado] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const productos = useProductosList();
+  const productosRaw = useProductosList();
+  const productos = useMemo(
+    () => [...productosRaw].sort((a, b) => a.nombre.localeCompare(b.nombre, "es")),
+    [productosRaw]
+  );
   // Para PDF
   const [localesMap, setLocalesMap] = useState<Record<number, any>>({});
   const [productosMap, setProductosMap] = useState<Record<number, any>>({});
@@ -63,7 +68,7 @@ const SolicitudForm: React.FC<Props> = ({ solicitud, onSubmit, onCancel }) => {
       // Buscar el id del estado PENDIENTE
       const pendiente = data.find((e: any) => e.codigo === "PENDIENTE");
       setEstado(solicitud?.estado_id || pendiente?.id || (data[0]?.id ?? 1));
-    });
+    }).catch(() => {});
     // Si estamos editando, inicializar items
     if (solicitud?.items) {
       setItems(solicitud.items.map(i => ({
@@ -270,24 +275,13 @@ const SolicitudForm: React.FC<Props> = ({ solicitud, onSubmit, onCancel }) => {
               const suficiente = typeof stock === 'number' && item.cantidad_solicitada <= stock;
               return (
                 <div key={idx} className="flex gap-2 items-center">
-                  <select
-                    className="bg-slate-700 border border-slate-600 rounded px-2 py-1 text-gray-200"
-                    value={item.producto_id || ""}
-                    onChange={e => {
-                      const val = Number(e.target.value);
-                      setItems(items => items.map((it, i) => i === idx ? { ...it, producto_id: val } : it));
-                    }}
+                  <ProductCombobox
+                    productos={productos}
+                    value={item.producto_id}
+                    onChange={val => setItems(items => items.map((it, i) => i === idx ? { ...it, producto_id: val } : it))}
                     disabled={!!solicitud && estadoActual === ESTADO_FINALIZADO}
-                  >
-                    <option value="">Producto</option>
-                    {productos
-                      .filter(p =>
-                        !items.some((it, i) => i !== idx && it.producto_id === p.id)
-                      )
-                      .map(p => (
-                        <option key={p.id} value={p.id}>{p.nombre}</option>
-                      ))}
-                  </select>
+                    excludeIds={items.filter((_, i) => i !== idx).map(it => it.producto_id).filter(Boolean)}
+                  />
                   <input
                     type="number"
                     min={1}
@@ -300,14 +294,16 @@ const SolicitudForm: React.FC<Props> = ({ solicitud, onSubmit, onCancel }) => {
                     }}
                     disabled={!!solicitud && estadoActual === ESTADO_FINALIZADO}
                   />
-                  {typeof stock === 'number' && (
-                    <span className={suficiente ? "text-green-400 ml-2 text-xs" : "text-red-400 ml-2 text-xs"}>
-                      [Stock: {stock}] {suficiente ? "✔" : "⚠"}
-                    </span>
-                  )}
+                  <span className="text-xs w-28 shrink-0">
+                    {typeof stock === 'number' && (
+                      <span className={suficiente ? "text-green-400" : "text-red-400"}>
+                        [Stock: {stock}] {suficiente ? "✔" : "⚠"}
+                      </span>
+                    )}
+                  </span>
                   <button
                     type="button"
-                    className="text-red-400 hover:text-red-300 px-2"
+                    className="shrink-0 text-red-400 hover:text-red-300 px-2"
                     onClick={() => setItems(items => items.filter((_, i) => i !== idx))}
                     title="Quitar"
                     disabled={!!solicitud && estadoActual === ESTADO_FINALIZADO}

@@ -293,6 +293,19 @@ Utilizar componentes de **shadcn/ui** o **Headless UI** para:
 - Notificaciones (toast)
 - Upload de archivos
 
+### 7.3. Breakpoints para listas/tablas (OBLIGATORIO)
+
+- Usar siempre `lg:` (1024px) como breakpoint para alternar entre vista cards y tabla.
+- **Nunca usar `md:`** para este propósito: los Android reportan ≥ 768px y verían la tabla con scroll horizontal en lugar de cards.
+- Patrón estándar:
+  ```tsx
+  {/* Vista Mobile: Cards */}
+  <div className="lg:hidden space-y-4">...</div>
+
+  {/* Vista Desktop: Tabla */}
+  <div className="hidden lg:block ...">...</div>
+  ```
+
 ---
 
 ## 8. 🧪 Tests (Pendiente)

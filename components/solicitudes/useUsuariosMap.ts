@@ -1,8 +1,3 @@
-declare global {
-  interface Window {
-    solicitudIds?: number[];
-  }
-}
 import { useEffect, useState } from "react";
 
 export interface Usuario {
@@ -10,17 +5,19 @@ export interface Usuario {
   nombre_completo: string;
 }
 
-export function useUsuariosMap() {
+export function useUsuariosMap(ids: number[]) {
   const [usuariosMap, setUsuariosMap] = useState<Record<number, Usuario>>({});
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const validIds = ids.filter(Boolean);
+    if (validIds.length === 0) return;
     const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-    const headers = require('../../lib/auth').AuthService.getAuthHeaders();
-    // IDs a consultar: solicitante y finalizador
-    const ids = window.solicitudIds || [];
-    if (ids.length === 0) return;
-    Promise.all(ids.map(id =>
+    const { AuthService } = require('../../lib/auth');
+    const headers = AuthService.getAuthHeaders();
+    setLoading(true);
+    Promise.all(validIds.map(id =>
       fetch(`${API_URL}/api/admin/users/${id}`, { headers })
         .then(async res => {
           if (!res.ok) return null;
@@ -30,9 +27,9 @@ export function useUsuariosMap() {
       const map: Record<number, Usuario> = {};
       usuarios.forEach(u => { if (u) map[u.id] = u; });
       setUsuariosMap(map);
-    }).catch(err => setError('Error al cargar usuarios'));
-  }, []);
-  return { usuariosMap, error };
+    }).catch(() => setError('Error al cargar usuarios'))
+      .finally(() => setLoading(false));
+  }, [ids.join(',')]);
 
-  return usuariosMap;
+  return { usuariosMap, loading, error };
 }

@@ -27,6 +27,7 @@ const SolicitudPDFResumen: React.FC<Props> = ({ solicitud, localesMap, productos
             <th style={{ border: '1px solid #ccc', padding: 6, background: '#f5f5f5' }}>Producto</th>
             <th style={{ border: '1px solid #ccc', padding: 6, background: '#f5f5f5' }}>Solicitado</th>
             <th style={{ border: '1px solid #ccc', padding: 6, background: '#f5f5f5' }}>Aprobado</th>
+            <th style={{ border: '1px solid #ccc', padding: 6, background: '#f5f5f5' }}>Recibido</th>
           </tr>
         </thead>
         <tbody>
@@ -35,6 +36,7 @@ const SolicitudPDFResumen: React.FC<Props> = ({ solicitud, localesMap, productos
               <td style={{ border: '1px solid #ccc', padding: 6 }}>{productosMap[item.producto_id]?.nombre || item.producto_id}</td>
               <td style={{ border: '1px solid #ccc', padding: 6, textAlign: 'center' }}>{item.cantidad_solicitada}</td>
               <td style={{ border: '1px solid #ccc', padding: 6, textAlign: 'center' }}>{item.cantidad_aprobada ?? '-'}</td>
+              <td style={{ border: '1px solid #ccc', padding: 6, textAlign: 'center' }}>{item.cantidad_recibida ?? '-'}</td>
             </tr>
           ))}
         </tbody>

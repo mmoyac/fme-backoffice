@@ -14,7 +14,7 @@ export interface InventarioUpdate {
 }
 
 export async function getInventarios(): Promise<Inventario[]> {
-  const response = await fetch(`${API_URL}/api/inventario/`, {
+  const response = await fetch(`${API_URL}/api/inventario/?limit=10000`, {
     headers: AuthService.getAuthHeaders(),
   });
   if (!response.ok) throw new Error('Error al obtener inventarios');

@@ -17,7 +17,7 @@ import { updateSolicitud } from "@/lib/api/solicitudes";
 
 const SolicitudDetalleModal: React.FC<Props> = ({ solicitud, localesMap, productosMap, onClose, onRecibir }) => {
   const { user } = useAuth();
-  const [recepcionOpen, setRecepcionOpen] = useState(true);
+  const [recepcionOpen, setRecepcionOpen] = useState(false);
   const [cantidades, setCantidades] = useState<{ [producto_id: number]: number }>({});
   const [loadingRecibir, setLoadingRecibir] = useState(false);
   const [errorRecibir, setErrorRecibir] = useState<string | null>(null);
@@ -27,10 +27,12 @@ const SolicitudDetalleModal: React.FC<Props> = ({ solicitud, localesMap, product
     React.useEffect(() => {
       const inicial: { [producto_id: number]: number } = {};
       solicitud.items.forEach(item => {
-        inicial[item.producto_id] = item.cantidad_recibida ?? item.cantidad_aprobada ?? item.cantidad_solicitada;
+        if (item.cantidad_recibida != null) {
+          inicial[item.producto_id] = item.cantidad_recibida;
+        }
       });
       setCantidades(inicial);
-      setRecepcionOpen(true);
+      setRecepcionOpen(false);
     }, [solicitud]);
 
     const handleCantidadChange = (producto_id: number, value: number) => {
@@ -59,11 +61,8 @@ const SolicitudDetalleModal: React.FC<Props> = ({ solicitud, localesMap, product
         setLoadingRecibir(false);
       }
     };
-  const usuariosHook = useUsuariosMap();
-  const usuariosMap = (usuariosHook as any).usuariosMap || {};
-  const error = (usuariosHook as any).error || null;
-  const loadingUsuarios = Object.keys(usuariosMap).length === 0 && !error;
-  const errorUsuarios = loadingUsuarios && typeof window !== 'undefined' && window.console && window.console.error && window.console.error.toString().includes('Unauthorized');
+  const usuarioIds = [solicitud.usuario_solicitante_id, solicitud.usuario_finalizador_id].filter(Boolean) as number[];
+  const { usuariosMap, loading: loadingUsuarios, error } = useUsuariosMap(usuarioIds);
   const handleImprimir = async () => {
     // Crear un div temporal oculto
     const tempDiv = document.createElement('div');
@@ -175,7 +174,7 @@ const SolicitudDetalleModal: React.FC<Props> = ({ solicitud, localesMap, product
                 <td className="py-2 px-3 border-b border-slate-700 text-center">{item.cantidad_solicitada}</td>
                 <td className="py-2 px-3 border-b border-slate-700 text-center">{item.cantidad_aprobada ?? '-'}</td>
                 <td className="py-2 px-3 border-b border-slate-700 text-center">
-                  {recepcionOpen ? (
+                  {puedeRecibir ? (
                     <input
                       type="number"
                       min={0}
@@ -195,12 +194,6 @@ const SolicitudDetalleModal: React.FC<Props> = ({ solicitud, localesMap, product
         <div className="flex flex-col gap-2 mt-4">
           <div className="flex gap-2 justify-end">
             <button
-              className="px-4 py-2 rounded bg-primary text-slate-900 font-semibold hover:bg-primary-dark transition-colors"
-              onClick={handleImprimir}
-            >
-              Imprimir PDF
-            </button>
-            <button
               className="px-4 py-2 rounded bg-slate-600 text-gray-200 hover:bg-slate-500 transition-colors"
               onClick={onClose}
             >
@@ -208,7 +201,7 @@ const SolicitudDetalleModal: React.FC<Props> = ({ solicitud, localesMap, product
             </button>
             {/* El botón Recibir ya no es necesario porque la edición está siempre activa */}
           </div>
-          {recepcionOpen && (
+          {puedeRecibir && (
             <div className="flex gap-2 justify-end mt-4">
               {errorRecibir && <div className="text-red-400 mt-2">{errorRecibir}</div>}
               <button

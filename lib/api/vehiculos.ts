@@ -85,4 +85,4 @@ export interface UsuarioChofer {
 }
 
 export const listarUsuarios = (): Promise<UsuarioChofer[]> =>
-  apiRequest('/api/admin/users');
+  apiRequest('/api/vehiculos/choferes');
