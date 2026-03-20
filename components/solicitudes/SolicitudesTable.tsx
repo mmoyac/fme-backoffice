@@ -404,6 +404,7 @@ export default function SolicitudesTable() {
           solicitud={editing}
           localesMap={localesMap}
           productosMap={productosMap}
+          estadosMap={estadosMap}
           onClose={() => { setDetalleOpen(false); setEditing(null); fetchSolicitudes(); }}
           onRecibir={() => fetchSolicitudes()}
         />

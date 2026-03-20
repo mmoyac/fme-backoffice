@@ -6,6 +6,7 @@ interface Props {
   solicitud: SolicitudTransferencia;
   localesMap: Record<number, any>;
   productosMap: Record<number, any>;
+  estadosMap: Record<number, any>;
   onClose: () => void;
   onRecibir?: () => void;
 }
@@ -15,14 +16,16 @@ import { generarPDFSolicitudHTML } from "./generarPDFSolicitudHTML";
 import { useAuth } from "@/lib/AuthProvider";
 import { updateSolicitud } from "@/lib/api/solicitudes";
 
-const SolicitudDetalleModal: React.FC<Props> = ({ solicitud, localesMap, productosMap, onClose, onRecibir }) => {
+const SolicitudDetalleModal: React.FC<Props> = ({ solicitud, localesMap, productosMap, estadosMap, onClose, onRecibir }) => {
   const { user } = useAuth();
   const [recepcionOpen, setRecepcionOpen] = useState(false);
   const [cantidades, setCantidades] = useState<{ [producto_id: number]: number }>({});
   const [loadingRecibir, setLoadingRecibir] = useState(false);
   const [errorRecibir, setErrorRecibir] = useState<string | null>(null);
+  const estadoCodigo = estadosMap[solicitud.estado_id]?.codigo ?? '';
+  const esFinalizado = estadoCodigo === 'FINALIZADO';
     // Condición para mostrar botón Recibir
-    const puedeRecibir = solicitud.estado_id === 3 && !solicitud.recibido && user?.local_defecto_id === solicitud.local_destino_id;
+    const puedeRecibir = esFinalizado && !solicitud.recibido && user?.local_defecto_id === solicitud.local_destino_id;
     // Inicializar cantidades al abrir el modal
     React.useEffect(() => {
       const inicial: { [producto_id: number]: number } = {};
@@ -84,10 +87,10 @@ const SolicitudDetalleModal: React.FC<Props> = ({ solicitud, localesMap, product
           <strong>Usuario que solicitó:</strong> {usuariosMap[solicitud.usuario_solicitante_id]?.nombre_completo || solicitud.usuario_solicitante_id}<br />
           <strong>Usuario que finalizó:</strong> {solicitud.usuario_finalizador_id ? (usuariosMap[solicitud.usuario_finalizador_id]?.nombre_completo || solicitud.usuario_finalizador_id) : '—'}<br />
           <strong>Fecha de Solicitud:</strong> {new Date(solicitud.fecha_creacion).toLocaleString('es-CL')}<br />
-          {"usuario_finalizador_id" in solicitud && solicitud.usuario_finalizador_id && solicitud.estado_id === 3 && (
+          {"usuario_finalizador_id" in solicitud && solicitud.usuario_finalizador_id && esFinalizado && (
             <div><strong>Fecha de Respuesta:</strong> {new Date(solicitud.fecha_actualizacion).toLocaleString('es-CL')}</div>
           )}
-          <strong>Estado:</strong> {solicitud.estado_id === 3 ? 'Finalizado' : 'Pendiente'}<br />
+          <strong>Estado:</strong> {estadosMap[solicitud.estado_id]?.nombre || solicitud.estado_id}<br />
         </div>
         {solicitud.nota && (
           <div style={{ marginBottom: 12 }}>
@@ -150,10 +153,10 @@ const SolicitudDetalleModal: React.FC<Props> = ({ solicitud, localesMap, product
           <strong>Usuario que solicitó:</strong> {usuariosMap[solicitud.usuario_solicitante_id]?.nombre_completo || solicitud.usuario_solicitante_id}<br />
           <strong>Usuario que finalizó:</strong> {"usuario_finalizador_id" in solicitud && solicitud.usuario_finalizador_id ? (usuariosMap[solicitud.usuario_finalizador_id]?.nombre_completo || solicitud.usuario_finalizador_id) : '—'}<br />
           <strong>Fecha de Solicitud:</strong> {new Date(solicitud.fecha_creacion).toLocaleString('es-CL')}<br />
-          {"usuario_finalizador_id" in solicitud && solicitud.usuario_finalizador_id && solicitud.estado_id === 3 && (
+          {"usuario_finalizador_id" in solicitud && solicitud.usuario_finalizador_id && esFinalizado && (
             <div><strong>Fecha de Respuesta:</strong> {new Date(solicitud.fecha_actualizacion).toLocaleString('es-CL')}</div>
           )}
-          <strong>Estado:</strong> {solicitud.estado_id === 3 ? 'Finalizado' : 'Pendiente'}
+          <strong>Estado:</strong> {estadosMap[solicitud.estado_id]?.nombre || solicitud.estado_id}
         </div>
         {solicitud.nota && (
           <div className="mb-2 text-sm"><strong>Nota:</strong> {solicitud.nota}</div>
