@@ -14,6 +14,7 @@ import EstadosEnrolamientoList from "./components/EstadosEnrolamientoList";
 import UbicacionesList from "./components/UbicacionesList";
 import MediosPagoList from "./components/MediosPagoList";
 import CanalesVentaList from "./components/CanalesVentaList";
+import TiposVentaList from "./components/TiposVentaList";
 
 export default function MantenedoresPage() {
     const [activeTab, setActiveTab] = useState<string | null>(null);
@@ -24,6 +25,7 @@ export default function MantenedoresPage() {
         { id: "tipos_vehiculo",        icono: "🚚",  titulo: "Tipos de Vehículo",        desc: "Vehículos para logística y enrolamientos" },
         { id: "paletas_colores",       icono: "🎨",  titulo: "Paleta de Colores",        desc: "Colores del sistema" },
         { id: "categorias",            icono: "📦",  titulo: "Categorías",               desc: "Categorías de productos y puntos" },
+        { id: "tipos_venta",           icono: "🛒",  titulo: "Tipos de Venta",           desc: "Unitario, Por Peso, etc. — se asignan a categorías" },
         { id: "tipos",                 icono: "🏷️",  titulo: "Tipos de Producto",        desc: "Materia Prima, Elaborado, etc." },
         { id: "unidades",              icono: "📏",  titulo: "Unidades de Medida",       desc: "Unidades con soporte de conversiones" },
         { id: "locales",               icono: "🏪",  titulo: "Locales",                  desc: "Locales y puntos de venta" },
@@ -117,6 +119,16 @@ export default function MantenedoresPage() {
                     const PaletasColoresList = require("./components/PaletasColoresList").default;
                     return <PaletasColoresList />;
                 })()}
+
+                {activeTab === "tipos_venta" && (
+                    <div>
+                        <h2 className="text-xl font-semibold text-white mb-2">Tipos de Venta</h2>
+                        <p className="text-gray-400 mb-4">
+                            Gestiona los tipos de venta (Unitario, Por Peso, etc.). Se asignan a las categorías de productos para determinar cómo se cobra cada ítem.
+                        </p>
+                        <TiposVentaList />
+                    </div>
+                )}
 
                 {activeTab === "categorias" && (
                     <div>

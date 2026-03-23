@@ -198,18 +198,25 @@ export default function CanalesVentaList() {
               <button onClick={cerrar} className="text-slate-400 hover:text-white text-2xl leading-none">×</button>
             </div>
             <div className="px-6 py-4 space-y-4">
-              {creando && (
-                <div>
-                  <label className="text-slate-300 text-sm block mb-1">Código *</label>
-                  <input
-                    value={form.codigo}
-                    onChange={(e) => setForm({ ...form, codigo: e.target.value.toUpperCase() })}
-                    placeholder="Ej: INSTAGRAM"
-                    className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm font-mono"
-                  />
-                  <p className="text-slate-500 text-xs mt-1">Solo letras y guiones bajos, en mayúsculas</p>
-                </div>
-              )}
+              <div>
+                <label className="text-slate-300 text-sm block mb-1">Código {creando ? '*' : ''}</label>
+                {creando ? (
+                  <>
+                    <input
+                      value={form.codigo}
+                      onChange={(e) => setForm({ ...form, codigo: e.target.value.toUpperCase() })}
+                      placeholder="Ej: INSTAGRAM"
+                      className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm font-mono"
+                    />
+                    <p className="text-slate-500 text-xs mt-1">Solo letras y guiones bajos, en mayúsculas</p>
+                  </>
+                ) : (
+                  <div className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-cyan-300 font-mono text-sm">
+                    {editando?.codigo}
+                    <span className="text-slate-500 font-sans ml-2 text-xs">(no editable)</span>
+                  </div>
+                )}
+              </div>
               <div>
                 <label className="text-slate-300 text-sm block mb-1">Nombre *</label>
                 <input

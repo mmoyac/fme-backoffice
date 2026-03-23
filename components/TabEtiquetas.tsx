@@ -38,6 +38,8 @@ export default function TabEtiquetas({ productoId, productoNombre }: TabEtiqueta
     azucares_g: undefined,
     grasas_totales_g: undefined,
     grasas_saturadas_g: undefined,
+    grasas_monoinsaturadas_g: undefined,
+    grasas_poliinsaturadas_g: undefined,
     grasas_trans_g: undefined,
     fibra_g: undefined,
     sodio_mg: undefined,
@@ -45,7 +47,15 @@ export default function TabEtiquetas({ productoId, productoNombre }: TabEtiqueta
     calcio_mg: undefined,
     hierro_mg: undefined,
     vitamina_a_mcg: undefined,
-    vitamina_c_mg: undefined
+    vitamina_c_mg: undefined,
+    porciones_por_envase: undefined,
+    porcion_peso_g: undefined,
+    contenido_neto: undefined,
+    ingredientes: undefined,
+    alergenos: undefined,
+    modo_uso: undefined,
+    condiciones_almacenamiento: undefined,
+    plazo_duracion: undefined,
   });
 
   useEffect(() => {
@@ -73,6 +83,8 @@ export default function TabEtiquetas({ productoId, productoNombre }: TabEtiqueta
           azucares_g: info.azucares_g ?? undefined,
           grasas_totales_g: info.grasas_totales_g ?? undefined,
           grasas_saturadas_g: info.grasas_saturadas_g ?? undefined,
+          grasas_monoinsaturadas_g: info.grasas_monoinsaturadas_g ?? undefined,
+          grasas_poliinsaturadas_g: info.grasas_poliinsaturadas_g ?? undefined,
           grasas_trans_g: info.grasas_trans_g ?? undefined,
           fibra_g: info.fibra_g ?? undefined,
           sodio_mg: info.sodio_mg ?? undefined,
@@ -80,7 +92,15 @@ export default function TabEtiquetas({ productoId, productoNombre }: TabEtiqueta
           calcio_mg: info.calcio_mg ?? undefined,
           hierro_mg: info.hierro_mg ?? undefined,
           vitamina_a_mcg: info.vitamina_a_mcg ?? undefined,
-          vitamina_c_mg: info.vitamina_c_mg ?? undefined
+          vitamina_c_mg: info.vitamina_c_mg ?? undefined,
+          porciones_por_envase: info.porciones_por_envase ?? undefined,
+          porcion_peso_g: info.porcion_peso_g ?? undefined,
+          contenido_neto: info.contenido_neto ?? undefined,
+          ingredientes: info.ingredientes ?? undefined,
+          alergenos: info.alergenos ?? undefined,
+          modo_uso: info.modo_uso ?? undefined,
+          condiciones_almacenamiento: info.condiciones_almacenamiento ?? undefined,
+          plazo_duracion: info.plazo_duracion ?? undefined,
         });
       }
 
@@ -165,7 +185,7 @@ export default function TabEtiquetas({ productoId, productoNombre }: TabEtiqueta
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Porción de referencia */}
-          <div className="md:col-span-3">
+          <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
               Porción de Referencia
             </label>
@@ -175,6 +195,49 @@ export default function TabEtiquetas({ productoId, productoNombre }: TabEtiqueta
               onChange={(e) => setInfoNutricional({ ...infoNutricional, porcion_referencia: e.target.value })}
               className="w-full bg-slate-700 text-white px-4 py-2 rounded-lg border border-slate-600 focus:border-primary focus:outline-none"
               placeholder="Ej: 100g, 100ml, 1 unidad"
+            />
+          </div>
+
+          {/* Peso de porción */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Peso de Porción (g)
+            </label>
+            <input
+              type="number"
+              step="0.1"
+              value={infoNutricional.porcion_peso_g || ''}
+              onChange={(e) => setInfoNutricional({ ...infoNutricional, porcion_peso_g: e.target.value ? Number(e.target.value) : undefined })}
+              className="w-full bg-slate-700 text-white px-4 py-2 rounded-lg border border-slate-600 focus:border-primary focus:outline-none"
+              placeholder="Ej: 70"
+            />
+          </div>
+
+          {/* Porciones por envase */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Porciones por Envase
+            </label>
+            <input
+              type="number"
+              value={infoNutricional.porciones_por_envase || ''}
+              onChange={(e) => setInfoNutricional({ ...infoNutricional, porciones_por_envase: e.target.value ? Number(e.target.value) : undefined })}
+              className="w-full bg-slate-700 text-white px-4 py-2 rounded-lg border border-slate-600 focus:border-primary focus:outline-none"
+              placeholder="Ej: 20"
+            />
+          </div>
+
+          {/* Contenido neto */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Contenido Neto
+            </label>
+            <input
+              type="text"
+              value={infoNutricional.contenido_neto || ''}
+              onChange={(e) => setInfoNutricional({ ...infoNutricional, contenido_neto: e.target.value || undefined })}
+              className="w-full bg-slate-700 text-white px-4 py-2 rounded-lg border border-slate-600 focus:border-primary focus:outline-none"
+              placeholder="Ej: 1.400g"
             />
           </div>
 
@@ -258,6 +321,49 @@ export default function TabEtiquetas({ productoId, productoNombre }: TabEtiqueta
               step="0.01"
               value={infoNutricional.grasas_saturadas_g || ''}
               onChange={(e) => setInfoNutricional({ ...infoNutricional, grasas_saturadas_g: e.target.value ? Number(e.target.value) : undefined })}
+              className="w-full bg-slate-700 text-white px-4 py-2 rounded-lg border border-slate-600 focus:border-primary focus:outline-none"
+            />
+          </div>
+
+          {/* Grasas monoinsaturadas */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Grasas Monoinsaturadas (g)
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              value={infoNutricional.grasas_monoinsaturadas_g || ''}
+              onChange={(e) => setInfoNutricional({ ...infoNutricional, grasas_monoinsaturadas_g: e.target.value ? Number(e.target.value) : undefined })}
+              className="w-full bg-slate-700 text-white px-4 py-2 rounded-lg border border-slate-600 focus:border-primary focus:outline-none"
+            />
+          </div>
+
+          {/* Grasas poliinsaturadas */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Grasas Poliinsaturadas (g)
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              value={infoNutricional.grasas_poliinsaturadas_g || ''}
+              onChange={(e) => setInfoNutricional({ ...infoNutricional, grasas_poliinsaturadas_g: e.target.value ? Number(e.target.value) : undefined })}
+              className="w-full bg-slate-700 text-white px-4 py-2 rounded-lg border border-slate-600 focus:border-primary focus:outline-none"
+            />
+          </div>
+
+          {/* Grasas trans */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Grasas Trans (g)
+            </label>
+            <input
+              key={`grasas_trans_${productoId}`}
+              type="number"
+              step="0.01"
+              defaultValue={infoNutricional.grasas_trans_g ?? ''}
+              onBlur={(e) => setInfoNutricional({ ...infoNutricional, grasas_trans_g: e.target.value !== '' ? Number(e.target.value) : undefined })}
               className="w-full bg-slate-700 text-white px-4 py-2 rounded-lg border border-slate-600 focus:border-primary focus:outline-none"
             />
           </div>
@@ -370,7 +476,69 @@ export default function TabEtiquetas({ productoId, productoNombre }: TabEtiqueta
         </details>
       </div>
 
-      {/* SECCIÓN 2: Sellos de Advertencia */}
+      {/* SECCIÓN 2: Texto de Etiqueta */}
+      <div className="bg-slate-800 rounded-lg p-6">
+        <h2 className="text-xl font-semibold text-white mb-4">📝 Texto de Etiqueta</h2>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Ingredientes</label>
+            <textarea
+              rows={3}
+              value={infoNutricional.ingredientes || ''}
+              onChange={(e) => setInfoNutricional({ ...infoNutricional, ingredientes: e.target.value || undefined })}
+              className="w-full bg-slate-700 text-white px-4 py-2 rounded-lg border border-slate-600 focus:border-primary focus:outline-none"
+              placeholder="Ej: harina de trigo, agua, manteca de cerdo, sal..."
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Alérgenos</label>
+            <textarea
+              rows={2}
+              value={infoNutricional.alergenos || ''}
+              onChange={(e) => setInfoNutricional({ ...infoNutricional, alergenos: e.target.value || undefined })}
+              className="w-full bg-slate-700 text-white px-4 py-2 rounded-lg border border-slate-600 focus:border-primary focus:outline-none"
+              placeholder="Ej: Contiene gluten. Elaborado en líneas que también procesan gluten."
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Modo de Uso / Preparación</label>
+            <textarea
+              rows={3}
+              value={infoNutricional.modo_uso || ''}
+              onChange={(e) => setInfoNutricional({ ...infoNutricional, modo_uso: e.target.value || undefined })}
+              className="w-full bg-slate-700 text-white px-4 py-2 rounded-lg border border-slate-600 focus:border-primary focus:outline-none"
+              placeholder="Ej: masas refrigeradas: listas para usar. masas congeladas: descongelar 1 día antes de usar."
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Condiciones de Almacenamiento</label>
+            <textarea
+              rows={2}
+              value={infoNutricional.condiciones_almacenamiento || ''}
+              onChange={(e) => setInfoNutricional({ ...infoNutricional, condiciones_almacenamiento: e.target.value || undefined })}
+              className="w-full bg-slate-700 text-white px-4 py-2 rounded-lg border border-slate-600 focus:border-primary focus:outline-none"
+              placeholder="Ej: conservar refrigerada / conservar congelada"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Plazo de Duración</label>
+            <textarea
+              rows={2}
+              value={infoNutricional.plazo_duracion || ''}
+              onChange={(e) => setInfoNutricional({ ...infoNutricional, plazo_duracion: e.target.value || undefined })}
+              className="w-full bg-slate-700 text-white px-4 py-2 rounded-lg border border-slate-600 focus:border-primary focus:outline-none"
+              placeholder="Ej: refrigerada 8 días a partir de fecha de elaboración / congelada 6 meses"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* SECCIÓN 3: Sellos de Advertencia */}
       <div className="bg-slate-800 rounded-lg p-6">
         <h2 className="text-xl font-semibold text-white mb-4">⚠️ Sellos de Advertencia</h2>
         <p className="text-gray-400 text-sm mb-4">Selecciona los sellos que aplican a este producto</p>

@@ -27,6 +27,8 @@ export interface InformacionNutricional {
   azucares_g: number | null;
   grasas_totales_g: number | null;
   grasas_saturadas_g: number | null;
+  grasas_monoinsaturadas_g: number | null;
+  grasas_poliinsaturadas_g: number | null;
   grasas_trans_g: number | null;
   fibra_g: number | null;
   sodio_mg: number | null;
@@ -35,6 +37,14 @@ export interface InformacionNutricional {
   hierro_mg: number | null;
   vitamina_a_mcg: number | null;
   vitamina_c_mg: number | null;
+  porciones_por_envase: number | null;
+  porcion_peso_g: number | null;
+  contenido_neto: string | null;
+  ingredientes: string | null;
+  alergenos: string | null;
+  modo_uso: string | null;
+  condiciones_almacenamiento: string | null;
+  plazo_duracion: string | null;
   fecha_actualizacion: string | null;
 }
 
@@ -45,6 +55,11 @@ export interface EtiquetaCompleta {
   codigo_barra: string | null;
   informacion_nutricional: InformacionNutricional | null;
   sellos: SelloAdvertencia[];
+  empresa_razon_social: string | null;
+  empresa_direccion: string | null;
+  empresa_resolucion_sanitaria: string | null;
+  empresa_email: string | null;
+  empresa_telefono: string | null;
 }
 
 export interface InformacionNutricionalUpdate {
@@ -55,6 +70,8 @@ export interface InformacionNutricionalUpdate {
   azucares_g?: number;
   grasas_totales_g?: number;
   grasas_saturadas_g?: number;
+  grasas_monoinsaturadas_g?: number;
+  grasas_poliinsaturadas_g?: number;
   grasas_trans_g?: number;
   fibra_g?: number;
   sodio_mg?: number;
@@ -63,6 +80,14 @@ export interface InformacionNutricionalUpdate {
   hierro_mg?: number;
   vitamina_a_mcg?: number;
   vitamina_c_mg?: number;
+  porciones_por_envase?: number;
+  porcion_peso_g?: number;
+  contenido_neto?: string;
+  ingredientes?: string;
+  alergenos?: string;
+  modo_uso?: string;
+  condiciones_almacenamiento?: string;
+  plazo_duracion?: string;
 }
 
 // ===========================
@@ -120,7 +145,15 @@ export async function updateInformacionNutricional(
     headers: AuthService.getAuthHeaders(),
     body: JSON.stringify(data),
   });
-  if (!response.ok) throw new Error('Error al actualizar información nutricional');
+  if (!response.ok) {
+    const detail = await response.json().catch(() => null);
+    const msg = detail?.detail
+      ? (Array.isArray(detail.detail)
+          ? detail.detail.map((e: any) => `${e.loc?.join('.')}: ${e.msg}`).join(' | ')
+          : String(detail.detail))
+      : 'Error al actualizar información nutricional';
+    throw new Error(msg);
+  }
   return response.json();
 }
 

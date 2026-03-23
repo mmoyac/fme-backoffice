@@ -1010,22 +1010,28 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
                 </div>
                 <p className="text-sm text-gray-400 text-center">
                   Este pedido tiene factura. El pago debe registrarse desde el módulo de{' '}
-                  <a href="/admin/facturas" className="text-blue-400 hover:underline font-medium">
-                    Facturas
+                  <a href="/admin/cobranzas" className="text-blue-400 hover:underline font-medium">
+                    Cobranzas
                   </a>.
                 </p>
               </div>
             ) : (
-              <button
-                onClick={togglePagado}
-                disabled={guardando}
-                className={`w-full px-4 py-3 rounded-lg font-semibold transition-all ${pedido.pagado
-                  ? 'bg-green-500 hover:bg-green-600 text-white'
-                  : 'bg-yellow-500 hover:bg-yellow-600 text-white'
-                  } disabled:opacity-50`}
-              >
-                {pedido.pagado ? '✓ Pagado' : '⏳ Marcar como Pagado'}
-              </button>
+              <div className="space-y-3">
+                <div className={`w-full px-4 py-3 rounded-lg font-semibold text-center ${pedido.pagado
+                  ? 'bg-green-500 text-white'
+                  : 'bg-yellow-500/20 border border-yellow-500 text-yellow-400'
+                  }`}>
+                  {pedido.pagado ? '✓ Pagado' : '⏳ Pendiente de Pago'}
+                </div>
+                {!pedido.pagado && (
+                  <p className="text-sm text-gray-400 text-center">
+                    El pago debe registrarse desde el módulo de{' '}
+                    <a href="/admin/cobranzas" className="text-blue-400 hover:underline font-medium">
+                      Cobranzas
+                    </a>.
+                  </p>
+                )}
+              </div>
             )}
           </div>
 
@@ -1183,11 +1189,11 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
                 </div>
               </div>
             ) : pedido.tipo_documento_tributario_id === 1 ? (
-              // Factura: el medio de pago se asigna desde el módulo de Facturas
+              // Factura: el medio de pago se asigna desde el módulo de Cobranzas
               <p className="text-sm text-gray-400 text-center py-2">
                 El medio de pago se registra desde el módulo de{' '}
-                <a href="/admin/facturas" className="text-blue-400 hover:underline font-medium">
-                  Facturas
+                <a href="/admin/cobranzas" className="text-blue-400 hover:underline font-medium">
+                  Cobranzas
                 </a>.
               </p>
             ) : (

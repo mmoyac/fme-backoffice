@@ -5,6 +5,9 @@ import { useState, useEffect } from 'react';
 import { getEstadisticasDashboard, getMetricasCaja } from '@/lib/api/dashboard';
 import { listarFacturas } from '@/lib/api/facturas';
 import { listarHojasRuta } from '@/lib/api/hojas_ruta';
+import { getSolicitudes } from '@/lib/api/solicitudes';
+import { getProductos } from '@/lib/api/productos';
+import { getEstadosEnrolamiento } from '@/lib/api/recepcion';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -12,6 +15,8 @@ export default function DashboardPage() {
   const [cajas, setCajas] = useState<any>(null);
   const [facturacionData, setFacturacionData] = useState<any>(null);
   const [rutasData, setRutasData] = useState<any>(null);
+  const [solicitudesData, setSolicitudesData] = useState<any>(null);
+  const [stockData, setStockData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -21,14 +26,34 @@ export default function DashboardPage() {
   const cargarResumenes = async () => {
     try {
       setLoading(true);
-      const [ventasData, cajasData, facturasArr, hojasArr] = await Promise.all([
+      const [ventasData, cajasData, facturasArr, hojasArr, solicitudesArr, productosArr, estadosArr] = await Promise.all([
         getEstadisticasDashboard().catch(() => null),
         getMetricasCaja().catch(() => null),
         listarFacturas().catch(() => [] as any[]),
-        listarHojasRuta().catch(() => [] as any[])
+        listarHojasRuta().catch(() => [] as any[]),
+        getSolicitudes().catch(() => [] as any[]),
+        getProductos().catch(() => [] as any[]),
+        getEstadosEnrolamiento().catch(() => [] as any[]),
       ]);
       setVentas(ventasData);
       setCajas(cajasData);
+
+      // Métricas de solicitudes
+      const estadosMap: Record<number, any> = {};
+      (estadosArr as any[]).forEach((e: any) => { estadosMap[e.id] = e; });
+      const solPendientes = (solicitudesArr as any[]).filter((s: any) => estadosMap[s.estado_id]?.codigo === 'PENDIENTE').length;
+      const solEnProceso = (solicitudesArr as any[]).filter((s: any) => estadosMap[s.estado_id]?.codigo === 'EN_PROCESO').length;
+      setSolicitudesData({
+        pendientes: solPendientes,
+        enProceso: solEnProceso,
+        total: (solicitudesArr as any[]).length,
+      });
+
+      // Métricas de stock (basado en stock_actual total del producto)
+      const prods = productosArr as any[];
+      const stockCritico = prods.filter((p: any) => p.activo && (p.stock_minimo > 0 || p.stock_critico > 0) && p.stock_actual <= p.stock_critico).length;
+      const stockMinimo = prods.filter((p: any) => p.activo && (p.stock_minimo > 0 || p.stock_critico > 0) && p.stock_actual > p.stock_critico && p.stock_actual <= p.stock_minimo).length;
+      setStockData({ criticos: stockCritico, minimos: stockMinimo });
       // Cálculos rápidos de facturación
       const activas = facturasArr.filter((f: any) => f.estado !== 'CANCELADO' && (f.total ?? 0) > 0);
       setFacturacionData({
@@ -120,7 +145,35 @@ export default function DashboardPage() {
         { label: 'Facturas pendientes', valor: facturacionData.cantPorCobrar.toString(), icon: '📋' },
         { label: 'Sin folio SII', valor: facturacionData.sinFolio.toString(), icon: '⚠️' },
       ] : []
-    }
+    },
+    {
+      id: 'solicitudes',
+      titulo: 'Tablero de Solicitudes',
+      descripcion: 'Solicitudes de transferencia de productos entre locales',
+      icono: '🔁',
+      ruta: '/admin/dashboard/solicitudes',
+      color: 'from-indigo-500 to-purple-500',
+      metricas: solicitudesData ? [
+        { label: 'Pendientes', valor: solicitudesData.pendientes.toString(), icon: '⏳' },
+        { label: 'En Proceso', valor: solicitudesData.enProceso.toString(), icon: '🔄' },
+        { label: 'Total activas', valor: (solicitudesData.pendientes + solicitudesData.enProceso).toString(), icon: '📋' },
+        { label: 'Total registradas', valor: solicitudesData.total.toString(), icon: '📄' },
+      ] : []
+    },
+    {
+      id: 'stock',
+      titulo: 'Alertas de Stock',
+      descripcion: 'Productos bajo niveles minimos y criticos en todos los locales',
+      icono: '⚠️',
+      ruta: '/admin/dashboard/stock-alertas',
+      color: 'from-red-500 to-orange-500',
+      metricas: stockData ? [
+        { label: 'Nivel critico', valor: stockData.criticos.toString(), icon: '🔴' },
+        { label: 'Nivel minimo', valor: stockData.minimos.toString(), icon: '🟡' },
+        { label: 'Total con alerta', valor: (stockData.criticos + stockData.minimos).toString(), icon: '⚠️' },
+        { label: 'Estado', valor: stockData.criticos === 0 ? 'Sin criticos' : 'Requiere atencion', icon: '📊' },
+      ] : []
+    },
   ];
 
   return (

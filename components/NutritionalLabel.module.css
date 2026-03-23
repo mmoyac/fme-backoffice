@@ -1,0 +1,79 @@
+.container {
+  border: 2px solid #000;
+  border-radius: 6px;
+  overflow: hidden;
+  width: 100%;
+  font-family: Arial, sans-serif;
+  color: #000;
+  background: #fff;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 9px;
+}
+
+/* Header principal */
+.headerMain th {
+  background: #fff;
+  color: #000;
+  text-align: center;
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  padding: 4px 6px;
+  border-bottom: 2px solid #000;
+}
+
+/* Fila de sub-header (porción y porciones) */
+.subHeader td {
+  padding: 3px 6px;
+  font-size: 9px;
+  border-bottom: 1px solid #000;
+}
+
+/* Fila de encabezados de columna (100g | Porción) */
+.colHeaders td {
+  font-weight: bold;
+  text-align: center;
+  padding: 3px 6px;
+  border-top: 2px solid #000;
+  border-bottom: 2px solid #000;
+  font-size: 9px;
+}
+
+/* Filas de datos */
+.row td {
+  padding: 2px 6px;
+  border-bottom: 0.5px solid #ccc;
+  font-size: 8.5px;
+}
+
+.rowLast td {
+  padding: 2px 6px;
+  font-size: 8.5px;
+}
+
+/* Nutriente principal — bold */
+.labelBold {
+  font-weight: bold;
+}
+
+/* Nutriente secundario — indentado, normal */
+.labelIndent {
+  padding-left: 12px !important;
+  font-weight: normal;
+}
+
+.textCenter {
+  text-align: center;
+}
+
+.textRight {
+  text-align: right;
+}
+
+.borderLeft {
+  border-left: 1px solid #ccc;
+}

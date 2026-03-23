@@ -10,6 +10,7 @@ const emptyForm: FormData = {
     nombre: '',
     permite_cheque: false,
     es_contado: false,
+    plazo_dias: 0,
     activo: true,
 };
 
@@ -48,6 +49,7 @@ export default function MediosPagoList() {
             nombre: medio.nombre,
             permite_cheque: medio.permite_cheque,
             es_contado: medio.es_contado,
+            plazo_dias: medio.plazo_dias ?? 0,
             activo: medio.activo,
         });
         setModalOpen(true);
@@ -92,6 +94,7 @@ export default function MediosPagoList() {
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Nombre</th>
                                 <th className="px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase">Al Contado</th>
                                 <th className="px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase">Permite Cheque</th>
+                                <th className="px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase">Plazo (días)</th>
                                 <th className="px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase">Estado</th>
                                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase">Acciones</th>
                             </tr>
@@ -116,6 +119,15 @@ export default function MediosPagoList() {
                                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${medio.permite_cheque ? "bg-blue-900 text-blue-300" : "bg-slate-600 text-slate-400"}`}>
                                             {medio.permite_cheque ? "Sí" : "No"}
                                         </span>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-center text-sm">
+                                        {(medio.plazo_dias ?? 0) > 0 ? (
+                                            <span className="bg-amber-900 text-amber-300 text-xs font-semibold px-2 py-0.5 rounded-full">
+                                                {medio.plazo_dias}d
+                                            </span>
+                                        ) : (
+                                            <span className="text-gray-500">—</span>
+                                        )}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-center">
                                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${medio.activo ? "bg-green-900 text-green-300" : "bg-gray-700 text-gray-400"}`}>
@@ -166,6 +178,25 @@ export default function MediosPagoList() {
                                     placeholder="Ej: Efectivo"
                                     className="w-full bg-slate-700 border border-slate-600 text-white rounded px-3 py-2 focus:ring-2 focus:ring-primary"
                                 />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-1">
+                                    Plazo de pago (días)
+                                    <span className="text-slate-500 font-normal ml-1">— 0 = contado, &gt;0 = crédito diferido</span>
+                                </label>
+                                <input
+                                    type="number"
+                                    min={0}
+                                    max={365}
+                                    value={formData.plazo_dias}
+                                    onChange={(e) => setFormData({ ...formData, plazo_dias: parseInt(e.target.value) || 0 })}
+                                    className="w-full bg-slate-700 border border-slate-600 text-white rounded px-3 py-2 focus:ring-2 focus:ring-primary"
+                                />
+                                {(formData.plazo_dias ?? 0) > 0 && (
+                                    <p className="text-amber-400 text-xs mt-1">
+                                        Este medio ocupa crédito del cliente. El pedido quedará impago hasta confirmar recibo en Cobranza.
+                                    </p>
+                                )}
                             </div>
                             <div className="space-y-2 pt-1">
                                 <label className="flex items-center space-x-2 text-gray-300 cursor-pointer">

@@ -215,12 +215,55 @@ export async function deleteCategoria(id: number): Promise<void> {
 
 // --- Tipos de Venta ---
 
+export interface TipoVentaCreate {
+    nombre: string;
+    descripcion?: string;
+    activo?: boolean;
+}
+
 export async function getTiposVenta(): Promise<TipoVenta[]> {
     const response = await fetch(`${API_URL}/api/maestras/tipos-venta`, {
         headers: AuthService.getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Error al cargar tipos de venta');
     return response.json();
+}
+
+export async function createTipoVenta(data: TipoVentaCreate): Promise<TipoVenta> {
+    const response = await fetch(`${API_URL}/api/maestras/tipos-venta`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...AuthService.getAuthHeaders() },
+        body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Error al crear tipo de venta');
+    }
+    return response.json();
+}
+
+export async function updateTipoVenta(id: number, data: TipoVentaCreate): Promise<TipoVenta> {
+    const response = await fetch(`${API_URL}/api/maestras/tipos-venta/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...AuthService.getAuthHeaders() },
+        body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Error al actualizar tipo de venta');
+    }
+    return response.json();
+}
+
+export async function deleteTipoVenta(id: number): Promise<void> {
+    const response = await fetch(`${API_URL}/api/maestras/tipos-venta/${id}`, {
+        method: 'DELETE',
+        headers: AuthService.getAuthHeaders(),
+    });
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Error al eliminar tipo de venta');
+    }
 }
 
 // --- Tipos de Producto ---
@@ -339,6 +382,7 @@ export interface MedioPago {
     nombre: string;
     permite_cheque: boolean;
     es_contado: boolean;
+    plazo_dias: number;
     activo: boolean;
 }
 

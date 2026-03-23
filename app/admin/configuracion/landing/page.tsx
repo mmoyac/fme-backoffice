@@ -77,6 +77,8 @@ export default function ConfiguracionLandingPage() {
         telefono: data.telefono,
         email: data.email,
         direccion: data.direccion,
+        razon_social: data.razon_social,
+        resolucion_sanitaria: data.resolucion_sanitaria,
         texto_footer_descripcion: data.texto_footer_descripcion,
         texto_copyright: data.texto_copyright,
         meta_title: data.meta_title,
@@ -633,6 +635,29 @@ export default function ConfiguracionLandingPage() {
                 onChange={(e) => setFormData(prev => ({ ...prev, direccion: e.target.value }))}
                 className="w-full p-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
                 placeholder="Calle Principal 123"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">Razón Social (Elaborado por)</label>
+              <input
+                type="text"
+                value={formData.razon_social || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, razon_social: e.target.value }))}
+                className="w-full p-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
+                placeholder="Masas Estación SpA"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">Resolución Sanitaria</label>
+              <input
+                type="text"
+                value={formData.resolucion_sanitaria || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, resolucion_sanitaria: e.target.value }))}
+                className="w-full p-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
+                placeholder="RS N° 1234/2024"
               />
             </div>
           </div>
