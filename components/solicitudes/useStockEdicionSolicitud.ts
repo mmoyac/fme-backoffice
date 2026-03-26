@@ -9,8 +9,10 @@ export function useStockEdicionSolicitud(items: { producto_id: number }[], local
       return;
     }
     let cancelled = false;
+    const validItems = items.filter(item => item.producto_id > 0);
+    if (validItems.length === 0) return;
     Promise.all(
-      items.map(async (item) => {
+      validItems.map(async (item) => {
         const stock = await getStockProductoLocal(item.producto_id, localOrigenId);
         return { producto_id: item.producto_id, stock };
       })

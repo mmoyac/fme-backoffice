@@ -51,7 +51,7 @@ export async function getStockProductoLocal(productoId: number, localId: number)
     throw new Error('Error al obtener stock del producto');
   }
   const inventario = await response.json();
-  return inventario.cantidad_stock || 0;
+  return Number(inventario.cantidad_stock) || 0;
 }
 
 export async function ajusteMerma(
