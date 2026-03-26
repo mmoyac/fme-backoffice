@@ -435,6 +435,152 @@ npx jest --init
 - ✅ Healthcheck implementado
 - ✅ NEXT_PUBLIC_API_URL configurado con IP pública
 
-**Docker Hub:** `https://hub.docker.com/r/mmoyac/masas-estacion-backoffice`  
+**Docker Hub:** `https://hub.docker.com/r/mmoyac/masas-estacion-backoffice`
 **Estado MVP:** ✅ **Desplegado y operativo en producción**
+
+---
+
+## Módulo: Notas de Crédito y Devoluciones — Backoffice (implementado 2026-03-25)
+
+### Páginas y componentes relevantes
+
+| Ruta / Archivo | Descripción |
+|---|---|
+| `app/admin/pedidos/[id]/page.tsx` | Detalle del pedido. Muestra sección de devoluciones, NC emitidas y botón para registrar nueva devolución. |
+| `app/admin/dashboard/facturacion/page.tsx` | Tablero de facturación. Todos los montos descuentan `total_notas_credito`. |
+| `lib/api/pedidos.ts` | Interface `Pedido` incluye `total_notas_credito?: number` (suma de NC del pedido). |
+| `lib/api/facturas.ts` | `listarFacturas()` usa `/api/pedidos/?tipo_documento_tributario_id=1`. |
+| `app/admin/mantenedores/components/CanalesVentaList.tsx` | Mantenedor de canales de venta con campos `entrega_inmediata` y `visible_en_pos`. |
+| `components/pos/EtapaProductos.tsx` | Botón `+` limitado al `stock_local` del producto seleccionado. |
+| `components/pos/EtapaFinalizacion.tsx` | Selector de canal de venta filtrado por `visible_en_pos=true`. |
+| `app/admin/pedidos/pos/page.tsx` | Carga canales de venta y pasa `canalVentaId` al crear el pedido. |
+
+### Interface Pedido (campos relevantes nuevos)
+
+```typescript
+interface Pedido {
+  // ... campos existentes ...
+  total_notas_credito?: number;  // Suma de NC emitidas. Usar para calcular monto neto.
+  tipo_documento_tributario_id?: number;
+  tipo_documento_codigo?: string;  // "BOL" | "FAC"
+  estado_sii?: string;  // "PENDIENTE" | "ANULADO" | "APROBADO" | "RECHAZADO" | "REGISTRADO"
+  folio_sii?: string;
+}
+```
+
+### Monto neto en el tablero de facturación
+
+```typescript
+// app/admin/dashboard/facturacion/page.tsx
+const neto = (f: Pedido) => Math.max(0, (f.total ?? 0) - (f.total_notas_credito ?? 0));
+
+// Se usa en TODOS los cálculos: totalFacturado, totalCobrado, totalPorCobrar,
+// gráfico mensual, ranking de clientes, cobranza de cheques, alertas.
+```
+
+### Devolución modal en detalle de pedido
+
+- Solo disponible en pedidos con estado `ENTREGADO`.
+- Permite seleccionar items y cantidad a devolver (máx = cantidad original).
+- El campo de cantidad tiene `Math.min` para no exceder el máximo.
+- Los errores del modal usan estado separado `errorDevolucion` (no reemplaza la página).
+- Después de crear la devolución, recarga el pedido para mostrar la NC generada.
+
+### POS — control de stock
+
+```typescript
+// components/pos/EtapaProductos.tsx
+const incrementarCantidad = () => {
+  const stockDisponible = productoSeleccionado?.stock_local ?? productoSeleccionado?.stock_total ?? Infinity;
+  if (actual + incremento > stockDisponible) return;
+  // ...
+};
+// El botón "+" también tiene disabled cuando cantidad >= stock
+// El input onChange hace Math.min(val, stock) para bloquear ingreso manual
+```
+
+Los productos en el POS se cargan desde `/api/productos/catalogo-local/{localId}` y ya incluyen `stock_local`. Solo se muestran productos con `stock_local > 0`.
+
+### Canales de venta en POS
+
+```typescript
+// app/admin/pedidos/pos/page.tsx
+// Se cargan desde /api/canales-venta/
+// canalVentaId por defecto = el canal con codigo "POS"
+// Se pasa al crear el pedido como canal_venta_id
+
+// components/pos/EtapaFinalizacion.tsx
+// Selector filtrado: canalesVenta.filter(c => c.visible_en_pos)
+// Muestra etiqueta "(entrega inmediata)" para canales con entrega_inmediata=true
+```
+
+## Módulo: Delivery en POS (implementado 2026-03-25)
+
+### Flujo general
+
+El operador activa el toggle "Requiere delivery" en `EtapaFinalizacion`. El componente calcula la ruta usando la API de Mapbox (Directions API) y muestra el costo estimado. El costo se guarda en `costo_delivery` del pedido pero **no se suma al `monto_total`** — es un cobro informativo aparte.
+
+### Pasos del cálculo
+
+1. Se geocodifican las direcciones del local (origen) y del cliente (destino) con `geocodeAddress()` usando Mapbox Geocoding v5, filtrado a Chile (`country=cl`).
+2. Se obtiene la ruta de conducción entre ambos puntos con `calcularRuta()` usando Mapbox Directions v5.
+3. Se extrae `distanciaKm` y `tiempoMinutos` de la respuesta.
+4. Si la distancia supera `max_km_delivery` configurado en el tenant, se muestra error y **el botón "Crear Pedido" queda deshabilitado**.
+5. Si no hay límite (`max_km_delivery = null`), se acepta cualquier distancia.
+6. `costoTotal = costo_fijo + round(distanciaKm * costo_por_km)`
+
+### Delivery gratis
+
+Si `totalCarrito >= monto_minimo_gratis` (y `monto_minimo_gratis != null`), el costo se fija en 0 sin llamar a Mapbox.
+
+### Configuración por tenant (`configuracion_landing`)
+
+| Campo | Descripción | Fallback en POS |
+|---|---|---|
+| `costo_fijo_delivery` | Costo base fijo (CLP) | 2000 |
+| `costo_por_km_delivery` | Costo adicional por km (CLP) | 150 |
+| `monto_minimo_delivery_gratis` | Monto mínimo para delivery gratis (CLP) | `null` (nunca gratis) |
+| `max_km_delivery` | Distancia máxima para aceptar delivery (km) | `null` (sin límite) |
+
+Estos valores llegan al frontend desde `/api/config/landing` bajo la clave `delivery`:
+
+```json
+{
+  "delivery": {
+    "costo_fijo": 2000,
+    "costo_por_km": 150,
+    "monto_minimo_gratis": 50000,
+    "max_km": 15
+  }
+}
+```
+
+### Componentes y archivos relevantes
+
+- `components/pos/EtapaFinalizacion.tsx` — lógica completa de delivery (cálculo, validación, UI)
+- `lib/TenantContext.tsx` — provee `tenantConfig` con el objeto `delivery`
+- `app/admin/configuracion/landing/page.tsx` — formulario para configurar los 4 parámetros
+
+### Validación de max_km en el botón
+
+```typescript
+// EtapaFinalizacion.tsx
+disabled={procesando || !localId || !medioPagoId || (requiereDelivery && !!errorDelivery)}
+```
+
+Si `errorDelivery` tiene contenido (incluido el error de km superado), el botón queda deshabilitado. El error se genera dentro del useEffect que calcula la ruta:
+
+```typescript
+if (maxKmDelivery !== null && distanciaKm > maxKmDelivery) {
+  setErrorDelivery(`La dirección está a X km, superando el límite de Y km para delivery`);
+  // no se llama a onCostoDeliveryCalculado con valor — queda null
+  return;
+}
+```
+
+### Prerrequisitos
+
+- Variable de entorno `NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN` configurada en el backoffice.
+- El local debe tener `direccion` registrada (si no, se muestra error sin calcular).
+- El cliente debe tener `direccion` registrada (idem).
 

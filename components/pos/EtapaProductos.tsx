@@ -181,6 +181,8 @@ export function EtapaProductos({
   const incrementarCantidad = () => {
     const actual = parseFloat(cantidadInput) || 0;
     const incremento = productoSeleccionado?.tipo_venta_codigo === 'PESO_SUELTO' ? 0.1 : 1;
+    const stockDisponible = productoSeleccionado?.stock_local ?? productoSeleccionado?.stock_total ?? Infinity;
+    if (actual + incremento > stockDisponible) return;
     setCantidadInput((actual + incremento).toString());
   };
   
@@ -423,7 +425,11 @@ export function EtapaProductos({
                   <input
                     type="number"
                     value={cantidadInput}
-                    onChange={(e) => setCantidadInput(e.target.value)}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value) || 0;
+                      const stock = productoSeleccionado.stock_local ?? productoSeleccionado.stock_total ?? Infinity;
+                      setCantidadInput(Math.min(val, stock).toString());
+                    }}
                     placeholder="0"
                     min="0"
                     step={productoSeleccionado.tipo_venta_codigo === 'PESO_SUELTO' ? '0.1' : '1'}
@@ -432,7 +438,8 @@ export function EtapaProductos({
                   
                   <button
                     onClick={incrementarCantidad}
-                    className="w-10 h-10 bg-slate-700 hover:bg-slate-600 text-white rounded-lg flex items-center justify-center"
+                    disabled={(parseFloat(cantidadInput) || 0) >= (productoSeleccionado.stock_local ?? productoSeleccionado.stock_total ?? Infinity)}
+                    className="w-10 h-10 bg-slate-700 hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg flex items-center justify-center"
                     type="button"
                   >
                     <PlusIcon className="w-5 h-5" />

@@ -89,6 +89,7 @@ export default function ConfiguracionLandingPage() {
         costo_fijo_delivery: data.costo_fijo_delivery ?? null,
         costo_por_km_delivery: data.costo_por_km_delivery ?? null,
         monto_minimo_delivery_gratis: data.monto_minimo_delivery_gratis ?? null,
+        max_km_delivery: data.max_km_delivery ?? null,
       });
     } catch (err) {
       console.error('Error cargando configuración:', err);
@@ -827,6 +828,19 @@ export default function ConfiguracionLandingPage() {
                 min={0}
               />
               <p className="text-xs text-slate-400 mt-1">Dejar vacío para nunca ofrecer delivery gratis</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">Distancia máxima de delivery (km)</label>
+              <input
+                type="number"
+                value={formData.max_km_delivery ?? ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, max_km_delivery: e.target.value ? parseFloat(e.target.value) : null }))}
+                className="w-full p-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
+                placeholder="15"
+                min={0}
+                step={0.5}
+              />
+              <p className="text-xs text-slate-400 mt-1">Pedidos con delivery fuera de este radio serán rechazados. Dejar vacío para no limitar.</p>
             </div>
           </div>
         </div>

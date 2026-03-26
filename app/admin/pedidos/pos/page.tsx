@@ -105,6 +105,8 @@ export default function POSPedidoPage() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [locales, setLocales] = useState<Local[]>([]);
   const [mediosPago, setMediosPago] = useState<MedioPago[]>([]);
+  const [canalesVenta, setCanalesVenta] = useState<{ id: number; codigo: string; nombre: string; entrega_inmediata: boolean; visible_en_pos: boolean }[]>([]);
+  const [canalVentaId, setCanalVentaId] = useState<number | null>(null);
   const [unidadesMedida, setUnidadesMedida] = useState<UnidadMedida[]>([]);
   
   // Estados del producto seleccionado
@@ -251,17 +253,22 @@ export default function POSPedidoPage() {
         setUsuarioActual(usuario);
         console.log('👤 Usuario autenticado:', usuario);
         
-        const [clientesData, localesData, mediosData, unidadesData] = await Promise.all([
+        const [clientesData, localesData, mediosData, unidadesData, canalesData] = await Promise.all([
           getClientes(),
           getLocales(),
           getMediosPago(),
-          getUnidadesMedida()
+          getUnidadesMedida(),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/canales-venta/`, { headers: AuthService.getAuthHeaders() }).then(r => r.json())
         ]);
-        
+
         setClientes(clientesData);
         setLocales(localesData);
         setMediosPago(mediosData);
         setUnidadesMedida(unidadesData);
+        setCanalesVenta(canalesData);
+        // Por defecto: POS (entrega inmediata)
+        const canalPos = canalesData.find((c: any) => c.codigo === 'POS');
+        if (canalPos) setCanalVentaId(canalPos.id);
         
         console.log('🏪 Locales disponibles:', localesData.map((l: any) => `${l.id}:${l.codigo}`));
         
@@ -661,7 +668,7 @@ export default function POSPedidoPage() {
         notas: notas || undefined,
         puntos_usar: 0,
         requiere_delivery: !cliente.es_anonimo && !!cliente.id && requiereDelivery,
-        canal_venta_id: 1, // POS
+        canal_venta_id: canalVentaId,
         costo_delivery: requiereDelivery && costoDeliveryFinal !== null ? costoDeliveryFinal : undefined,
         items: itemsPedido
       };
@@ -1000,6 +1007,9 @@ export default function POSPedidoPage() {
             usuarioActual={usuarioActual}
             puntosEstimados={puntosEstimados}
             onClienteCreado={recargarClientes}
+            canalesVenta={canalesVenta}
+            canalVentaId={canalVentaId}
+            setCanalVentaId={setCanalVentaId}
             requiereDelivery={requiereDelivery}
             setRequiereDelivery={setRequiereDelivery}
             onCostoDeliveryCalculado={setCostoDeliveryFinal}

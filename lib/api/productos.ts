@@ -32,6 +32,11 @@ export interface Producto {
   // Configuración tributaria
   precio_incluye_iva: boolean;
   descuento_contado: number | null; // % de descuento cuando el pago es al contado
+  // Unidad de medida
+  unidad_medida_simbolo: string | null;
+  // Unidad de compra (para materias primas a granel)
+  unidad_compra_descripcion: string | null;
+  factor_conversion_compra: number | null; // cuántas unidades de inventario = 1 unidad de compra
 }
 
 export interface ProductoCreate {
@@ -55,6 +60,8 @@ export interface ProductoCreate {
   stock_critico?: number;
   precio_incluye_iva?: boolean;
   descuento_contado?: number | null;
+  unidad_compra_descripcion?: string | null;
+  factor_conversion_compra?: number | null;
 }
 
 export type ProductoUpdate = Partial<ProductoCreate>;

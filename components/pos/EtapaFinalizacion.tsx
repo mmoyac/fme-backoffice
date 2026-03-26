@@ -60,6 +60,10 @@ interface EtapaFinalizacionProps {
   puntosEstimados: any;
   // Callback para recargar clientes después de crear uno nuevo
   onClienteCreado?: () => void;
+  // Canal de venta
+  canalesVenta: { id: number; codigo: string; nombre: string; entrega_inmediata: boolean; visible_en_pos: boolean }[];
+  canalVentaId: number | null;
+  setCanalVentaId: (id: number) => void;
   // Delivery
   requiereDelivery: boolean;
   setRequiereDelivery: (v: boolean) => void;
@@ -88,6 +92,9 @@ export function EtapaFinalizacion({
   usuarioActual,
   puntosEstimados,
   onClienteCreado,
+  canalesVenta,
+  canalVentaId,
+  setCanalVentaId,
   requiereDelivery,
   setRequiereDelivery,
   onCostoDeliveryCalculado
@@ -142,6 +149,7 @@ export function EtapaFinalizacion({
   const costoFijoDelivery = (tenantConfig as any)?.delivery?.costo_fijo ?? 2000;
   const costoPorKmDelivery = (tenantConfig as any)?.delivery?.costo_por_km ?? 150;
   const montoMinimoGratis = (tenantConfig as any)?.delivery?.monto_minimo_gratis ?? null;
+  const maxKmDelivery: number | null = (tenantConfig as any)?.delivery?.max_km ?? null;
 
   // Delivery gratis si el carrito supera el mínimo configurado
   const deliveryGratis = montoMinimoGratis !== null && totalCarrito >= montoMinimoGratis;
@@ -184,6 +192,11 @@ export function EtapaFinalizacion({
           geocodeAddress(direccionDestino),
         ]);
         const { distanciaKm, tiempoMinutos } = await calcularRuta(coordsOrigen, coordsDestino);
+        if (maxKmDelivery !== null && distanciaKm > maxKmDelivery) {
+          setErrorDelivery(`La dirección está a ${Math.round(distanciaKm * 10) / 10} km, superando el límite de ${maxKmDelivery} km para delivery`);
+          onCostoDeliveryCalculado?.(null);
+          return;
+        }
         const costoTotal = costoFijoDelivery + Math.round(distanciaKm * costoPorKmDelivery);
         setCostoDelivery({ distanciaKm: Math.round(distanciaKm * 100) / 100, tiempoMinutos, costoTotal });
         onCostoDeliveryCalculado?.(costoTotal);
@@ -526,6 +539,24 @@ export function EtapaFinalizacion({
               </div>
             </div>
             
+            {/* Canal de venta */}
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Canal de Venta *
+              </label>
+              <select
+                value={canalVentaId || ''}
+                onChange={(e) => setCanalVentaId(parseInt(e.target.value))}
+                className="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-white"
+              >
+                {canalesVenta.filter(c => c.visible_en_pos).map(canal => (
+                  <option key={canal.id} value={canal.id} className="text-white">
+                    {canal.nombre}{canal.entrega_inmediata ? ' (entrega inmediata)' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             {/* Notas adicionales */}
             <div className="mt-4">
               <label className="block text-sm font-medium text-slate-300 mb-2">
@@ -828,7 +859,7 @@ export function EtapaFinalizacion({
             
             <button
               onClick={onProcesar}
-              disabled={procesando || !localId || !medioPagoId}
+              disabled={procesando || !localId || !medioPagoId || (requiereDelivery && !!errorDelivery)}
               className="w-full bg-green-600 hover:bg-green-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white font-medium py-4 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2"
             >
               {procesando ? (

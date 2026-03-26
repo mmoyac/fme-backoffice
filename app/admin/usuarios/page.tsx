@@ -34,15 +34,10 @@ interface Local {
 }
 
 export default function UsuariosPage() {
-    const [activeTab, setActiveTab] = useState<'users' | 'roles'>('users');
     const [users, setUsers] = useState<User[]>([]);
     const [roles, setRoles] = useState<Role[]>([]);
     const [locales, setLocales] = useState<Local[]>([]);
     const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-    const [selectedRole, setSelectedRole] = useState<Role | null>(null);
-    const [roleMenus, setRoleMenus] = useState<number[]>([]);
-    const [loading, setLoading] = useState(false);
-
     const [newUser, setNewUser] = useState({ email: '', password: '', nombre: '', role_id: 0, local_defecto_id: 0 });
     const [showCreateUser, setShowCreateUser] = useState(false);
 
@@ -61,12 +56,6 @@ export default function UsuariosPage() {
         fetchMenuItems();
         fetchLocales();
     }, []);
-
-    useEffect(() => {
-        if (selectedRole && activeTab === 'roles') {
-            fetchRoleMenu(selectedRole.id);
-        }
-    }, [selectedRole, activeTab]);
 
     const getHeaders = () => ({
         'Authorization': `Bearer ${AuthService.getToken()}`,
@@ -99,18 +88,6 @@ export default function UsuariosPage() {
             const res = await fetch(`${API_URL}/api/locales/`, { headers: getHeaders() });
             if (res.ok) setLocales(await res.json());
         } catch (e) { console.error(e); }
-    };
-
-    const fetchRoleMenu = async (roleId: number) => {
-        setLoading(true);
-        try {
-            const res = await fetch(`${API_URL}/api/admin/roles/${roleId}/menu`, { headers: getHeaders() });
-            if (res.ok) {
-                const items: MenuItem[] = await res.json();
-                setRoleMenus(items.map(i => i.id));
-            }
-        } catch (e) { console.error(e); }
-        finally { setLoading(false); }
     };
 
     const handleCreateUser = async (e: React.FormEvent) => {
@@ -205,51 +182,14 @@ export default function UsuariosPage() {
         } catch (e) { alert('Error de red'); }
     };
 
-    const handleSavePermissions = async () => {
-        if (!selectedRole) return;
-        try {
-            const res = await fetch(`${API_URL}/api/admin/roles/${selectedRole.id}/menu`, {
-                method: 'PUT',
-                headers: getHeaders(),
-                body: JSON.stringify(roleMenus)
-            });
-            if (res.ok) alert('Permisos guardados correctamente');
-            else alert('Error al guardar permisos');
-        } catch (e) { alert('Error de red'); }
-    };
-
-    const toggleMenuPermission = (menuId: number) => {
-        setRoleMenus(prev =>
-            prev.includes(menuId) ? prev.filter(id => id !== menuId) : [...prev, menuId]
-        );
-    };
-
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
-                <h1 className="text-3xl font-bold text-white">Gestión de Usuarios y Roles</h1>
+                <h1 className="text-3xl font-bold text-white">Gestión de Usuarios</h1>
             </div>
 
-            {/* Tabs */}
-            <div className="flex space-x-4 border-b border-slate-700">
-                <button
-                    className={`py-2 px-4 ${activeTab === 'users' ? 'border-b-2 border-primary text-primary' : 'text-slate-400'}`}
-                    onClick={() => setActiveTab('users')}
-                >
-                    Usuarios
-                </button>
-                <button
-                    className={`py-2 px-4 ${activeTab === 'roles' ? 'border-b-2 border-primary text-primary' : 'text-slate-400'}`}
-                    onClick={() => setActiveTab('roles')}
-                >
-                    Roles y Permisos
-                </button>
-            </div>
-
-            {/* Content */}
             <div className="min-h-[400px]">
-                {activeTab === 'users' && (
-                    <div>
+                <div>
                         <div className="flex justify-end mb-4">
                             <button
                                 onClick={() => setShowCreateUser(true)}
@@ -315,65 +255,6 @@ export default function UsuariosPage() {
                             </table>
                         </div>
                     </div>
-                )}
-
-                {activeTab === 'roles' && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="bg-slate-800 rounded-lg p-4 h-fit">
-                            <h3 className="text-lg text-white font-semibold mb-4">Roles</h3>
-                            <div className="space-y-2">
-                                {roles.map(r => (
-                                    <div
-                                        key={r.id}
-                                        onClick={() => setSelectedRole(r)}
-                                        className={`p-3 rounded cursor-pointer transition-colors ${selectedRole?.id === r.id ? 'bg-primary text-slate-900 font-bold' : 'bg-slate-900 text-slate-300 hover:bg-slate-700'}`}
-                                    >
-                                        {r.nombre.toUpperCase()}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="md:col-span-2 bg-slate-800 rounded-lg p-6">
-                            {selectedRole ? (
-                                <>
-                                    <div className="flex justify-between items-center mb-6">
-                                        <h3 className="text-xl text-white">
-                                            Permisos de Menú: <span className="text-primary font-bold">{selectedRole.nombre.toUpperCase()}</span>
-                                        </h3>
-                                        <button
-                                            onClick={handleSavePermissions}
-                                            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow-lg"
-                                        >
-                                            Guardar Cambios
-                                        </button>
-                                    </div>
-                                    {loading ? (
-                                        <p className="text-slate-400">Cargando permisos...</p>
-                                    ) : (
-                                        <div className="grid grid-cols-2 gap-4">
-                                            {menuItems.map(item => (
-                                                <label key={item.id} className="flex items-center space-x-3 p-3 bg-slate-900 rounded hover:bg-slate-700 cursor-pointer">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={roleMenus.includes(item.id)}
-                                                        onChange={() => toggleMenuPermission(item.id)}
-                                                        className="form-checkbox h-5 w-5 text-primary rounded border-slate-600 bg-slate-800 focus:ring-primary focus:ring-offset-slate-900"
-                                                    />
-                                                    <span className="text-slate-200">{item.nombre}</span>
-                                                </label>
-                                            ))}
-                                        </div>
-                                    )}
-                                </>
-                            ) : (
-                                <div className="flex items-center justify-center h-full text-slate-500">
-                                    <p>Selecciona un rol para editar sus permisos</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
             </div>
 
             {/* Modal: Nuevo Usuario */}

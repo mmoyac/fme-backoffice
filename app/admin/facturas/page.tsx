@@ -11,6 +11,7 @@ const ESTADOS_SII = [
   { value: 'ENVIADO', label: 'Enviado', color: 'bg-indigo-500' },
   { value: 'APROBADO', label: 'Aprobado', color: 'bg-green-500' },
   { value: 'RECHAZADO', label: 'Rechazado', color: 'bg-red-500' },
+  { value: 'ANULADO', label: 'Anulado', color: 'bg-gray-500' },
 ];
 
 function EstadoSiiBadge({ estado }: { estado?: string }) {

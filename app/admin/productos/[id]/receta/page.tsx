@@ -27,7 +27,7 @@ export default function RecetaPage({ params }: { params: { id: string } }) {
     // Nuevo ingrediente
     const [nuevoIngrediente, setNuevoIngrediente] = useState({
         producto_ingrediente_id: 0,
-        cantidad: 1,
+        cantidad: '1',
         unidad_medida_id: 1,
         orden: 0,
         notas: '',
@@ -116,19 +116,24 @@ export default function RecetaPage({ params }: { params: { id: string } }) {
             alert('Selecciona un producto');
             return;
         }
+        const cantidadNum = parseFloat(nuevoIngrediente.cantidad);
+        if (isNaN(cantidadNum) || cantidadNum <= 0) {
+            alert('Ingresa una cantidad válida mayor a 0');
+            return;
+        }
 
         setFormData({
             ...formData,
             ingredientes: [
                 ...formData.ingredientes,
-                { ...nuevoIngrediente, orden: formData.ingredientes.length },
+                { ...nuevoIngrediente, cantidad: cantidadNum, orden: formData.ingredientes.length },
             ],
         });
 
         // Resetear formulario
         setNuevoIngrediente({
             producto_ingrediente_id: 0,
-            cantidad: 1,
+            cantidad: '1',
             unidad_medida_id: 1,
             orden: 0,
             notas: '',
@@ -148,6 +153,11 @@ export default function RecetaPage({ params }: { params: { id: string } }) {
             alert('Selecciona un producto');
             return;
         }
+        const cantidadNum = parseFloat(nuevoIngrediente.cantidad);
+        if (isNaN(cantidadNum) || cantidadNum <= 0) {
+            alert('Ingresa una cantidad válida mayor a 0');
+            return;
+        }
 
         try {
             console.log('Receta actual:', receta);
@@ -155,7 +165,7 @@ export default function RecetaPage({ params }: { params: { id: string } }) {
 
             const resultado = await crearIngredienteAPI(receta.id!, {
                 producto_ingrediente_id: nuevoIngrediente.producto_ingrediente_id,
-                cantidad: nuevoIngrediente.cantidad,
+                cantidad: cantidadNum,
                 unidad_medida_id: nuevoIngrediente.unidad_medida_id,
                 orden: receta.ingredientes.length,
                 notas: nuevoIngrediente.notas || undefined,
@@ -166,7 +176,7 @@ export default function RecetaPage({ params }: { params: { id: string } }) {
             // Resetear formulario
             setNuevoIngrediente({
                 producto_ingrediente_id: 0,
-                cantidad: 1,
+                cantidad: '1',
                 unidad_medida_id: 1,
                 orden: 0,
                 notas: '',
@@ -425,7 +435,7 @@ export default function RecetaPage({ params }: { params: { id: string } }) {
                                             step="0.001"
                                             min="0.001"
                                             value={nuevoIngrediente.cantidad}
-                                            onChange={(e) => setNuevoIngrediente({ ...nuevoIngrediente, cantidad: Number(e.target.value) })}
+                                            onChange={(e) => setNuevoIngrediente({ ...nuevoIngrediente, cantidad: e.target.value })}
                                             className="w-full bg-slate-600 text-white px-3 py-2 rounded-lg text-sm"
                                         />
                                     </div>
@@ -568,7 +578,7 @@ export default function RecetaPage({ params }: { params: { id: string } }) {
                                         step="0.001"
                                         min="0.001"
                                         value={nuevoIngrediente.cantidad}
-                                        onChange={(e) => setNuevoIngrediente({ ...nuevoIngrediente, cantidad: Number(e.target.value) })}
+                                        onChange={(e) => setNuevoIngrediente({ ...nuevoIngrediente, cantidad: e.target.value })}
                                         className="w-full bg-slate-600 text-white px-3 py-2 rounded-lg text-sm"
                                     />
                                 </div>

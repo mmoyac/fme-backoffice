@@ -61,6 +61,8 @@ export default function EditarProductoPage({ params }: { params: { id: string } 
         stock_critico: productoData.stock_critico,
         precio_incluye_iva: productoData.precio_incluye_iva,
         descuento_contado: productoData.descuento_contado ?? undefined,
+        unidad_compra_descripcion: productoData.unidad_compra_descripcion ?? undefined,
+        factor_conversion_compra: productoData.factor_conversion_compra ?? 1,
       });
     } catch (err) {
       alert('Error al cargar datos');
@@ -255,6 +257,51 @@ export default function EditarProductoPage({ params }: { params: { id: string } 
                 onChange={(e) => setFormData({ ...formData, stock_critico: Number(e.target.value) })}
                 className="w-full bg-slate-700 text-white px-4 py-2 rounded-lg border border-slate-600 focus:border-primary focus:outline-none"
               />
+            </div>
+          </div>
+
+          {/* Unidad de Compra (para materias primas a granel) */}
+          <div className="mt-4 p-4 bg-slate-700 rounded-lg border border-slate-600">
+            <h3 className="text-sm font-semibold text-yellow-400 mb-3">
+              Unidad de Compra (opcional — solo para materias primas a granel)
+            </h3>
+            <p className="text-xs text-gray-400 mb-3">
+              Si este producto se compra en una unidad diferente a la de inventario (ej: sacos, cajas),
+              configura aquí la descripción y el factor de conversión para que el sistema convierta automáticamente.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Descripción unidad de compra
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ej: Saco 25 kg, Caja 12 un, Bidon 20 L"
+                  value={formData.unidad_compra_descripcion || ''}
+                  onChange={(e) => setFormData({ ...formData, unidad_compra_descripcion: e.target.value || undefined })}
+                  className="w-full bg-slate-600 text-white px-4 py-2 rounded-lg border border-slate-500 focus:border-yellow-400 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Factor de conversión
+                  {formData.unidad_compra_descripcion && formData.factor_conversion_compra && formData.factor_conversion_compra > 1 && (
+                    <span className="ml-2 text-xs text-yellow-400">
+                      1 {formData.unidad_compra_descripcion} = {formData.factor_conversion_compra} {/* unidad inventario */}
+                    </span>
+                  )}
+                </label>
+                <input
+                  type="number"
+                  step="0.0001"
+                  min="0.0001"
+                  placeholder="Ej: 25"
+                  value={formData.factor_conversion_compra || 1}
+                  onChange={(e) => setFormData({ ...formData, factor_conversion_compra: Number(e.target.value) })}
+                  className="w-full bg-slate-600 text-white px-4 py-2 rounded-lg border border-slate-500 focus:border-yellow-400 focus:outline-none"
+                />
+                <p className="text-xs text-gray-500 mt-1">Cuántas unidades de inventario contiene 1 unidad de compra</p>
+              </div>
             </div>
           </div>
         </div>

@@ -154,9 +154,14 @@ export default function ProductosPage() {
                   <td className="px-6 py-4 text-sm text-center text-red-400 font-semibold">{producto.stock_critico ?? 0}</td>
                   <td className="px-6 py-4 text-sm text-center font-bold text-white">
                     {getStockActual(producto.id)}
+                    {producto.unidad_compra_descripcion && producto.factor_conversion_compra && producto.factor_conversion_compra > 1 && (
+                      <div className="text-xs text-yellow-400 font-normal">
+                        {(getStockActual(producto.id) / producto.factor_conversion_compra).toLocaleString('es-CL', { maximumFractionDigits: 2 })} {producto.unidad_compra_descripcion}
+                      </div>
+                    )}
                   </td>
                   <td className="px-6 py-4 text-sm text-center text-gray-400 font-normal">
-                    {'-'}
+                    {producto.unidad_medida_simbolo || '-'}
                   </td>
                   <td className="px-6 py-4 text-sm text-right space-x-2">
                     <Link

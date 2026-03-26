@@ -81,6 +81,7 @@ export interface ConfiguracionLanding {
     costo_fijo_delivery?: number | null;
     costo_por_km_delivery?: number | null;
     monto_minimo_delivery_gratis?: number | null;
+    max_km_delivery?: number | null;
 
     created_at: string;
     updated_at: string;
@@ -116,6 +117,7 @@ export interface ConfiguracionLandingCreate {
     costo_fijo_delivery?: number | null;
     costo_por_km_delivery?: number | null;
     monto_minimo_delivery_gratis?: number | null;
+    max_km_delivery?: number | null;
 }
 
 export interface ConfiguracionLandingUpdate extends Partial<Omit<ConfiguracionLandingCreate, 'tenant_id'>> {

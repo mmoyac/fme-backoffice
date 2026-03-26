@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { obtenerPedido, actualizarPedido, Pedido, descargarBoleta } from '@/lib/api/pedidos';
 import { descargarFactura } from '@/lib/api/facturas';
+import { obtenerNotaCreditoPorPedido, NotaCredito } from '@/lib/api/notas_credito';
+import { crearDevolucion, obtenerDevolucionesPedido, Devolucion } from '@/lib/api/devoluciones';
 import { obtenerPreventa, PreventaOut, ItemPreventaOut } from '@/lib/api/preventa';
 import { getLocales, Local } from '@/lib/api/locales';
 import { getInventarios, Inventario } from '@/lib/api/inventario';
@@ -34,6 +36,14 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
   const [actualizandoCheque, setActualizandoCheque] = useState<number | null>(null);
   const [generandoBoleta, setGenerandoBoleta] = useState(false);
   const [generandoFactura, setGenerandoFactura] = useState(false);
+  const [notaCredito, setNotaCredito] = useState<NotaCredito | null>(null);
+  const [devoluciones, setDevoluciones] = useState<Devolucion[]>([]);
+  const [mostrarModalDevolucion, setMostrarModalDevolucion] = useState(false);
+  const [devolucionItems, setDevolucionItems] = useState<Record<number, number>>({});
+  const [devolucionLocalDestino, setDevolucionLocalDestino] = useState<number | null>(null);
+  const [devolucionMotivo, setDevolucionMotivo] = useState('');
+  const [registrandoDevolucion, setRegistrandoDevolucion] = useState(false);
+  const [errorDevolucion, setErrorDevolucion] = useState('');
 
   // Estados para confirmación de cajas variables
   const [mostrarConfirmacionCajas, setMostrarConfirmacionCajas] = useState(false);
@@ -296,6 +306,18 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
       if (data.permite_cheque) {
         cargarCheques();
       }
+
+      // Si el pedido está cancelado, cargar nota de crédito si existe
+      if (data.estado === 'CANCELADO') {
+        const nota = await obtenerNotaCreditoPorPedido(Number(params.id));
+        setNotaCredito(nota);
+      }
+
+      // Si el pedido está entregado, cargar devoluciones si existen
+      if (data.estado === 'ENTREGADO') {
+        const devs = await obtenerDevolucionesPedido(Number(params.id));
+        setDevoluciones(devs);
+      }
     } catch (err) {
       setError('Error al cargar el pedido');
       console.error(err);
@@ -333,6 +355,10 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
       const actualizado = await actualizarPedido(pedido.id, updateData);
       setPedido(actualizado);
       setMostrarSelectorLocal(false);
+      if (nuevoEstado === 'CANCELADO') {
+        const nota = await obtenerNotaCreditoPorPedido(pedido.id);
+        setNotaCredito(nota);
+      }
     } catch (err: any) {
       setError(err.message || 'Error al cambiar el estado');
       console.error(err);
@@ -398,6 +424,35 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
       console.error(err);
     } finally {
       setGenerandoFactura(false);
+    }
+  };
+
+  const registrarDevolucion = async () => {
+    if (!pedido || !devolucionLocalDestino) return;
+    const items = pedido.items
+      ?.filter(item => (devolucionItems[item.id] || 0) > 0)
+      .map(item => ({
+        item_pedido_id: item.id,
+        cantidad_devuelta: devolucionItems[item.id],
+        local_destino_id: devolucionLocalDestino,
+      }));
+    if (!items || items.length === 0) {
+      setErrorDevolucion('Debes seleccionar al menos un producto a devolver.');
+      return;
+    }
+    try {
+      setRegistrandoDevolucion(true);
+      await crearDevolucion(pedido.id, { motivo: devolucionMotivo, items });
+      const devs = await obtenerDevolucionesPedido(pedido.id);
+      setDevoluciones(devs);
+      setMostrarModalDevolucion(false);
+      setDevolucionItems({});
+      setDevolucionMotivo('');
+      setDevolucionLocalDestino(null);
+    } catch (err: any) {
+      setErrorDevolucion(err.message || 'Error al registrar la devolución');
+    } finally {
+      setRegistrandoDevolucion(false);
     }
   };
 
@@ -490,6 +545,7 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
   }
 
   return (
+    <>
     <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-start">
@@ -511,6 +567,14 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
 
         {/* Botones de acción */}
         <div className="flex gap-3">
+          {pedido.estado === 'ENTREGADO' && (
+            <button
+              onClick={() => { setMostrarModalDevolucion(true); setErrorDevolucion(''); }}
+              className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg transition-colors flex items-center gap-2"
+            >
+              Registrar Devolución
+            </button>
+          )}
           {pedido.tipo_documento_tributario_id === 1 ? (
             <button
               onClick={handleDescargarFactura}
@@ -1234,8 +1298,164 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
               </div>
             )}
           </div>
+
+          {/* Devoluciones */}
+          {devoluciones.length > 0 && (
+            <div className="bg-slate-800 rounded-lg p-6 border border-orange-500/30">
+              <h2 className="text-xl font-bold text-white mb-4">Devoluciones</h2>
+              <div className="space-y-4">
+                {devoluciones.map(dev => (
+                  <div key={dev.id} className="bg-slate-700 rounded-lg p-4">
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <span className="text-white font-semibold">Devolución #{dev.id}</span>
+                        <span className="ml-3 bg-orange-500 text-white px-2 py-0.5 rounded-full text-xs">{dev.estado}</span>
+                      </div>
+                      <span className="text-gray-400 text-sm">{new Date(dev.fecha_devolucion).toLocaleDateString('es-CL')}</span>
+                    </div>
+                    {dev.motivo && <p className="text-gray-300 text-sm mb-3">{dev.motivo}</p>}
+                    <div className="space-y-1">
+                      {dev.items?.map(item => (
+                        <div key={item.id} className="flex justify-between text-sm">
+                          <span className="text-gray-400">Producto #{item.producto_id}</span>
+                          <span className="text-white">{item.cantidad_devuelta} unidades</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Nota de Crédito */}
+          {notaCredito && (
+            <div className="bg-slate-800 rounded-lg p-6 border border-red-500/30">
+              <h2 className="text-xl font-bold text-white mb-4">Nota de Crédito</h2>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Tipo</span>
+                  <span className="text-white">{notaCredito.tipo_documento?.nombre ?? `ID ${notaCredito.tipo_documento_id}`}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Monto</span>
+                  <span className="text-white font-mono">${Number(notaCredito.monto).toLocaleString('es-CL')}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Fecha emisión</span>
+                  <span className="text-white">{new Date(notaCredito.fecha_emision).toLocaleDateString('es-CL')}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Estado SII</span>
+                  <span className={`font-semibold ${notaCredito.estado_sii === 'APROBADO' ? 'text-green-400' : notaCredito.estado_sii === 'RECHAZADO' ? 'text-red-400' : 'text-yellow-400'}`}>
+                    {notaCredito.estado_sii}
+                  </span>
+                </div>
+                {notaCredito.folio_sii && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Folio SII</span>
+                    <span className="text-cyan-400 font-mono">{notaCredito.folio_sii}</span>
+                  </div>
+                )}
+                {notaCredito.motivo && (
+                  <div>
+                    <span className="text-gray-400">Motivo</span>
+                    <p className="text-white mt-1">{notaCredito.motivo}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
+
+    {/* Modal Devolución */}
+
+    {mostrarModalDevolucion && pedido && (
+      <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+        <div className="bg-slate-800 rounded-xl p-6 w-full max-w-lg space-y-5">
+          <h2 className="text-xl font-bold text-white">Registrar Devolución</h2>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Productos a devolver</label>
+            <div className="space-y-3">
+              {pedido.items?.map(item => (
+                <div key={item.id} className="flex items-center justify-between bg-slate-700 rounded-lg px-4 py-3">
+                  <div>
+                    <p className="text-white text-sm font-medium">{item.producto?.nombre || item.producto_nombre || `Producto #${item.producto_id}`}</p>
+                    <p className="text-gray-400 text-xs">SKU: {item.producto?.sku ?? '—'} · Comprado: {item.cantidad}</p>
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <input
+                      type="number"
+                      min={0}
+                      max={item.cantidad}
+                      step={1}
+                      placeholder="0"
+                      value={devolucionItems[item.id] || ''}
+                      onChange={e => {
+                        const val = Math.min(Number(e.target.value), item.cantidad)
+                        setDevolucionItems(prev => ({ ...prev, [item.id]: val < 0 ? 0 : val }))
+                      }}
+                      className="w-24 bg-slate-600 border border-slate-500 text-white rounded-lg px-3 py-1.5 text-sm text-right"
+                    />
+                    <span className="text-gray-500 text-xs">máx. {item.cantidad}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Local de destino del stock</label>
+            <select
+              value={devolucionLocalDestino || ''}
+              onChange={e => setDevolucionLocalDestino(Number(e.target.value))}
+              className="w-full bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-2"
+            >
+              <option value="">Seleccionar local...</option>
+              {locales.map(l => (
+                <option key={l.id} value={l.id}>{l.nombre}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Motivo (opcional)</label>
+            <textarea
+              value={devolucionMotivo}
+              onChange={e => setDevolucionMotivo(e.target.value)}
+              rows={2}
+              placeholder="Ej: Producto defectuoso, arrepentimiento de compra..."
+              className="w-full bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm"
+            />
+          </div>
+
+          {errorDevolucion && (
+            <div className="bg-red-500/10 border border-red-500 text-red-400 px-4 py-2 rounded-lg text-sm">
+              {errorDevolucion}
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            <button
+              onClick={() => { setMostrarModalDevolucion(false); setErrorDevolucion(''); }}
+              className="flex-1 bg-slate-600 hover:bg-slate-500 text-white px-4 py-2 rounded-lg"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={registrarDevolucion}
+              disabled={registrandoDevolucion || !devolucionLocalDestino}
+              className="flex-1 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg font-semibold"
+            >
+              {registrandoDevolucion ? 'Registrando...' : 'Confirmar Devolución'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

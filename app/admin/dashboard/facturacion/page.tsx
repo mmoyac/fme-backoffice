@@ -53,12 +53,15 @@ export default function TableroFacturacionPage() {
   const activas = facturas.filter(f => f.estado !== 'CANCELADO' && (f.total ?? 0) > 0);
   const canceladas = facturas.filter(f => f.estado === 'CANCELADO');
 
+  // Monto neto de una factura (descontando notas de crédito)
+  const neto = (f: typeof facturas[0]) => Math.max(0, (f.total ?? 0) - (f.total_notas_credito ?? 0));
+
   // Financiero
-  const totalFacturado   = activas.reduce((s, f) => s + (f.total ?? 0), 0);
-  const totalCobrado     = activas.filter(f => f.pagado).reduce((s, f) => s + (f.total ?? 0), 0);
-  const totalPorCobrar   = activas.filter(f => !f.pagado).reduce((s, f) => s + (f.total ?? 0), 0);
-  const totalChequePdte  = activas.filter(f => !f.pagado && f.permite_cheque).reduce((s, f) => s + (f.total ?? 0), 0);
-  const totalSinMedioPago = activas.filter(f => !f.pagado && !f.medio_pago_id).reduce((s, f) => s + (f.total ?? 0), 0);
+  const totalFacturado   = activas.reduce((s, f) => s + neto(f), 0);
+  const totalCobrado     = activas.filter(f => f.pagado).reduce((s, f) => s + neto(f), 0);
+  const totalPorCobrar   = activas.filter(f => !f.pagado).reduce((s, f) => s + neto(f), 0);
+  const totalChequePdte  = activas.filter(f => !f.pagado && f.permite_cheque).reduce((s, f) => s + neto(f), 0);
+  const totalSinMedioPago = activas.filter(f => !f.pagado && !f.medio_pago_id).reduce((s, f) => s + neto(f), 0);
   const totalCobradoCheques = activas.reduce((s, f) => s + (f.monto_cobrado_cheques ?? 0), 0);
 
   // SII
@@ -81,9 +84,9 @@ export default function TableroFacturacionPage() {
       });
       datosMes.push({
         mes: label,
-        facturado: del_mes.reduce((s, f) => s + (f.total ?? 0), 0),
-        cobrado:   del_mes.filter(f => f.pagado).reduce((s, f) => s + (f.total ?? 0), 0),
-        porCobrar: del_mes.filter(f => !f.pagado).reduce((s, f) => s + (f.total ?? 0), 0),
+        facturado: del_mes.reduce((s, f) => s + neto(f), 0),
+        cobrado:   del_mes.filter(f => f.pagado).reduce((s, f) => s + neto(f), 0),
+        porCobrar: del_mes.filter(f => !f.pagado).reduce((s, f) => s + neto(f), 0),
       });
     }
   }
@@ -95,10 +98,10 @@ export default function TableroFacturacionPage() {
     const rut = f.cliente?.rut;
     const existing = rankingClientes.find(r => r.nombre === nombre);
     if (existing) {
-      existing.monto += f.total ?? 0;
+      existing.monto += neto(f);
       existing.cantidad++;
     } else {
-      rankingClientes.push({ nombre, rut, monto: f.total ?? 0, cantidad: 1 });
+      rankingClientes.push({ nombre, rut, monto: neto(f), cantidad: 1 });
     }
   });
   rankingClientes.sort((a, b) => b.monto - a.monto);
@@ -300,7 +303,7 @@ export default function TableroFacturacionPage() {
             <div className="space-y-3">
               {[
                 { label: 'Con cheque pendiente', count: activas.filter(f => !f.pagado && f.permite_cheque).length, monto: totalChequePdte, color: 'text-orange-400' },
-                { label: 'Cheque totalmente cobrado', count: activas.filter(f => f.pagado && f.permite_cheque).length, monto: activas.filter(f => f.pagado && f.permite_cheque).reduce((s, f) => s + (f.total ?? 0), 0), color: 'text-green-400' },
+                { label: 'Cheque totalmente cobrado', count: activas.filter(f => f.pagado && f.permite_cheque).length, monto: activas.filter(f => f.pagado && f.permite_cheque).reduce((s, f) => s + neto(f), 0), color: 'text-green-400' },
               ].map(c => (
                 <div key={c.label} className="bg-slate-700/60 rounded-lg p-3">
                   <p className="text-slate-400 text-xs">{c.label}</p>
@@ -377,7 +380,7 @@ export default function TableroFacturacionPage() {
                       <div key={f.id} className="flex justify-between text-xs">
                         <span className="text-slate-400 font-mono">{f.numero_pedido}</span>
                         <span className="text-slate-400">{f.cliente?.razon_social || f.cliente?.nombre}</span>
-                        <span className="text-white font-medium">{fmt(f.total ?? 0)}</span>
+                        <span className="text-white font-medium">{fmt(neto(f))}</span>
                       </div>
                     ))}
                   </div>
@@ -396,7 +399,7 @@ export default function TableroFacturacionPage() {
                       <div key={f.id} className="flex justify-between text-xs">
                         <span className="text-slate-400 font-mono">{f.numero_pedido}</span>
                         <span className="text-slate-400">{formatFecha(f.fecha_pedido)}</span>
-                        <span className="text-white font-medium">{fmt(f.total ?? 0)}</span>
+                        <span className="text-white font-medium">{fmt(neto(f))}</span>
                       </div>
                     ))}
                   </div>

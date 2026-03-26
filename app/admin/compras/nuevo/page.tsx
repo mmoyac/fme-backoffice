@@ -259,7 +259,16 @@ export default function NuevaCompraPage() {
                             </select>
                         </div>
                         <div>
-                            <label className="block text-sm text-gray-300 mb-1">Cantidad</label>
+                            {(() => {
+                                const prod = productos.find(p => p.id === selectedProducto);
+                                const unidadLabel = prod?.unidad_compra_descripcion || prod?.unidad_medida_simbolo || 'unidad';
+                                return (
+                                    <label className="block text-sm text-gray-300 mb-1">
+                                        Cantidad{' '}
+                                        <span className="text-yellow-400 font-semibold">({unidadLabel})</span>
+                                    </label>
+                                );
+                            })()}
                             <input
                                 type="number"
                                 step="0.01"
@@ -267,9 +276,29 @@ export default function NuevaCompraPage() {
                                 value={cantidad}
                                 onChange={(e) => setCantidad(e.target.value)}
                             />
+                            {(() => {
+                                const prod = productos.find(p => p.id === selectedProducto);
+                                if (!prod?.unidad_compra_descripcion || !prod?.factor_conversion_compra || !cantidad) return null;
+                                const cantNum = parseFloat(cantidad);
+                                if (isNaN(cantNum) || cantNum <= 0) return null;
+                                const enInventario = cantNum * prod.factor_conversion_compra;
+                                return (
+                                    <p className="text-xs text-green-400 mt-1">
+                                        → Ingresa {enInventario.toLocaleString('es-CL', { maximumFractionDigits: 3 })} {prod.unidad_medida_simbolo || ''} al stock
+                                    </p>
+                                );
+                            })()}
                         </div>
                         <div>
-                            <label className="block text-sm text-gray-300 mb-1">Precio Unit.</label>
+                            {(() => {
+                                const prod = productos.find(p => p.id === selectedProducto);
+                                const unidadLabel = prod?.unidad_compra_descripcion || prod?.unidad_medida_simbolo || 'unidad';
+                                return (
+                                    <label className="block text-sm text-gray-300 mb-1">
+                                        Precio Unit. <span className="text-yellow-400">/ {unidadLabel}</span>
+                                    </label>
+                                );
+                            })()}
                             <input
                                 type="number"
                                 step="0.01"
@@ -309,7 +338,14 @@ export default function NuevaCompraPage() {
                                     return (
                                         <tr key={idx}>
                                             <td className="px-4 py-2 text-sm text-white">{producto?.nombre}</td>
-                                            <td className="px-4 py-2 text-sm text-gray-300 text-right">{det.cantidad}</td>
+                                            <td className="px-4 py-2 text-sm text-gray-300 text-right">
+                                                {det.cantidad} {producto?.unidad_compra_descripcion || ''}
+                                                {producto?.unidad_compra_descripcion && producto?.factor_conversion_compra && (
+                                                    <span className="block text-xs text-green-400">
+                                                        → {(det.cantidad * producto.factor_conversion_compra).toLocaleString('es-CL', { maximumFractionDigits: 3 })} {producto.unidad_medida_simbolo || 'u.'} en stock
+                                                    </span>
+                                                )}
+                                            </td>
                                             <td className="px-4 py-2 text-sm text-gray-300 text-right font-mono">
                                                 ${det.precio_unitario.toLocaleString('es-CL')}
                                             </td>

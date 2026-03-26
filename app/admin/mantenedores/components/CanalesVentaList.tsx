@@ -10,6 +10,8 @@ interface CanalVenta {
   codigo: string;
   nombre: string;
   activo: boolean;
+  entrega_inmediata: boolean;
+  visible_en_pos: boolean;
 }
 
 function req<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -34,7 +36,7 @@ export default function CanalesVentaList() {
   const [error, setError] = useState('');
   const [editando, setEditando] = useState<CanalVenta | null>(null);
   const [creando, setCreando] = useState(false);
-  const [form, setForm] = useState({ codigo: '', nombre: '', activo: true });
+  const [form, setForm] = useState({ codigo: '', nombre: '', activo: true, entrega_inmediata: false, visible_en_pos: true });
   const [guardando, setGuardando] = useState(false);
   const [errorForm, setErrorForm] = useState('');
 
@@ -53,14 +55,14 @@ export default function CanalesVentaList() {
   useEffect(() => { cargar(); }, []);
 
   const abrirCrear = () => {
-    setForm({ codigo: '', nombre: '', activo: true });
+    setForm({ codigo: '', nombre: '', activo: true, entrega_inmediata: false, visible_en_pos: true });
     setErrorForm('');
     setCreando(true);
     setEditando(null);
   };
 
   const abrirEditar = (c: CanalVenta) => {
-    setForm({ codigo: c.codigo, nombre: c.nombre, activo: c.activo });
+    setForm({ codigo: c.codigo, nombre: c.nombre, activo: c.activo, entrega_inmediata: c.entrega_inmediata, visible_en_pos: c.visible_en_pos });
     setErrorForm('');
     setEditando(c);
     setCreando(false);
@@ -79,7 +81,7 @@ export default function CanalesVentaList() {
       } else if (editando) {
         await req(`/api/canales-venta/${editando.id}`, {
           method: 'PUT',
-          body: JSON.stringify({ nombre: form.nombre, activo: form.activo }),
+          body: JSON.stringify({ nombre: form.nombre, activo: form.activo, entrega_inmediata: form.entrega_inmediata, visible_en_pos: form.visible_en_pos }),
         });
       }
       cerrar();
@@ -152,6 +154,12 @@ export default function CanalesVentaList() {
                   <span className="text-white font-medium">{c.nombre}</span>
                   {esSistema && (
                     <span className="text-xs bg-slate-600 text-slate-400 px-1.5 py-0.5 rounded">sistema</span>
+                  )}
+                  {c.entrega_inmediata && (
+                    <span className="text-xs bg-emerald-900/50 text-emerald-400 border border-emerald-800 px-1.5 py-0.5 rounded">entrega inmediata</span>
+                  )}
+                  {!c.visible_en_pos && (
+                    <span className="text-xs bg-slate-700 text-slate-400 border border-slate-600 px-1.5 py-0.5 rounded">oculto en POS</span>
                   )}
                   {!c.activo && (
                     <span className="text-xs bg-red-900/50 text-red-400 border border-red-800 px-1.5 py-0.5 rounded">inactivo</span>
@@ -235,6 +243,32 @@ export default function CanalesVentaList() {
                   className="accent-cyan-500"
                 />
                 <label htmlFor="activo" className="text-slate-300 text-sm">Activo</label>
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="entrega_inmediata"
+                  checked={form.entrega_inmediata}
+                  onChange={(e) => setForm({ ...form, entrega_inmediata: e.target.checked })}
+                  className="accent-emerald-500"
+                />
+                <label htmlFor="entrega_inmediata" className="text-slate-300 text-sm">
+                  Entrega inmediata
+                  <span className="text-slate-500 text-xs ml-1">(el pedido se entrega automáticamente al crearse)</span>
+                </label>
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="visible_en_pos"
+                  checked={form.visible_en_pos}
+                  onChange={(e) => setForm({ ...form, visible_en_pos: e.target.checked })}
+                  className="accent-cyan-500"
+                />
+                <label htmlFor="visible_en_pos" className="text-slate-300 text-sm">
+                  Visible en POS
+                  <span className="text-slate-500 text-xs ml-1">(aparece en el selector al crear un pedido)</span>
+                </label>
               </div>
               {errorForm && (
                 <div className="bg-red-900/40 border border-red-700 text-red-300 rounded-lg px-3 py-2 text-sm">{errorForm}</div>

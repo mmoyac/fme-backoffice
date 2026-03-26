@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Sidebar from '@/components/layout/Sidebar';
 import TopBar from '@/components/layout/TopBar';
+import TenantSwitcher from '@/components/superadmin/TenantSwitcher';
 import { useAuth } from '@/lib/AuthProvider';
 import { AuthService } from '@/lib/auth';
 
@@ -29,8 +30,8 @@ export default function AdminLayout({
       return;
     }
 
-    // Admin siempre tiene acceso total sin restricción de ruta
-    if (user.role?.nombre?.toLowerCase() === 'admin') {
+    // Superadmin y admin: acceso total sin restricción de ruta
+    if (user.is_superadmin || user.role?.nombre?.toLowerCase() === 'admin') {
       setAuthorized(true);
       return;
     }
@@ -63,7 +64,7 @@ export default function AdminLayout({
       });
   }, [user, loading, pathname, router]);
 
-  const isAdmin = user?.role?.nombre?.toLowerCase() === 'admin';
+  const isAdmin = user?.is_superadmin || user?.role?.nombre?.toLowerCase() === 'admin';
   if (loading || (authorized === null && !isAdmin)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-900">
@@ -97,6 +98,7 @@ export default function AdminLayout({
       )}
 
       <main className="flex-1 flex flex-col w-full relative">
+        <TenantSwitcher />
         <TopBar onMenuClick={() => setSidebarOpen(true)} sidebarCollapsed={sidebarCollapsed} />
 
         <div className="p-4 md:p-8 pb-24 md:pb-32">

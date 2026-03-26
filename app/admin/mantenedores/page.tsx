@@ -15,6 +15,7 @@ import UbicacionesList from "./components/UbicacionesList";
 import MediosPagoList from "./components/MediosPagoList";
 import CanalesVentaList from "./components/CanalesVentaList";
 import TiposVentaList from "./components/TiposVentaList";
+import RolesPermisosList from "./components/RolesPermisosList";
 
 export default function MantenedoresPage() {
     const [activeTab, setActiveTab] = useState<string | null>(null);
@@ -36,7 +37,8 @@ export default function MantenedoresPage() {
         { id: "medios_pago",           icono: "💳",  titulo: "Medios de Pago",           desc: "Medios de pago y descuentos al contado" },
         { id: "canales_venta",         icono: "📡",  titulo: "Canales de Venta",         desc: "POS, Landing, WhatsApp, Teléfono y otros" },
         { id: "config_landing",        icono: "🌐",  titulo: "Config. Landing",          desc: "Apariencia de la landing page" },
-        { id: "usuarios",              icono: "👤",  titulo: "Usuarios",                 desc: "Usuarios, roles y permisos" },
+        { id: "roles_permisos",        icono: "🔐",  titulo: "Roles y Permisos",         desc: "Roles del sistema y permisos de menú" },
+        { id: "usuarios",              icono: "👤",  titulo: "Usuarios",                 desc: "Usuarios del sistema" },
         { id: "tenants",               icono: "🏢",  titulo: "Tenants (SaaS)",           desc: "Gestión de clientes de la plataforma" },
     ];
 
@@ -250,11 +252,21 @@ export default function MantenedoresPage() {
                     </div>
                 )}
 
+                {activeTab === "roles_permisos" && (
+                    <div>
+                        <h2 className="text-xl font-semibold text-white mb-2">Roles y Permisos</h2>
+                        <p className="text-gray-400 mb-4">
+                            Gestiona los roles del sistema y los permisos de menú de cada rol
+                        </p>
+                        <RolesPermisosList />
+                    </div>
+                )}
+
                 {activeTab === "usuarios" && (
                     <div>
                         <h2 className="text-xl font-semibold text-white mb-2">Usuarios del Sistema</h2>
                         <p className="text-gray-400 mb-4">
-                            Gestiona usuarios, roles y permisos del sistema
+                            Gestiona los usuarios del sistema
                         </p>
                         <div className="bg-slate-700 rounded-lg p-6 text-center">
                             <p className="text-gray-300 mb-4">

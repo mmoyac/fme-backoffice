@@ -77,6 +77,8 @@ export interface Pedido {
   usuario_email?: string;
   // Resumen de cobro de cheques
   monto_cobrado_cheques?: number;
+  // Notas de crédito
+  total_notas_credito?: number;
   cliente?: Cliente;
   items?: ItemPedido[];
 }

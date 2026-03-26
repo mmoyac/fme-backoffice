@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { AuthService } from './auth'
 
 interface TenantConfig {
   tenant: {
@@ -44,12 +45,14 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
         const currentHostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost'
-        
-        console.log('🔍 Backoffice - Cargando config desde:', `${apiUrl}/api/config/landing`)
-        console.log('🌐 Backoffice - Dominio actual:', currentHostname)
-        
-        // Enviar el hostname actual al backend para detección de tenant
-        const response = await fetch(`${apiUrl}/api/config/landing`, {
+
+        // Superadmin: si tiene un tenant activo, cargar config de ese tenant
+        const tenantCtx = AuthService.getTenantContext()
+        const url = tenantCtx
+          ? `${apiUrl}/api/config/landing?tenant_id=${tenantCtx.tenant_id}`
+          : `${apiUrl}/api/config/landing`
+
+        const response = await fetch(url, {
           headers: {
             'X-Forwarded-Host': currentHostname
           }
