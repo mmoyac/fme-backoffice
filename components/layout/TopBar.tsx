@@ -2,6 +2,7 @@
 
 import { useAuth } from '@/lib/AuthProvider';
 import { useTenant } from '@/lib/TenantContext';
+import NotificationBell from '@/components/notifications/NotificationBell';
 
 interface TopBarProps {
     onMenuClick: () => void;
@@ -27,6 +28,7 @@ export default function TopBar({ onMenuClick, sidebarCollapsed }: TopBarProps) {
 
             {/* Right: User Info & Logout */}
             <div className="flex items-center space-x-4 ml-auto">
+                <NotificationBell />
                 {user && (
                     <div className="hidden md:flex flex-col items-end mr-2">
                         <span className="text-sm text-white font-medium">{user.nombre_completo}</span>
