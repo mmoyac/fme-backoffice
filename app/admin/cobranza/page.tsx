@@ -419,6 +419,11 @@ export default function CobranzaPage() {
                                 <div>
                                     <p className="text-gray-400 text-xs">Monto pendiente</p>
                                     <p className="text-white font-semibold">{formatMonto(item.monto_pendiente)}</p>
+                                    {item.costo_delivery ? (
+                                      <p className="text-xs text-gray-400">
+                                        {formatMonto(item.monto_total)} + {formatMonto(item.costo_delivery)} delivery
+                                      </p>
+                                    ) : null}
                                 </div>
                                 <div className="text-right">
                                     <p className="text-gray-400 text-xs">Vence</p>
@@ -459,7 +464,7 @@ export default function CobranzaPage() {
                                         onClick={() => abrirConfirmar(item)}
                                         className="flex-1 bg-primary hover:bg-primary-dark text-slate-900 font-semibold text-sm py-2 rounded-lg transition-colors"
                                     >
-                                        Confirmar recibo
+                                        ✓ Pago recibido
                                     </button>
                                 )}
                                 {item.tipo === 'TRANSFERENCIA' && !item.entregado && (
@@ -527,6 +532,11 @@ export default function CobranzaPage() {
                                     </td>
                                     <td className="px-4 py-3 text-sm text-right font-semibold text-white">
                                         {formatMonto(item.monto_pendiente)}
+                                        {item.costo_delivery ? (
+                                            <p className="text-xs text-gray-400 font-normal">
+                                                {formatMonto(item.monto_total)} + {formatMonto(item.costo_delivery)} delivery
+                                            </p>
+                                        ) : null}
                                     </td>
                                     <td className="px-4 py-3 text-sm">
                                         <div className="flex flex-col gap-1">
@@ -558,7 +568,7 @@ export default function CobranzaPage() {
                                                         onClick={() => abrirConfirmar(item)}
                                                         className="bg-primary hover:bg-primary-dark text-slate-900 font-semibold text-xs px-3 py-1.5 rounded-lg transition-colors"
                                                     >
-                                                        Confirmar
+                                                        ✓ Pago recibido
                                                     </button>
                                                     {!item.entregado && (
                                                         <button
@@ -594,7 +604,7 @@ export default function CobranzaPage() {
             {modalConfirmar && itemSeleccionado && (
                 <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
                     <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 max-w-md w-full shadow-xl">
-                        <h2 className="text-lg font-bold text-white mb-1">Confirmar recibo de transferencia</h2>
+                        <h2 className="text-lg font-bold text-white mb-1">Registrar pago recibido</h2>
                         <p className="text-gray-400 text-sm mb-4">
                             {itemSeleccionado.cliente_nombre} · Pedido #{itemSeleccionado.numero_pedido}
                         </p>
@@ -636,7 +646,7 @@ export default function CobranzaPage() {
                                 disabled={procesando}
                                 className="flex-1 py-2 rounded-lg bg-primary hover:bg-primary-dark text-slate-900 font-semibold text-sm transition-colors disabled:opacity-50"
                             >
-                                {procesando ? 'Confirmando...' : 'Confirmar recibo'}
+                                {procesando ? 'Registrando...' : '✓ Confirmar pago recibido'}
                             </button>
                         </div>
                     </div>

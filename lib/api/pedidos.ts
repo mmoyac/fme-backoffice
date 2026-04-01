@@ -43,6 +43,7 @@ export interface Pedido {
   fecha_pedido: string;
   estado: string;
   total: number;
+  costo_delivery?: number | null;
   pagado: boolean;
   inventario_descontado: boolean;
   notas?: string;

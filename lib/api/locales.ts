@@ -8,18 +8,21 @@ export interface Local {
   nombre: string;
   direccion?: string;
   activo?: boolean;
+  es_local_fabricacion?: boolean;
 }
 
 export interface LocalCreate {
   nombre: string;
   direccion?: string;
   activo?: boolean;
+  es_local_fabricacion?: boolean;
 }
 
 export interface LocalUpdate {
   nombre?: string;
   direccion?: string;
   activo?: boolean;
+  es_local_fabricacion?: boolean;
 }
 
 export async function getLocales(): Promise<Local[]> {

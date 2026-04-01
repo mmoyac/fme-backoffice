@@ -11,7 +11,8 @@ export default function LocalesList() {
     const [formData, setFormData] = useState<LocalCreate>({
         nombre: '',
         direccion: '',
-        activo: true
+        activo: true,
+        es_local_fabricacion: false,
     });
 
     useEffect(() => {
@@ -34,7 +35,8 @@ export default function LocalesList() {
         setFormData({
             nombre: '',
             direccion: '',
-            activo: true
+            activo: true,
+            es_local_fabricacion: false,
         });
         setModalOpen(true);
     }
@@ -44,7 +46,8 @@ export default function LocalesList() {
         setFormData({
             nombre: local.nombre,
             direccion: local.direccion || '',
-            activo: local.activo
+            activo: local.activo,
+            es_local_fabricacion: local.es_local_fabricacion ?? false,
         });
         setModalOpen(true);
     }
@@ -105,6 +108,7 @@ export default function LocalesList() {
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Nombre</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Dirección</th>
                                 <th className="px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase">Estado</th>
+                                <th className="px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase">Fabricación</th>
                                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase">Acciones</th>
                             </tr>
                         </thead>
@@ -118,6 +122,12 @@ export default function LocalesList() {
                                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${local.activo ? "bg-green-900 text-green-300" : "bg-gray-700 text-gray-400"}`}>
                                             {local.activo ? "Activo" : "Inactivo"}
                                         </span>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                                        {local.es_local_fabricacion
+                                            ? <span className="text-lg" title="Local de fabricación">🏭</span>
+                                            : <span className="text-gray-600">—</span>
+                                        }
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm space-x-2">
                                         <button
@@ -178,6 +188,19 @@ export default function LocalesList() {
                                     onChange={(e) => setFormData({ ...formData, activo: e.target.checked })}
                                 />
                                 <label htmlFor="activo-local" className="text-sm font-medium text-gray-300 cursor-pointer">Activo</label>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="checkbox"
+                                    id="fabricacion-local"
+                                    className="w-4 h-4 text-primary bg-slate-700 border-slate-600 rounded focus:ring-primary focus:ring-2"
+                                    checked={formData.es_local_fabricacion ?? false}
+                                    onChange={(e) => setFormData({ ...formData, es_local_fabricacion: e.target.checked })}
+                                />
+                                <label htmlFor="fabricacion-local" className="text-sm font-medium text-gray-300 cursor-pointer">
+                                    🏭 Local de fabricación
+                                    <span className="ml-1 text-xs text-gray-500">(stock para OT y cotizaciones)</span>
+                                </label>
                             </div>
                             <div className="flex justify-end gap-3 mt-6">
                                 <button

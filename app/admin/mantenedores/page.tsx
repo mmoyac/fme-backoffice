@@ -16,6 +16,8 @@ import MediosPagoList from "./components/MediosPagoList";
 import CanalesVentaList from "./components/CanalesVentaList";
 import TiposVentaList from "./components/TiposVentaList";
 import RolesPermisosList from "./components/RolesPermisosList";
+import OtEtapasTipoList from "./components/OtEtapasTipoList";
+import TiposOTList from "./components/TiposOTList";
 
 export default function MantenedoresPage() {
     const [activeTab, setActiveTab] = useState<string | null>(null);
@@ -37,6 +39,8 @@ export default function MantenedoresPage() {
         { id: "medios_pago",           icono: "💳",  titulo: "Medios de Pago",           desc: "Medios de pago y descuentos al contado" },
         { id: "canales_venta",         icono: "📡",  titulo: "Canales de Venta",         desc: "POS, Landing, WhatsApp, Teléfono y otros" },
         { id: "config_landing",        icono: "🌐",  titulo: "Config. Landing",          desc: "Apariencia de la landing page" },
+        { id: "tipos_ot",              icono: "⚙️",  titulo: "Tipos de OT",              desc: "Tipos de Orden de Trabajo: Producción, Servicio, etc." },
+        { id: "ot_etapas",             icono: "🔧",  titulo: "Etapas de OT",             desc: "Flujo de etapas por tipo de Orden de Trabajo" },
         { id: "roles_permisos",        icono: "🔐",  titulo: "Roles y Permisos",         desc: "Roles del sistema y permisos de menú" },
         { id: "usuarios",              icono: "👤",  titulo: "Usuarios",                 desc: "Usuarios del sistema" },
         { id: "tenants",               icono: "🏢",  titulo: "Tenants (SaaS)",           desc: "Gestión de clientes de la plataforma" },
@@ -252,6 +256,24 @@ export default function MantenedoresPage() {
                     </div>
                 )}
 
+                {activeTab === "tipos_ot" && (
+                    <div>
+                        <h2 className="text-xl font-semibold text-white mb-2">Tipos de Orden de Trabajo</h2>
+                        <p className="text-gray-400 mb-4">
+                            Define los tipos de OT disponibles en el sistema: Producción, Servicio, y cualquier tipo futuro.
+                        </p>
+                        <TiposOTList />
+                    </div>
+                )}
+                {activeTab === "ot_etapas" && (
+                    <div>
+                        <h2 className="text-xl font-semibold text-white mb-2">Etapas de Orden de Trabajo</h2>
+                        <p className="text-gray-400 mb-4">
+                            Configura las etapas del flujo de trabajo para cada tipo de OT (Producción, Servicio, etc.)
+                        </p>
+                        <OtEtapasTipoList />
+                    </div>
+                )}
                 {activeTab === "roles_permisos" && (
                     <div>
                         <h2 className="text-xl font-semibold text-white mb-2">Roles y Permisos</h2>

@@ -191,6 +191,20 @@ export default function EditarLocalPage({ params }: { params: { id: string } }) 
           <label htmlFor="activo" className="text-sm text-gray-300">Local activo</label>
         </div>
 
+        <div className="flex items-center gap-3">
+          <input
+            type="checkbox"
+            id="es_local_fabricacion"
+            checked={(formData as any).es_local_fabricacion ?? false}
+            onChange={(e) => setFormData({ ...formData, es_local_fabricacion: e.target.checked } as any)}
+            className="w-4 h-4 text-primary bg-slate-700 border-slate-600 rounded"
+          />
+          <label htmlFor="es_local_fabricacion" className="text-sm text-gray-300">
+            Local de fabricación
+            <span className="ml-2 text-xs text-gray-500">(usado para chequeo de stock y generación de OT desde cotizaciones)</span>
+          </label>
+        </div>
+
         <div className="flex gap-3 pt-4">
           <button
             type="submit"

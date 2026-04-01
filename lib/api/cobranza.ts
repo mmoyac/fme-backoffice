@@ -15,6 +15,7 @@ export interface ItemCobranza {
     local_id: number;
     local_nombre: string | null;
     monto_total: number;
+    costo_delivery?: number | null;
     monto_pendiente: number;
     cantidad_cheques: number | null;
     sin_cheques?: boolean;

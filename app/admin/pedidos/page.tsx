@@ -106,7 +106,7 @@ export default function PedidosPage() {
         <div className="bg-slate-800 rounded-lg p-4">
           <p className="text-sm text-gray-400">Total Ventas</p>
           <p className="text-2xl font-bold text-green-500">
-            ${pedidos.reduce((sum, p) => sum + p.total, 0).toLocaleString('es-CL')}
+            ${pedidos.reduce((sum, p) => sum + p.total + (p.costo_delivery || 0), 0).toLocaleString('es-CL')}
           </p>
         </div>
       </div>
@@ -247,7 +247,12 @@ export default function PedidosPage() {
                       )}
                     </td>
                     <td className="px-4 py-4 text-white font-semibold">
-                      ${pedido.total.toLocaleString('es-CL')}
+                      ${(pedido.total + (pedido.costo_delivery || 0)).toLocaleString('es-CL')}
+                      {pedido.costo_delivery ? (
+                        <p className="text-xs text-gray-400 font-normal">
+                          ${pedido.total.toLocaleString('es-CL')} + ${pedido.costo_delivery.toLocaleString('es-CL')} delivery
+                        </p>
+                      ) : null}
                     </td>
                     <td className="px-4 py-4">
                       {pedido.pagado ? (
