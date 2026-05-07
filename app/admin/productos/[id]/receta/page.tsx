@@ -267,6 +267,8 @@ export default function RecetaPage({ params }: { params: { id: string } }) {
         return productos.find(p => p.id === id)?.nombre || 'Desconocido';
     }
 
+
+
     function getUnidadSimbolo(id: number): string {
         return unidades.find(u => u.id === id)?.simbolo || '';
     }
@@ -362,7 +364,8 @@ export default function RecetaPage({ params }: { params: { id: string } }) {
                                         <tr>
                                             <th className="px-4 py-2 text-left text-sm font-semibold text-gray-300">Producto</th>
                                             <th className="px-4 py-2 text-right text-sm font-semibold text-gray-300">Cantidad</th>
-                                            <th className="px-4 py-2 text-right text-sm font-semibold text-gray-300">Costo Unit.</th>
+                                            <th className="px-4 py-2 text-right text-sm font-semibold text-gray-300">Val. Compra</th>
+                                            <th className="px-4 py-2 text-right text-sm font-semibold text-gray-300">Val. Kg</th>
                                             <th className="px-4 py-2 text-right text-sm font-semibold text-gray-300">Costo Total</th>
                                             <th className="px-4 py-2 text-right text-sm font-semibold text-gray-300">Acciones</th>
                                         </tr>
@@ -377,7 +380,18 @@ export default function RecetaPage({ params }: { params: { id: string } }) {
                                                     {ing.cantidad} {getUnidadSimbolo(ing.unidad_medida_id)}
                                                 </td>
                                                 <td className="px-4 py-3 text-sm text-gray-300 text-right">
+                                                    {(() => {
+                                                        const prod = productos.find(p => p.id === ing.producto_ingrediente_id) ?? null;
+                                                        const precioCompra = prod?.precio_compra ?? null;
+                                                        const factor = prod?.factor_conversion_compra ?? 1;
+                                                        if (!precioCompra || factor <= 1) return <span className="text-gray-500">—</span>;
+                                                        const desc = prod?.unidad_compra_descripcion || `x${factor}`;
+                                                        return <span title={desc}>${Number(precioCompra).toLocaleString('es-CL')}<span className="text-gray-500 text-xs ml-1">{desc}</span></span>;
+                                                    })()}
+                                                </td>
+                                                <td className="px-4 py-3 text-sm text-gray-300 text-right">
                                                     ${ing.costo_unitario_referencia ? Number(ing.costo_unitario_referencia).toFixed(2) : '0.00'}
+                                                    <span className="text-gray-500 text-xs ml-1">/{getUnidadSimbolo(ing.unidad_medida_id)}</span>
                                                 </td>
                                                 <td className="px-4 py-3 text-sm text-white font-medium text-right">
                                                     ${ing.costo_total_calculado ? Number(ing.costo_total_calculado).toFixed(2) : '0.00'}

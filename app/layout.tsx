@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
+import { headers } from 'next/headers'
 import './globals.css'
 import { AuthProvider } from '@/lib/AuthProvider'
 import { TenantProvider } from '@/lib/TenantContext'
@@ -14,15 +15,37 @@ export const viewport: Viewport = {
   userScalable: false,
 }
 
-export const metadata: Metadata = {
-  title: 'EffiChain',
-  description: 'Panel de administración EffiChain - gestión de ventas, inventario y operaciones.',
-  applicationName: 'EffiChain',
+async function getTenantName(): Promise<string> {
+  try {
+    const headersList = headers()
+    const host = headersList.get('host') || 'localhost'
+    const hostname = host.split(':')[0]
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+    const response = await fetch(`${apiUrl}/api/config/landing`, {
+      headers: { 'X-Forwarded-Host': hostname },
+      next: { revalidate: 3600 },
+    })
+    if (response.ok) {
+      const data = await response.json()
+      return data.branding?.nombre_comercial || data.tenant?.nombre || 'EffiChain'
+    }
+  } catch {
+    // fallback
+  }
+  return 'EffiChain'
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const tenantName = await getTenantName()
+  return {
+  title: tenantName,
+  description: `Panel de administración ${tenantName} - gestión de ventas, inventario y operaciones.`,
+  applicationName: tenantName,
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'EffiChain',
+    title: tenantName,
     startupImage: [
       // iPhone SE / 5 (640x1136)
       { url: '/icons/splash-640x1136.png', media: '(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2)' },
@@ -50,13 +73,15 @@ export const metadata: Metadata = {
       { rel: 'apple-touch-icon', url: '/icons/icon-180x180.png' },
     ],
   },
+  }
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const tenantName = await getTenantName()
   return (
     <html lang="es" className="dark">
       <head>
@@ -64,7 +89,7 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="EffiChain" />
+        <meta name="apple-mobile-web-app-title" content={tenantName} />
         {/* Icono para iOS (apple-touch-icon directo) */}
         <link rel="apple-touch-icon" href="/icons/icon-180x180.png" />
         <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png" />

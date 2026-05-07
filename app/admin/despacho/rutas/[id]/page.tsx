@@ -336,6 +336,99 @@ export default function HojaRutaDetallePage() {
         </div>
       )}
 
+      {/* Timeline de la ruta */}
+      {hoja.fecha_salida && (
+        <div className="bg-slate-800 border border-slate-700 rounded-xl px-6 py-5 mb-6">
+          <h2 className="text-white font-semibold mb-4">🗺️ Tracking de ruta</h2>
+          <ol className="relative border-l border-slate-600 ml-2 space-y-5">
+
+            {/* Salida */}
+            <li className="pl-6">
+              <span className="absolute -left-2.5 flex items-center justify-center w-5 h-5 rounded-full bg-blue-600 ring-4 ring-slate-800">
+                <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM3 4h1.5l2.7 6.39A2 2 0 009 11.5h5a2 2 0 001.96-1.6L17 5H3z" />
+                </svg>
+              </span>
+              <p className="text-sm font-semibold text-blue-300">Salida del camión</p>
+              <p className="text-xs text-slate-400 mt-0.5">
+                {new Date(hoja.fecha_salida).toLocaleString('es-CL', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              </p>
+            </li>
+
+            {/* Entregas ordenadas por hora */}
+            {[...hoja.items]
+              .filter(i => i.entregado && i.fecha_entrega)
+              .sort((a, b) => new Date(a.fecha_entrega!).getTime() - new Date(b.fecha_entrega!).getTime())
+              .map((item, idx, arr) => {
+                const prev = idx === 0 ? new Date(hoja.fecha_salida!) : new Date(arr[idx - 1].fecha_entrega!);
+                const curr = new Date(item.fecha_entrega!);
+                const mins = Math.round((curr.getTime() - prev.getTime()) / 60000);
+                return (
+                  <li key={item.id} className="pl-6">
+                    <span className="absolute -left-2.5 flex items-center justify-center w-5 h-5 rounded-full bg-emerald-600 ring-4 ring-slate-800">
+                      <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </span>
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-sm font-semibold text-emerald-300">{item.pedido.cliente_nombre}</p>
+                        <p className="text-xs text-slate-500">{item.pedido.numero_pedido}</p>
+                        {item.notas_entrega && (
+                          <p className="text-xs text-slate-400 italic mt-0.5">"{item.notas_entrega}"</p>
+                        )}
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-sm font-mono text-white">
+                          {curr.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                        {mins > 0 && (
+                          <p className="text-xs text-slate-500">+{mins} min</p>
+                        )}
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+
+            {/* Pendientes (ruta en curso) */}
+            {hoja.items.filter(i => !i.entregado).length > 0 && (
+              <li className="pl-6">
+                <span className="absolute -left-2.5 flex items-center justify-center w-5 h-5 rounded-full bg-slate-600 ring-4 ring-slate-800">
+                  <span className="w-2 h-2 rounded-full bg-slate-400 animate-pulse" />
+                </span>
+                <p className="text-sm text-slate-400 italic">
+                  {hoja.items.filter(i => !i.entregado).length} entrega{hoja.items.filter(i => !i.entregado).length !== 1 ? 's' : ''} pendiente{hoja.items.filter(i => !i.entregado).length !== 1 ? 's' : ''}...
+                </p>
+              </li>
+            )}
+
+            {/* Retorno */}
+            {hoja.fecha_retorno && (
+              <li className="pl-6">
+                <span className="absolute -left-2.5 flex items-center justify-center w-5 h-5 rounded-full bg-slate-500 ring-4 ring-slate-800">
+                  <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.707-10.293a1 1 0 00-1.414-1.414l-3 3a1 1 0 000 1.414l3 3a1 1 0 001.414-1.414L9.414 11H13a1 1 0 100-2H9.414l1.293-1.293z" clipRule="evenodd" />
+                  </svg>
+                </span>
+                <div className="flex items-center justify-between gap-4">
+                  <p className="text-sm font-semibold text-slate-300">Retorno</p>
+                  <div className="text-right">
+                    <p className="text-sm font-mono text-white">
+                      {new Date(hoja.fecha_retorno).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      Duración total: {Math.round((new Date(hoja.fecha_retorno).getTime() - new Date(hoja.fecha_salida).getTime()) / 60000)} min
+                    </p>
+                  </div>
+                </div>
+              </li>
+            )}
+
+          </ol>
+        </div>
+      )}
+
       {/* Modal notas entrega */}
       {notasModal && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center px-4">

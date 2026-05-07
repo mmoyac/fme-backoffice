@@ -33,8 +33,14 @@ export default function LoginPage() {
         try {
             await AuthService.login({ username: email, password });
             console.log('✅ Login: Token obtenido exitosamente');
-            // Forzar recarga para que AuthProvider detecte el token y cargue el usuario correctamente
-            window.location.href = '/admin/dashboard';
+            // Redirigir según rol
+            const user = await AuthService.getCurrentUser();
+            const rolNombre = user.role?.nombre?.toLowerCase() ?? '';
+            if (rolNombre === 'despachador') {
+                window.location.href = '/despachador';
+            } else {
+                window.location.href = '/admin/dashboard';
+            }
         } catch (err: any) {
             console.error('❌ Login: Error en autenticación:', err.message);
             setError(err.message || 'Error al iniciar sesión');

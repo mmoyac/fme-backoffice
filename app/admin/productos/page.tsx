@@ -141,6 +141,7 @@ export default function ProductosPage() {
                 <th className="px-6 py-3 text-center text-sm font-semibold text-gray-300">Stock Crítico</th>
                 <th className="px-6 py-3 text-center text-sm font-semibold text-gray-300">Stock Actual</th>
                 <th className="px-6 py-3 text-center text-sm font-semibold text-gray-300">Unidad</th>
+                <th className="px-6 py-3 text-center text-sm font-semibold text-gray-300">Receta</th>
                 <th className="px-6 py-3 text-right text-sm font-semibold text-gray-300">Acciones</th>
               </tr>
             </thead>
@@ -162,6 +163,15 @@ export default function ProductosPage() {
                   </td>
                   <td className="px-6 py-4 text-sm text-center text-gray-400 font-normal">
                     {producto.unidad_medida_simbolo || '-'}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-center">
+                    {producto.tiene_receta ? (
+                      <Link href={`/admin/productos/${producto.id}/receta`} className="inline-flex items-center gap-1 text-blue-400 hover:text-blue-300" title="Ver receta">
+                        📋 <span className="text-xs">Sí</span>
+                      </Link>
+                    ) : (
+                      <span className="text-gray-600 text-xs">—</span>
+                    )}
                   </td>
                   <td className="px-6 py-4 text-sm text-right space-x-2">
                     <Link

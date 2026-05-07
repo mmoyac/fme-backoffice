@@ -14,6 +14,7 @@ import { AuthService } from '@/lib/auth';
 import { CheckCircleIcon, XMarkIcon, PlusIcon, MinusIcon } from '@heroicons/react/24/outline';
 import { BoletaTermica } from '@/components/pos/BoletaTermica';
 import { useTenant } from '@/lib/TenantContext';
+import { useCashDrawer } from '@/lib/hooks/useCashDrawer';
 
 // ⚙️ CONFIGURACIÓN: Tipo de documento por defecto para el POS
 // Según tu base de datos:
@@ -145,6 +146,10 @@ export default function POSPedidoPage() {
   const [cajaAbierta, setCajaAbierta] = useState<boolean>(false);
   const [infoCaja, setInfoCaja] = useState<any>(null);
   const [errorCaja, setErrorCaja] = useState<string>('');
+
+  // Gaveta de efectivo
+  const { checkDrawer, configureDrawer, isSupported: gavetaSoportada } = useCashDrawer();
+  const [gavetaConectada, setGavetaConectada] = useState<boolean>(false);
 
   // Estados para modal de abrir caja directamente desde el POS
   const [showAbrirCajaModal, setShowAbrirCajaModal] = useState<boolean>(false);
@@ -288,6 +293,7 @@ export default function POSPedidoPage() {
         if (localSeleccionado) {
           setLocalId(localSeleccionado);
           await verificarCajaAbierta(localSeleccionado);
+          checkDrawer().then(setGavetaConectada);
         } else {
           console.warn('⚠️ No hay locales disponibles en absoluto');
         }
@@ -926,10 +932,29 @@ export default function POSPedidoPage() {
                   <p className="text-green-300 text-sm">
                     <span className="font-medium">Monto inicial:</span> ${infoCaja.turno.monto_inicial.toLocaleString('es-CL')}
                   </p>
+                  {gavetaSoportada && (
+                    <p className="text-green-300 text-sm flex items-center gap-2">
+                      <span className="font-medium">Gaveta:</span>
+                      {gavetaConectada ? (
+                        <span className="text-green-400">🗄️ Conectada</span>
+                      ) : (
+                        <>
+                          <span className="text-slate-400">Sin gaveta</span>
+                          <button
+                            type="button"
+                            onClick={() => configureDrawer().then(setGavetaConectada)}
+                            className="text-xs px-2 py-0.5 bg-slate-600 hover:bg-slate-500 text-slate-300 rounded transition-colors"
+                          >
+                            Tengo gaveta
+                          </button>
+                        </>
+                      )}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
-            
+
             {/* Botón para ir a gestión de caja */}
             <a
               href="/admin/caja"

@@ -132,6 +132,7 @@ export default function CategoriasList() {
                     <table className="min-w-full divide-y divide-slate-600">
                         <thead className="bg-slate-600">
                             <tr>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">ID</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Código</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Nombre</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Descripción</th>
@@ -144,6 +145,7 @@ export default function CategoriasList() {
                         <tbody className="divide-y divide-slate-600">
                             {categorias.map((categoria) => (
                                 <tr key={categoria.id} className="hover:bg-slate-600/50">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-400">{categoria.id}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-300">{categoria.codigo}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">{categoria.nombre}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{categoria.descripcion || "-"}</td>

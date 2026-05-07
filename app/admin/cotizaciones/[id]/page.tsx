@@ -102,12 +102,13 @@ export default function DetalleCotizacionPage({ params }: { params: { id: string
   const [modalAceptar, setModalAceptar] = useState(false);
   const [tiposDocumento, setTiposDocumento] = useState<{id: number; nombre: string; codigo: string}[]>([]);
   const [tiposPedido, setTiposPedido] = useState<{id: number; nombre: string}[]>([]);
-  const [locales, setLocales] = useState<{id: number; nombre: string; direccion?: string}[]>([]);
+  const [locales, setLocales] = useState<{id: number; nombre: string; direccion?: string; es_local_fabricacion: boolean}[]>([]);
   const [mediosPago, setMediosPago] = useState<{id: number; nombre: string; permite_cheque: boolean; es_contado: boolean; plazo_dias: number}[]>([]);
   const [aceptarForm, setAceptarForm] = useState({
     tipo_documento_id: '',
     tipo_pedido_id: '1',
     local_despacho_id: '',
+    local_fabricacion_id: '',
     notas: '',
     medio_pago_id: '',
   });
@@ -306,6 +307,7 @@ export default function DetalleCotizacionPage({ params }: { params: { id: string
           tipo_documento_id: Number(aceptarForm.tipo_documento_id),
           tipo_pedido_id: Number(aceptarForm.tipo_pedido_id) || 1,
           local_despacho_id: aceptarForm.local_despacho_id ? Number(aceptarForm.local_despacho_id) : null,
+          local_fabricacion_id: aceptarForm.local_fabricacion_id ? Number(aceptarForm.local_fabricacion_id) : null,
           notas: aceptarForm.notas || null,
           medio_pago_id: aceptarForm.medio_pago_id ? Number(aceptarForm.medio_pago_id) : null,
           requiere_delivery: requiereDelivery,
@@ -316,7 +318,7 @@ export default function DetalleCotizacionPage({ params }: { params: { id: string
       });
       if (!res.ok) { const e = await res.json(); throw new Error(e.detail); }
       setModalAceptar(false);
-      setAceptarForm({ tipo_documento_id: '', tipo_pedido_id: '1', local_despacho_id: '', notas: '', medio_pago_id: '' });
+      setAceptarForm({ tipo_documento_id: '', tipo_pedido_id: '1', local_despacho_id: '', local_fabricacion_id: '', notas: '', medio_pago_id: '' });
       setRequiereDelivery(false);
       setCostoDeliveryCalc(null);
       setNoCobraDelivery(false);
@@ -658,6 +660,37 @@ export default function DetalleCotizacionPage({ params }: { params: { id: string
                 </select>
               </div>
 
+              {/* Local de fabricación */}
+              {(() => {
+                const localesFab = locales.filter(l => l.es_local_fabricacion);
+                if (localesFab.length === 0) return (
+                  <div className="bg-red-900/50 border border-red-500 text-red-200 px-3 py-2 rounded text-sm">
+                    No hay locales de fabricación configurados. Ve a Administración &gt; Locales y marca al menos uno como "Local de fabricación" antes de aceptar cotizaciones.
+                  </div>
+                );
+                if (localesFab.length === 1) return (
+                  <p className="text-xs text-gray-400">
+                    Local de fabricación: <span className="text-gray-200 font-medium">{localesFab[0].nombre}</span>
+                  </p>
+                );
+                return (
+                  <div>
+                    <label className="block text-sm text-gray-300 mb-1">Local de fabricación *</label>
+                    <select
+                      required
+                      className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white"
+                      value={aceptarForm.local_fabricacion_id}
+                      onChange={e => setAceptarForm(f => ({ ...f, local_fabricacion_id: e.target.value }))}
+                    >
+                      <option value="">Seleccionar local de fabricación...</option>
+                      {localesFab.map(l => (
+                        <option key={l.id} value={l.id}>{l.nombre}</option>
+                      ))}
+                    </select>
+                  </div>
+                );
+              })()}
+
               {/* Delivery */}
               <div className="border border-slate-600 rounded p-3 space-y-3">
                 <div className="flex items-center justify-between">
@@ -750,7 +783,7 @@ export default function DetalleCotizacionPage({ params }: { params: { id: string
 
             <div className="flex justify-end gap-3 pt-2">
               <button
-                onClick={() => { setModalAceptar(false); setError(''); setRequiereDelivery(false); setCostoDeliveryCalc(null); setNoCobraDelivery(false); }}
+                onClick={() => { setModalAceptar(false); setError(''); setAceptarForm(f => ({ ...f, local_fabricacion_id: '' })); setRequiereDelivery(false); setCostoDeliveryCalc(null); setNoCobraDelivery(false); }}
                 className="px-4 py-2 rounded text-gray-300 hover:bg-slate-700"
                 disabled={procesando}
               >
@@ -758,7 +791,12 @@ export default function DetalleCotizacionPage({ params }: { params: { id: string
               </button>
               <button
                 onClick={confirmarAceptar}
-                disabled={!aceptarForm.tipo_documento_id || procesando}
+                disabled={
+                  !aceptarForm.tipo_documento_id ||
+                  procesando ||
+                  locales.filter(l => l.es_local_fabricacion).length === 0 ||
+                  (locales.filter(l => l.es_local_fabricacion).length > 1 && !aceptarForm.local_fabricacion_id)
+                }
                 className="px-5 py-2 rounded bg-green-700 hover:bg-green-600 text-white font-semibold disabled:opacity-50"
               >
                 {procesando ? 'Procesando...' : '✓ Confirmar y generar pedido'}

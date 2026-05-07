@@ -139,6 +139,7 @@ export default function UnidadesList() {
                     <table className="min-w-full divide-y divide-slate-600">
                         <thead className="bg-slate-600">
                             <tr>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">ID</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Código</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Nombre</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Símbolo</th>
@@ -150,6 +151,7 @@ export default function UnidadesList() {
                         <tbody className="divide-y divide-slate-600">
                             {unidades.map((unidad) => (
                                 <tr key={unidad.id} className="hover:bg-slate-600/50">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-400">{unidad.id}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-300">{unidad.codigo}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">{unidad.nombre}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{unidad.simbolo}</td>

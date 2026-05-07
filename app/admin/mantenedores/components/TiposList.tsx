@@ -109,6 +109,7 @@ export default function TiposList() {
                     <table className="min-w-full divide-y divide-slate-600">
                         <thead className="bg-slate-600">
                             <tr>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">ID</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Código</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Nombre</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Descripción</th>
@@ -119,6 +120,7 @@ export default function TiposList() {
                         <tbody className="divide-y divide-slate-600">
                             {tipos.map((tipo) => (
                                 <tr key={tipo.id} className="hover:bg-slate-600/50">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-400">{tipo.id}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-300">{tipo.codigo}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">{tipo.nombre}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{tipo.descripcion || "-"}</td>

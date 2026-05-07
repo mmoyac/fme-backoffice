@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useCashDrawer } from '@/lib/hooks/useCashDrawer';
 
 interface ItemBoleta {
   sku: string;
@@ -42,18 +43,21 @@ interface BoletaTermicaProps {
 }
 
 export function BoletaTermica({ datos, onImprimir, visible }: BoletaTermicaProps) {
-  
+  const { openDrawer } = useCashDrawer()
+
   useEffect(() => {
     if (visible) {
-      // Auto-imprimir después de un breve delay
-      const timer = setTimeout(() => {
+      // Auto-imprimir después de un breve delay y abrir gaveta
+      const timer = setTimeout(async () => {
+        await openDrawer()
         window.print();
       }, 1000); // Aumenté el tiempo para que el usuario pueda ver la vista previa
       return () => clearTimeout(timer);
     }
   }, [visible]);
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
+    await openDrawer()
     window.print();
   };
 

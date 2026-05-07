@@ -20,6 +20,7 @@ function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 export interface PedidoResumen {
   id: number;
+  tipo?: 'pedido' | 'solicitud';
   numero_pedido: string;
   cliente_nombre: string;
   cliente_telefono?: string | null;
@@ -31,11 +32,15 @@ export interface PedidoResumen {
   kg_brutos: number;
   items_count: number;
   fecha_pedido?: string;
+  // Extras para solicitudes
+  local_origen_nombre?: string;
+  local_destino_nombre?: string;
 }
 
 export interface HojaRutaItem {
   id: number;
-  pedido_id: number;
+  pedido_id: number | null;
+  solicitud_id?: number | null;
   orden: number;
   entregado: boolean;
   fecha_entrega: string | null;
@@ -86,6 +91,10 @@ export interface HojaRuta {
   monto_cobro_chofer: number | null;
   cobro_chofer_pagado: boolean;
   fecha_pago_chofer: string | null;
+  // Delivery (solo en mis-hojas)
+  delivery_cobrable?: number;
+  delivery_total?: number;
+  delivery_cobros_detalle?: number[];
 }
 
 export interface HojaRutaCreate {
@@ -94,6 +103,7 @@ export interface HojaRutaCreate {
   capacidad_kg?: number;
   notas?: string;
   pedido_ids: number[];
+  solicitud_ids?: number[];
   tipo_cobro_chofer?: 'FIJO' | 'POR_KG';
   tarifa_chofer?: number;
 }
@@ -147,6 +157,9 @@ export const pagarChoferMasivo = (hoja_ids: number[]): Promise<{ ok: boolean; ho
 
 export const calcularCobrosChofer = (id: number): Promise<{ ok: boolean; monto_cobro_chofer: number; tipo_cobro_chofer: string }> =>
   apiRequest(`/api/hojas-ruta/${id}/calcular-cobro-chofer`, { method: 'POST' });
+
+export const misHojas = (): Promise<HojaRuta[]> =>
+  apiRequest('/api/hojas-ruta/mis-hojas');
 
 export const pagarChofer = (id: number, monto?: number): Promise<{ ok: boolean; monto_cobro_chofer: number; fecha_pago_chofer: string }> =>
   apiRequest(`/api/hojas-ruta/${id}/pagar-chofer`, {

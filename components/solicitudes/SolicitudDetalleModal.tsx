@@ -156,7 +156,10 @@ const SolicitudDetalleModal: React.FC<Props> = ({ solicitud, localesMap, product
           {"usuario_finalizador_id" in solicitud && solicitud.usuario_finalizador_id && esFinalizado && (
             <div><strong>Fecha de Respuesta:</strong> {new Date(solicitud.fecha_actualizacion).toLocaleString('es-CL')}</div>
           )}
-          <strong>Estado:</strong> {estadosMap[solicitud.estado_id]?.nombre || solicitud.estado_id}
+          <strong>Estado:</strong> {estadosMap[solicitud.estado_id]?.nombre || solicitud.estado_id}<br />
+          {solicitud.requiere_delivery && (
+            <span className="inline-block mt-1 px-2 py-0.5 bg-blue-600 text-white text-xs rounded">Requiere delivery</span>
+          )}
         </div>
         {solicitud.nota && (
           <div className="mb-2 text-sm"><strong>Nota:</strong> {solicitud.nota}</div>

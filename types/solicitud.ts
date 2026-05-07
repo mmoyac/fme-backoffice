@@ -22,6 +22,7 @@ export interface SolicitudTransferencia {
   recibido: boolean;
   usuario_receptor_id?: number;
   fecha_recepcion?: string;
+  requiere_delivery: boolean;
 }
 
 export interface ItemSolicitudTransferenciaCreate {
@@ -39,6 +40,7 @@ export interface SolicitudTransferenciaCreate {
   usuario_finalizador_id?: number;
   estado_id: number;
   nota?: string;
+  requiere_delivery?: boolean;
   items: ItemSolicitudTransferenciaCreate[];
 }
 
@@ -50,4 +52,5 @@ export interface SolicitudTransferenciaUpdate {
   recibido?: boolean;
   usuario_receptor_id?: number;
   fecha_recepcion?: string;
+  requiere_delivery?: boolean;
 }

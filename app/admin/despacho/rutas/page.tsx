@@ -111,16 +111,20 @@ export default function HojasRutaPage() {
   const handleCrear = async () => {
     if (!vehiculoId) { setErrorCrear('Seleccione un vehículo'); return; }
     if (!choferId) { setErrorCrear('Seleccione un chofer'); return; }
-    if (pedidosSeleccionados.size === 0) { setErrorCrear('Seleccione al menos un pedido'); return; }
+    if (pedidosSeleccionados.size === 0) { setErrorCrear('Seleccione al menos un pedido o solicitud'); return; }
     if (excedeLimite) { setErrorCrear('Los pedidos seleccionados superan la capacidad del vehículo'); return; }
     setCreando(true);
     setErrorCrear('');
     try {
+      const selArray = Array.from(pedidosSeleccionados);
+      const pedidoIds = selArray.filter(id => pedidosDisponibles.find(p => p.id === id)?.tipo !== 'solicitud');
+      const solicitudIds = selArray.filter(id => pedidosDisponibles.find(p => p.id === id)?.tipo === 'solicitud');
       await crearHojaRuta({
         vehiculo_id: Number(vehiculoId),
         chofer_id: Number(choferId),
         notas: notas || undefined,
-        pedido_ids: Array.from(pedidosSeleccionados),
+        pedido_ids: pedidoIds,
+        solicitud_ids: solicitudIds,
         tipo_cobro_chofer: tipoCobro || undefined,
         tarifa_chofer: tarifaChofer ? Number(tarifaChofer) : undefined,
       });
@@ -602,6 +606,12 @@ export default function HojasRutaPage() {
                       </option>
                     ))}
                   </select>
+                  {usuarios.length === 0 && (
+                    <p className="text-amber-400 text-xs mt-1.5">
+                      No hay choferes disponibles. Asegúrate de que los usuarios tengan el rol <strong>Despachador</strong> en{' '}
+                      <a href="/admin/usuarios" className="underline hover:text-amber-300">Gestión de Usuarios</a>.
+                    </p>
+                  )}
                 </div>
 
                 <div className="sm:col-span-2">
@@ -650,10 +660,10 @@ export default function HojasRutaPage() {
                 )}
               </div>
 
-              {/* Selección de pedidos */}
+              {/* Selección de pedidos y solicitudes */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-slate-300 text-sm">Pedidos a incluir *</label>
+                  <label className="text-slate-300 text-sm">Pedidos / Solicitudes a incluir *</label>
                   <div className={`text-sm font-semibold ${excedeLimite ? 'text-red-400' : 'text-cyan-400'}`}>
                     {kgSeleccionados.toFixed(1)} kg seleccionados
                     {capacidadNum > 0 && ` / ${capacidadNum} kg`}
@@ -663,18 +673,19 @@ export default function HojasRutaPage() {
 
                 {pedidosDisponibles.length === 0 ? (
                   <div className="text-slate-500 text-sm text-center py-6 bg-slate-800/50 rounded-lg">
-                    No hay pedidos confirmados disponibles para asignar
+                    No hay pedidos ni solicitudes disponibles para asignar
                   </div>
                 ) : (
                   <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
                     {pedidosDisponibles.map((p) => {
                       const sel = pedidosSeleccionados.has(p.id);
+                      const esSolicitud = p.tipo === 'solicitud';
                       return (
                         <label
-                          key={p.id}
+                          key={`${p.tipo ?? 'pedido'}-${p.id}`}
                           className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
                             sel
-                              ? 'bg-cyan-900/30 border-cyan-700'
+                              ? esSolicitud ? 'bg-blue-900/30 border-blue-700' : 'bg-cyan-900/30 border-cyan-700'
                               : 'bg-slate-800 border-slate-700 hover:border-slate-600'
                           }`}
                         >
@@ -687,8 +698,11 @@ export default function HojasRutaPage() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="text-white font-mono text-sm font-semibold">{p.numero_pedido}</span>
+                              {esSolicitud && (
+                                <span className="text-xs bg-blue-900/50 text-blue-300 border border-blue-700 px-1.5 py-0.5 rounded-full">Transferencia</span>
+                              )}
                               <span className="text-slate-300 text-sm truncate">{p.cliente_nombre}</span>
-                              {!p.es_pagado && (
+                              {!esSolicitud && !p.es_pagado && (
                                 <span className="text-xs bg-amber-900/50 text-amber-400 border border-amber-700 px-1.5 py-0.5 rounded-full">⚠️ No pagado</span>
                               )}
                             </div>
@@ -698,13 +712,20 @@ export default function HojasRutaPage() {
                             <div className={`text-sm font-bold ${p.kg_brutos > 0 ? 'text-cyan-400' : 'text-slate-500'}`}>
                               {p.kg_brutos > 0 ? `${p.kg_brutos.toFixed(1)} kg` : 'sin kg'}
                             </div>
-                            <div className="text-slate-500 text-xs">
-                              ${p.monto_total.toLocaleString('es-CL', { maximumFractionDigits: 0 })}
-                            </div>
-                            {p.costo_delivery > 0 && (
-                              <div className="text-emerald-400 text-xs">
-                                +${p.costo_delivery.toLocaleString('es-CL', { maximumFractionDigits: 0 })} delivery
-                              </div>
+                            {!esSolicitud && (
+                              <>
+                                <div className="text-slate-500 text-xs">
+                                  ${p.monto_total.toLocaleString('es-CL', { maximumFractionDigits: 0 })}
+                                </div>
+                                {p.costo_delivery > 0 && (
+                                  <div className="text-emerald-400 text-xs">
+                                    +${p.costo_delivery.toLocaleString('es-CL', { maximumFractionDigits: 0 })} delivery
+                                  </div>
+                                )}
+                              </>
+                            )}
+                            {esSolicitud && (
+                              <div className="text-slate-500 text-xs">{p.items_count} productos</div>
                             )}
                           </div>
                         </label>

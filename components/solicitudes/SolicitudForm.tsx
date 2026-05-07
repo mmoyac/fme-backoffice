@@ -41,6 +41,7 @@ const SolicitudForm: React.FC<Props> = ({ solicitud, onSubmit, onCancel }) => {
     solicitud?.items?.map(i => ({ producto_id: i.producto_id, cantidad_solicitada: i.cantidad_solicitada, cantidad_aprobada: i.cantidad_aprobada })) || []
   );
   const [nota, setNota] = useState<string>(solicitud?.nota || "");
+  const [requiereDelivery, setRequiereDelivery] = useState<boolean>(solicitud?.requiere_delivery ?? false);
   const [showConfirmFinalizar, setShowConfirmFinalizar] = useState(false);
   const stockMap = useStockEdicionSolicitud(items, Number(localOrigen));
 
@@ -131,6 +132,7 @@ const SolicitudForm: React.FC<Props> = ({ solicitud, onSubmit, onCancel }) => {
         estado_id: Number(estado),
         items: items.map(i => ({ producto_id: i.producto_id, cantidad_solicitada: i.cantidad_solicitada, cantidad_aprobada: i.cantidad_aprobada })),
         nota: nota.trim() || undefined,
+        requiere_delivery: requiereDelivery,
         tenant_id: (user as any)?.tenant_id || 1,
         usuario_solicitante_id: user?.id || 1,
         local_origen_id: Number(localOrigen),
@@ -206,9 +208,31 @@ const SolicitudForm: React.FC<Props> = ({ solicitud, onSubmit, onCancel }) => {
           </button>
         </div>
       )}
-      {solicitud && esLocalOrigen && estadoActual === ESTADO_EN_PROCESO && (
+      {solicitud && esLocalOrigen && (estadoActual === ESTADO_EN_PROCESO || estadoActual === ESTADO_FINALIZADO) && (
         <div className="bg-slate-800 p-3 rounded mb-2">
-          <div className="mb-2 text-xs text-gray-400">Como local origen, puedes aprobar cantidades y finalizar la solicitud.</div>
+          {estadoActual === ESTADO_EN_PROCESO && (
+            <div className="mb-2 text-xs text-gray-400">Como local origen, puedes aprobar cantidades y finalizar la solicitud.</div>
+          )}
+          <label className="flex items-center gap-2 cursor-pointer mt-1">
+            <input
+              type="checkbox"
+              checked={requiereDelivery}
+              onChange={e => setRequiereDelivery(e.target.checked)}
+              className="w-4 h-4 accent-primary"
+            />
+            <span className="text-sm text-white">Requiere delivery</span>
+            <span className="text-xs text-gray-400">(aparecerá en rutas de despacho)</span>
+          </label>
+          {estadoActual === ESTADO_FINALIZADO && requiereDelivery !== (solicitud?.requiere_delivery ?? false) && (
+            <button
+              type="button"
+              className="mt-2 px-3 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 transition-colors"
+              disabled={submitting}
+              onClick={() => onSubmit({ requiere_delivery: requiereDelivery } as unknown as SolicitudTransferenciaCreate)}
+            >
+              Guardar cambio delivery
+            </button>
+          )}
         </div>
       )}
 

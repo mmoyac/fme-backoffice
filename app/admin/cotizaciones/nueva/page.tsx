@@ -6,8 +6,10 @@ import { useAuth } from '@/lib/AuthProvider';
 import ProductoAutocomplete from '../components/ProductoAutocomplete';
 
 interface Cliente { id: number; nombre: string; email?: string; rut?: string; }
-interface Producto { id: number; nombre: string; precio_venta?: number; }
+interface Producto { id: number; nombre: string; sku?: string; precio_venta?: number; }
 interface CanalVenta { id: number; nombre: string; }
+interface Local { id: number; nombre: string; es_local_fabricacion: boolean; }
+interface PrecioInfo { local_id: number; monto_precio: number; }
 
 interface ItemForm {
   producto_id: number;
@@ -15,6 +17,9 @@ interface ItemForm {
   cantidad: number;
   precio_unitario: number;
   subtotal: number;
+  stock_total: number;
+  stock_fab: number;
+  precios: PrecioInfo[];
 }
 
 export default function NuevaCotizacionPage() {
@@ -24,6 +29,7 @@ export default function NuevaCotizacionPage() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [productos, setProductos] = useState<Producto[]>([]);
   const [canales, setCanales] = useState<CanalVenta[]>([]);
+  const [locales, setLocales] = useState<Local[]>([]);
 
   const [clienteId, setClienteId] = useState<number | ''>('');
   const [canalId, setCanalId] = useState<number | ''>('');
@@ -44,16 +50,18 @@ export default function NuevaCotizacionPage() {
       fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/productos/`, { headers }).then(r => r.json()),
       fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/canales-venta/`, { headers }).then(r => r.json()),
       fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/precios/`, { headers }).then(r => r.json()),
-    ]).then(([c, p, cv, precios]) => {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/locales/`, { headers }).then(r => r.json()),
+    ]).then(([c, p, cv, precios, ls]) => {
       setClientes(c);
       const idsConPrecio = new Set((precios as { producto_id: number }[]).map(pr => pr.producto_id));
       setProductos((p as Producto[]).filter(prod => idsConPrecio.has(prod.id)));
       setCanales(cv);
+      setLocales(ls);
     }).catch(() => setError('Error al cargar datos'));
   }, []);
 
   const agregarItem = () => {
-    setItems([...items, { producto_id: 0, nombre: '', cantidad: 1, precio_unitario: 0, subtotal: 0 }]);
+    setItems([...items, { producto_id: 0, nombre: '', cantidad: 1, precio_unitario: 0, subtotal: 0, stock_total: 0, stock_fab: 0, precios: [] }]);
   };
 
   const actualizarItem = (idx: number, field: keyof ItemForm, value: any) => {
@@ -65,7 +73,7 @@ export default function NuevaCotizacionPage() {
     setItems(nuevos);
   };
 
-  const seleccionarProducto = (idx: number, productoId: number, nombre: string, precioMax: number) => {
+  const seleccionarProducto = (idx: number, productoId: number, nombre: string, precioMax: number, stockTotal: number, stockFab: number, precios: PrecioInfo[]) => {
     const nuevos = [...items];
     nuevos[idx] = {
       ...nuevos[idx],
@@ -73,6 +81,9 @@ export default function NuevaCotizacionPage() {
       nombre,
       precio_unitario: precioMax,
       subtotal: nuevos[idx].cantidad * precioMax,
+      stock_total: stockTotal,
+      stock_fab: stockFab,
+      precios,
     };
     setItems(nuevos);
   };
@@ -211,52 +222,79 @@ export default function NuevaCotizacionPage() {
           ) : (
             <div className="space-y-3">
               {items.map((item, idx) => (
-                <div key={idx} className="grid grid-cols-12 gap-2 items-end bg-slate-700 rounded p-3">
-                  <div className="col-span-4">
-                    {idx === 0 && <label className="block text-xs text-gray-400 mb-1">Producto</label>}
-                    <ProductoAutocomplete
-                      productos={productos}
-                      value={item.producto_id}
-                      accessToken={user?.access_token ?? undefined}
-                      onSelect={(id, nombre, precio) => seleccionarProducto(idx, id, nombre, precio)}
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    {idx === 0 && <label className="block text-xs text-gray-400 mb-1">Cantidad</label>}
-                    <input
-                      type="number"
-                      min={0.001}
-                      step="any"
-                      className="w-full bg-slate-600 border border-slate-500 rounded px-2 py-1.5 text-white text-sm"
-                      value={item.cantidad}
-                      onChange={e => actualizarItem(idx, 'cantidad', parseFloat(e.target.value) || 0)}
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    {idx === 0 && <label className="block text-xs text-gray-400 mb-1">Precio unit.</label>}
-                    <input
-                      type="number"
-                      min={0}
-                      className="w-full bg-slate-600 border border-slate-500 rounded px-2 py-1.5 text-white text-sm"
-                      value={item.precio_unitario}
-                      onChange={e => actualizarItem(idx, 'precio_unitario', parseFloat(e.target.value) || 0)}
-                    />
-                  </div>
-                  <div className="col-span-3">
-                    {idx === 0 && <label className="block text-xs text-gray-400 mb-1">Subtotal</label>}
-                    <div className="bg-slate-600 border border-slate-500 rounded px-2 py-1.5 text-white text-sm font-semibold">
-                      ${item.subtotal.toLocaleString('es-CL')}
+                <div key={idx} className="bg-slate-700 rounded p-3 space-y-2">
+                  <div className="grid grid-cols-12 gap-2 items-end">
+                    <div className="col-span-4">
+                      {idx === 0 && <label className="block text-xs text-gray-400 mb-1">Producto</label>}
+                      <ProductoAutocomplete
+                        productos={productos}
+                        value={item.producto_id}
+                        localesFabIds={locales.filter(l => l.es_local_fabricacion).map(l => l.id)}
+                        accessToken={user?.access_token ?? undefined}
+                        onSelect={(id, nombre, precio, stockTotal, stockFab, precios) => seleccionarProducto(idx, id, nombre, precio, stockTotal, stockFab, precios)}
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      {idx === 0 && <label className="block text-xs text-gray-400 mb-1">Cantidad</label>}
+                      <input
+                        type="number"
+                        min={0.001}
+                        step="any"
+                        className="w-full bg-slate-600 border border-slate-500 rounded px-2 py-1.5 text-white text-sm"
+                        value={item.cantidad}
+                        onChange={e => actualizarItem(idx, 'cantidad', parseFloat(e.target.value) || 0)}
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      {idx === 0 && <label className="block text-xs text-gray-400 mb-1">Precio unit.</label>}
+                      <input
+                        type="number"
+                        min={0}
+                        className="w-full bg-slate-600 border border-slate-500 rounded px-2 py-1.5 text-white text-sm"
+                        value={item.precio_unitario}
+                        onChange={e => actualizarItem(idx, 'precio_unitario', parseFloat(e.target.value) || 0)}
+                      />
+                    </div>
+                    <div className="col-span-3">
+                      {idx === 0 && <label className="block text-xs text-gray-400 mb-1">Subtotal</label>}
+                      <div className="bg-slate-600 border border-slate-500 rounded px-2 py-1.5 text-white text-sm font-semibold">
+                        ${item.subtotal.toLocaleString('es-CL')}
+                      </div>
+                    </div>
+                    <div className="col-span-1 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => eliminarItem(idx)}
+                        className="text-red-400 hover:text-red-300 text-lg leading-none"
+                      >
+                        ✕
+                      </button>
                     </div>
                   </div>
-                  <div className="col-span-1 flex justify-end">
-                    <button
-                      type="button"
-                      onClick={() => eliminarItem(idx)}
-                      className="text-red-400 hover:text-red-300 text-lg leading-none"
-                    >
-                      ✕
-                    </button>
-                  </div>
+
+                  {item.producto_id !== 0 && (
+                    <div className="flex flex-wrap items-center gap-3 text-xs pl-1">
+                      <span className={item.stock_fab <= 0 ? 'text-red-400 font-semibold' : 'text-emerald-400'}>
+                        Fab: {item.stock_fab}
+                        {item.stock_total !== item.stock_fab && (
+                          <span className="text-gray-500 ml-1">· Total: {item.stock_total}</span>
+                        )}
+                      </span>
+                      {item.precios.length > 0 && (
+                        <span className="text-gray-500">Precios:</span>
+                      )}
+                      {item.precios.map((p, pi) => (
+                        <button
+                          key={pi}
+                          type="button"
+                          onClick={() => actualizarItem(idx, 'precio_unitario', p.monto_precio)}
+                          className={`px-2 py-0.5 rounded border transition-colors ${item.precio_unitario === p.monto_precio ? 'border-primary text-primary' : 'border-slate-500 text-gray-300 hover:border-slate-400'}`}
+                        >
+                          {locales.find(l => l.id === p.local_id)?.nombre ?? `Local ${p.local_id}`}: ${p.monto_precio.toLocaleString('es-CL')}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
 

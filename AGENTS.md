@@ -584,3 +584,101 @@ if (maxKmDelivery !== null && distanciaKm > maxKmDelivery) {
 - El local debe tener `direccion` registrada (si no, se muestra error sin calcular).
 - El cliente debe tener `direccion` registrada (idem).
 
+---
+
+## Módulo: App del Despachador (implementado 2026-04-06)
+
+### Concepto
+
+Vista mobile-first aislada para los choferes/despachadores. Separada del panel admin (`/admin/*`), sin sidebar, diseñada para uso desde celular. Acceso controlado por rol.
+
+### Rutas
+
+```
+app/despachador/
+  layout.tsx        — Layout limpio, sin sidebar, header fijo con nombre del usuario y logout
+  page.tsx          — Lista de hojas de ruta asignadas al despachador autenticado
+  [id]/page.tsx     — Detalle de hoja: gestión de entregas y tracking de ruta
+```
+
+### Autenticación y control de acceso
+
+- Login compartido con el backoffice (`/login`)
+- **Post-login**: `AuthService.getCurrentUser()` verifica `user.role.nombre`
+  - Si el rol es `despachador` (case-insensitive) → redirige a `/despachador`
+  - Cualquier otro rol → redirige a `/admin/dashboard`
+- El layout de `/despachador` verifica el rol y redirige si no corresponde
+- Los roles `admin` también pueden acceder a `/despachador` (para pruebas)
+
+### Rol DESPACHADOR
+
+- Se crea desde `/admin/usuarios` como cualquier otro rol
+- El selector de chofer en `/admin/despacho/rutas` **solo muestra usuarios con rol `despachador`**
+- Si no hay usuarios con ese rol, aparece una nota con link a Gestión de Usuarios
+
+### Página principal `/despachador`
+
+- Consume `GET /api/hojas-ruta/mis-hojas` (filtra por `chofer_id = usuario autenticado`)
+- Muestra hojas con estado `PENDIENTE` o `EN_RUTA` (desaparece cuando `cobro_chofer_pagado = true`)
+- **Banner superior**: total de pagos pendientes al despachador (suma de `monto_cobro_chofer`)
+- **Por cada hoja**:
+  - Patente / label del vehículo
+  - Badge de estado (Pendiente / En Ruta / Completada)
+  - Barra de progreso de entregas
+  - Monto pendiente de cobrar al despachador (`monto_cobro_chofer`)
+
+> ⚠️ `monto_cobro_chofer` es lo que la **empresa le debe al despachador** por hacer la ruta.
+> No confundir con `costo_delivery` que es lo que el **cliente paga por el envío**.
+
+### Página detalle `/despachador/[id]`
+
+**Secciones:**
+1. **Header**: número de hoja, vehículo, badge de estado
+2. **Progreso**: barra X/N entregados + monto pendiente de cobro al despachador
+3. **Botón "Confirmar Salida"**: visible solo si estado `PENDIENTE`, llama a `marcarEnRuta()`
+4. **Pedidos por entregar**: cards grandes con:
+   - Nombre del cliente y número de pedido
+   - Dirección (con ícono)
+   - Teléfono clicable (`tel:` link)
+   - Estado de pago del pedido
+   - Botón "Marcar Entregado" (deshabilitado si la hoja está PENDIENTE)
+5. **Pedidos entregados**: lista compacta con hora de entrega
+6. **Timeline de ruta**: visible solo si `fecha_salida` existe
+7. **Modal de confirmación**: se abre al tocar "Marcar Entregado", permite agregar notas
+
+### Timeline de ruta
+
+Presente en **ambas vistas** (admin y despachador):
+
+| Evento | Dato fuente | Color |
+|---|---|---|
+| Salida del camión | `hoja.fecha_salida` | Azul |
+| Entrega (por cada ítem) | `item.fecha_entrega` | Verde |
+| Pendientes en curso | items sin `fecha_entrega` | Gris pulsante (solo admin) |
+| Retorno | `hoja.fecha_retorno` | Gris (solo si existe) |
+
+- Los ítems se ordenan por `fecha_entrega` ascendente
+- Se muestra `+N min` desde el evento anterior
+- En la vista admin también muestra el número de pedido, notas de entrega y duración total
+
+### API client (`lib/api/hojas_ruta.ts`)
+
+```typescript
+// Nuevas funciones
+export const misHojas = (): Promise<HojaRuta[]>
+  // GET /api/hojas-ruta/mis-hojas
+
+// Campos nuevos en HojaRuta
+delivery_cobrable?: number;       // No usar — se quedó por legado, no refleja el cobro al chofer
+delivery_total?: number;
+delivery_cobros_detalle?: number[];
+// El campo correcto para el pago al despachador es:
+monto_cobro_chofer: number | null  // Lo que la empresa le debe al despachador
+cobro_chofer_pagado: boolean       // Cuando es true, la hoja desaparece de /despachador
+```
+
+### Lógica de desaparición de hojas
+
+Una hoja desaparece de la vista del despachador cuando `cobro_chofer_pagado = true`.
+El admin la marca como pagada desde `/admin/despacho/rutas/[id]` con el botón "💰 Marcar como pagado".
+
