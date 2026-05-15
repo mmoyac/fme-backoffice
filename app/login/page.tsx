@@ -202,7 +202,15 @@ export default function LoginPage() {
                     {/* Footer Info */}
                     <div className="mt-6 pt-6 border-t border-slate-700">
                         <p className="text-center text-sm text-slate-500">
-                            2026
+                            Desarrollado por{" "}
+                            <a
+                                href="https://www.effi4tech.cl"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-primary hover:text-primary-dark transition-colors font-medium"
+                            >
+                                Effi4Tech
+                            </a>
                         </p>
                     </div>
                 </div>
