@@ -474,3 +474,23 @@ export async function getBancos(): Promise<Banco[]> {
     if (!response.ok) throw new Error('Error al cargar bancos');
     return response.json();
 }
+
+export async function createBanco(data: Omit<Banco, 'id'>): Promise<Banco> {
+    const response = await fetch(`${API_URL}/api/maestras/bancos`, {
+        method: 'POST',
+        headers: { ...AuthService.getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    });
+    if (!response.ok) throw new Error('Error al crear banco');
+    return response.json();
+}
+
+export async function updateBanco(id: number, data: Partial<Omit<Banco, 'id'>>): Promise<Banco> {
+    const response = await fetch(`${API_URL}/api/maestras/bancos/${id}`, {
+        method: 'PUT',
+        headers: { ...AuthService.getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    });
+    if (!response.ok) throw new Error('Error al actualizar banco');
+    return response.json();
+}
