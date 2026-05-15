@@ -422,6 +422,7 @@ export interface EstadoCheque {
     id: number;
     codigo: string;
     nombre: string;
+    descripcion?: string;
     es_final: boolean;
     activo: boolean;
 }
@@ -431,6 +432,26 @@ export async function getEstadosCheque(): Promise<EstadoCheque[]> {
         headers: AuthService.getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Error al cargar estados de cheque');
+    return response.json();
+}
+
+export async function createEstadoCheque(data: Omit<EstadoCheque, 'id'>): Promise<EstadoCheque> {
+    const response = await fetch(`${API_URL}/api/maestras/estados-cheque`, {
+        method: 'POST',
+        headers: { ...AuthService.getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    });
+    if (!response.ok) throw new Error('Error al crear estado de cheque');
+    return response.json();
+}
+
+export async function updateEstadoCheque(id: number, data: Partial<Omit<EstadoCheque, 'id'>>): Promise<EstadoCheque> {
+    const response = await fetch(`${API_URL}/api/maestras/estados-cheque/${id}`, {
+        method: 'PUT',
+        headers: { ...AuthService.getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    });
+    if (!response.ok) throw new Error('Error al actualizar estado de cheque');
     return response.json();
 }
 

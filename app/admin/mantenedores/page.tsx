@@ -18,6 +18,7 @@ import TiposVentaList from "./components/TiposVentaList";
 import RolesPermisosList from "./components/RolesPermisosList";
 import OtEtapasTipoList from "./components/OtEtapasTipoList";
 import TiposOTList from "./components/TiposOTList";
+import EstadosChequeList from "./components/EstadosChequeList";
 
 export default function MantenedoresPage() {
     const [activeTab, setActiveTab] = useState<string | null>(null);
@@ -37,6 +38,7 @@ export default function MantenedoresPage() {
         { id: "tipos_documento",       icono: "📄",  titulo: "Tipos Documento",          desc: "Factura, Boleta, Guía, etc." },
         { id: "tipos_pedido",          icono: "📦",  titulo: "Tipos Pedido",             desc: "Tipos de pedido y locales de despacho" },
         { id: "medios_pago",           icono: "💳",  titulo: "Medios de Pago",           desc: "Medios de pago y descuentos al contado" },
+        { id: "estados_cheque",        icono: "🏦",  titulo: "Estados de Cheque",         desc: "Estados del ciclo de vida de un cheque" },
         { id: "canales_venta",         icono: "📡",  titulo: "Canales de Venta",         desc: "POS, Landing, WhatsApp, Teléfono y otros" },
         { id: "config_landing",        icono: "🌐",  titulo: "Config. Landing",          desc: "Apariencia de la landing page" },
         { id: "tipos_ot",              icono: "⚙️",  titulo: "Tipos de OT",              desc: "Tipos de Orden de Trabajo: Producción, Servicio, etc." },
@@ -223,6 +225,16 @@ export default function MantenedoresPage() {
                             Configura los medios de pago y marca cuáles son al contado para aplicar descuentos en preventas
                         </p>
                         <MediosPagoList />
+                    </div>
+                )}
+
+                {activeTab === "estados_cheque" && (
+                    <div>
+                        <h2 className="text-xl font-semibold text-white mb-2">Estados de Cheque</h2>
+                        <p className="text-gray-400 mb-4">
+                            Gestiona los estados del ciclo de vida de un cheque (Pendiente, En canje, Cobrado, Rechazado, etc.)
+                        </p>
+                        <EstadosChequeList />
                     </div>
                 )}
 
