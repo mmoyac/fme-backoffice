@@ -19,7 +19,8 @@ export default function TiposList() {
         codigo: '',
         nombre: '',
         descripcion: '',
-        activo: true
+        activo: true,
+        afecta_inventario: true
     });
 
     useEffect(() => {
@@ -43,7 +44,8 @@ export default function TiposList() {
             codigo: '',
             nombre: '',
             descripcion: '',
-            activo: true
+            activo: true,
+            afecta_inventario: true
         });
         setModalOpen(true);
     }
@@ -54,7 +56,8 @@ export default function TiposList() {
             codigo: tipo.codigo,
             nombre: tipo.nombre,
             descripcion: tipo.descripcion || '',
-            activo: tipo.activo
+            activo: tipo.activo,
+            afecta_inventario: tipo.afecta_inventario
         });
         setModalOpen(true);
     }
@@ -113,6 +116,7 @@ export default function TiposList() {
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Código</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Nombre</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Descripción</th>
+                                <th className="px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase">Inventario</th>
                                 <th className="px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase">Estado</th>
                                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase">Acciones</th>
                             </tr>
@@ -124,6 +128,11 @@ export default function TiposList() {
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-300">{tipo.codigo}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">{tipo.nombre}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{tipo.descripcion || "-"}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${tipo.afecta_inventario ? "bg-blue-900 text-blue-300" : "bg-amber-900 text-amber-300"}`}>
+                                            {tipo.afecta_inventario ? "Stock" : "Operacional"}
+                                        </span>
+                                    </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-center">
                                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${tipo.activo ? "bg-green-900 text-green-300" : "bg-gray-700 text-gray-400"}`}>
                                             {tipo.activo ? "Activo" : "Inactivo"}
@@ -196,6 +205,21 @@ export default function TiposList() {
                                     onChange={(e) => setFormData({ ...formData, activo: e.target.checked })}
                                 />
                                 <label htmlFor="activo" className="text-sm font-medium text-gray-300">Activo</label>
+                            </div>
+                            <div className="flex items-start">
+                                <input
+                                    type="checkbox"
+                                    id="afecta_inventario"
+                                    className="mr-2 mt-1"
+                                    checked={formData.afecta_inventario ?? true}
+                                    onChange={(e) => setFormData({ ...formData, afecta_inventario: e.target.checked })}
+                                />
+                                <label htmlFor="afecta_inventario" className="text-sm font-medium text-gray-300">
+                                    Afecta inventario
+                                    <span className="block text-xs text-gray-400 font-normal">
+                                        Desmarcar para tipos operacionales (arriendo, electricidad, servicios): se costean pero no manejan stock.
+                                    </span>
+                                </label>
                             </div>
                             <div className="flex justify-end gap-3 mt-6">
                                 <button

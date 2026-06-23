@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { getProducto, getProductos, type Producto } from '@/lib/api/productos';
 import { getRecetaProducto, createReceta, deleteReceta, recalcularCostos, crearIngredienteAPI, borrarIngredienteAPI, type Receta, type RecetaCreate } from '@/lib/api/recetas';
-import { getUnidades, type UnidadMedida } from '@/lib/api/maestras';
+import { getUnidades, getTipos, type UnidadMedida, type TipoProducto } from '@/lib/api/maestras';
 
 export default function RecetaPage({ params }: { params: { id: string } }) {
     const router = useRouter();
@@ -14,6 +14,7 @@ export default function RecetaPage({ params }: { params: { id: string } }) {
     const [receta, setReceta] = useState<Receta | null>(null);
     const [unidades, setUnidades] = useState<UnidadMedida[]>([]);
     const [productos, setProductos] = useState<Producto[]>([]);
+    const [tipos, setTipos] = useState<TipoProducto[]>([]);
 
     // Formulario de nueva receta
     const [formData, setFormData] = useState<RecetaCreate>({
@@ -44,14 +45,16 @@ export default function RecetaPage({ params }: { params: { id: string } }) {
 
     async function loadData() {
         try {
-            const [productoData, unidadesData, productosData] = await Promise.all([
+            const [productoData, unidadesData, productosData, tiposData] = await Promise.all([
                 getProducto(Number(params.id)),
                 getUnidades(),
                 getProductos(),
+                getTipos(),
             ]);
 
             setProducto(productoData);
             setUnidades(unidadesData.filter(u => u.activo));
+            setTipos(tiposData);
 
             // Cargar productos disponibles para usar como ingredientes
             // Filtrar el producto actual para que no se pueda agregar a sí mismo
@@ -116,17 +119,24 @@ export default function RecetaPage({ params }: { params: { id: string } }) {
             alert('Selecciona un producto');
             return;
         }
+        if (formData.ingredientes.some(i => i.producto_ingrediente_id === nuevoIngrediente.producto_ingrediente_id)) {
+            alert('Ese producto ya está en la receta. Edita o elimina el existente.');
+            return;
+        }
         const cantidadNum = parseFloat(nuevoIngrediente.cantidad);
         if (isNaN(cantidadNum) || cantidadNum <= 0) {
             alert('Ingresa una cantidad válida mayor a 0');
             return;
         }
+        // Redondear a 8 decimales (límite de la columna cantidad Numeric(18,8))
+        // y limpiar el artefacto de punto flotante de JS.
+        const cantidad8 = Number(cantidadNum.toFixed(8));
 
         setFormData({
             ...formData,
             ingredientes: [
                 ...formData.ingredientes,
-                { ...nuevoIngrediente, cantidad: cantidadNum, orden: formData.ingredientes.length },
+                { ...nuevoIngrediente, cantidad: cantidad8, orden: formData.ingredientes.length },
             ],
         });
 
@@ -153,11 +163,17 @@ export default function RecetaPage({ params }: { params: { id: string } }) {
             alert('Selecciona un producto');
             return;
         }
+        if (receta.ingredientes.some(i => i.producto_ingrediente_id === nuevoIngrediente.producto_ingrediente_id)) {
+            alert('Ese producto ya está en la receta. Edita o elimina el existente.');
+            return;
+        }
         const cantidadNum = parseFloat(nuevoIngrediente.cantidad);
         if (isNaN(cantidadNum) || cantidadNum <= 0) {
             alert('Ingresa una cantidad válida mayor a 0');
             return;
         }
+        // Redondear a 8 decimales (límite de la columna cantidad Numeric(18,8))
+        const cantidad8 = Number(cantidadNum.toFixed(8));
 
         try {
             console.log('Receta actual:', receta);
@@ -165,7 +181,7 @@ export default function RecetaPage({ params }: { params: { id: string } }) {
 
             const resultado = await crearIngredienteAPI(receta.id!, {
                 producto_ingrediente_id: nuevoIngrediente.producto_ingrediente_id,
-                cantidad: cantidadNum,
+                cantidad: cantidad8,
                 unidad_medida_id: nuevoIngrediente.unidad_medida_id,
                 orden: receta.ingredientes.length,
                 notas: nuevoIngrediente.notas || undefined,
@@ -273,6 +289,26 @@ export default function RecetaPage({ params }: { params: { id: string } }) {
         return unidades.find(u => u.id === id)?.simbolo || '';
     }
 
+    function getTipoDeIngrediente(productoId: number): TipoProducto | null {
+        const prod = productos.find(p => p.id === productoId);
+        if (!prod) return null;
+        return tipos.find(t => t.id === prod.tipo_producto_id) ?? null;
+    }
+
+    function TipoIngredienteBadge({ productoId }: { productoId: number }) {
+        const tipo = getTipoDeIngrediente(productoId);
+        if (!tipo) return <span className="text-gray-500">—</span>;
+        const operacional = !tipo.afecta_inventario;
+        return (
+            <div className="flex flex-col gap-1">
+                <span className="text-sm text-gray-300">{tipo.nombre}</span>
+                <span className={`px-2 inline-flex w-fit text-xs leading-5 font-semibold rounded-full ${operacional ? 'bg-amber-900 text-amber-300' : 'bg-blue-900 text-blue-300'}`}>
+                    {operacional ? 'Operacional · sin stock' : 'Afecta inventario'}
+                </span>
+            </div>
+        );
+    }
+
     if (loading) {
         return (
             <div className="flex items-center justify-center h-64">
@@ -363,9 +399,10 @@ export default function RecetaPage({ params }: { params: { id: string } }) {
                                     <thead className="bg-slate-700">
                                         <tr>
                                             <th className="px-4 py-2 text-left text-sm font-semibold text-gray-300">Producto</th>
+                                            <th className="px-4 py-2 text-left text-sm font-semibold text-gray-300">Tipo</th>
                                             <th className="px-4 py-2 text-right text-sm font-semibold text-gray-300">Cantidad</th>
                                             <th className="px-4 py-2 text-right text-sm font-semibold text-gray-300">Val. Compra</th>
-                                            <th className="px-4 py-2 text-right text-sm font-semibold text-gray-300">Val. Kg</th>
+                                            <th className="px-4 py-2 text-right text-sm font-semibold text-gray-300">Val. unitario</th>
                                             <th className="px-4 py-2 text-right text-sm font-semibold text-gray-300">Costo Total</th>
                                             <th className="px-4 py-2 text-right text-sm font-semibold text-gray-300">Acciones</th>
                                         </tr>
@@ -375,6 +412,9 @@ export default function RecetaPage({ params }: { params: { id: string } }) {
                                             <tr key={ing.id}>
                                                 <td className="px-4 py-3 text-sm text-white">
                                                     {getProductoNombre(ing.producto_ingrediente_id)}
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <TipoIngredienteBadge productoId={ing.producto_ingrediente_id} />
                                                 </td>
                                                 <td className="px-4 py-3 text-sm text-gray-300 text-right">
                                                     {ing.cantidad} {getUnidadSimbolo(ing.unidad_medida_id)}
@@ -446,8 +486,8 @@ export default function RecetaPage({ params }: { params: { id: string } }) {
                                         <label className="block text-xs font-medium text-gray-400 mb-1">Cantidad</label>
                                         <input
                                             type="number"
-                                            step="0.001"
-                                            min="0.001"
+                                            step="0.00000001"
+                                            min="0.00000001"
                                             value={nuevoIngrediente.cantidad}
                                             onChange={(e) => setNuevoIngrediente({ ...nuevoIngrediente, cantidad: e.target.value })}
                                             className="w-full bg-slate-600 text-white px-3 py-2 rounded-lg text-sm"
@@ -589,8 +629,8 @@ export default function RecetaPage({ params }: { params: { id: string } }) {
                                     <label className="block text-xs font-medium text-gray-400 mb-1">Cantidad</label>
                                     <input
                                         type="number"
-                                        step="0.001"
-                                        min="0.001"
+                                        step="0.00000001"
+                                        min="0.00000001"
                                         value={nuevoIngrediente.cantidad}
                                         onChange={(e) => setNuevoIngrediente({ ...nuevoIngrediente, cantidad: e.target.value })}
                                         className="w-full bg-slate-600 text-white px-3 py-2 rounded-lg text-sm"
@@ -627,6 +667,7 @@ export default function RecetaPage({ params }: { params: { id: string } }) {
                                     <thead className="bg-slate-700">
                                         <tr>
                                             <th className="px-4 py-2 text-left text-sm font-semibold text-gray-300">Producto</th>
+                                            <th className="px-4 py-2 text-left text-sm font-semibold text-gray-300">Tipo</th>
                                             <th className="px-4 py-2 text-right text-sm font-semibold text-gray-300">Cantidad</th>
                                             <th className="px-4 py-2 text-right text-sm font-semibold text-gray-300">Acciones</th>
                                         </tr>
@@ -636,6 +677,9 @@ export default function RecetaPage({ params }: { params: { id: string } }) {
                                             <tr key={index}>
                                                 <td className="px-4 py-3 text-sm text-white">
                                                     {getProductoNombre(ing.producto_ingrediente_id)}
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <TipoIngredienteBadge productoId={ing.producto_ingrediente_id} />
                                                 </td>
                                                 <td className="px-4 py-3 text-sm text-gray-300 text-right">
                                                     {ing.cantidad} {getUnidadSimbolo(ing.unidad_medida_id)}

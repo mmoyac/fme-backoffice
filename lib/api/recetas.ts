@@ -2,6 +2,26 @@ import { AuthService } from '../auth';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
+/**
+ * Convierte un error de FastAPI en un mensaje legible.
+ * El `detail` de un 422 es un array de objetos {loc, msg, type}; sin formatear
+ * se mostraría como "[object Object]".
+ */
+function formatApiError(error: any, fallback: string): string {
+    const d = error?.detail;
+    if (typeof d === 'string') return d;
+    if (Array.isArray(d)) {
+        return d
+            .map((e: any) => {
+                const campo = Array.isArray(e?.loc) ? e.loc.slice(1).join('.') : '';
+                return campo ? `${campo}: ${e?.msg ?? ''}` : (e?.msg ?? '');
+            })
+            .filter(Boolean)
+            .join('; ') || fallback;
+    }
+    return fallback;
+}
+
 export interface IngredienteReceta {
     id?: number;
     receta_id?: number;
@@ -62,7 +82,7 @@ export async function createReceta(productoId: number, receta: RecetaCreate): Pr
     if (!response.ok) {
         const error = await response.json();
         console.error('Error del servidor:', error);
-        throw new Error(error.detail || JSON.stringify(error) || 'Error al crear receta');
+        throw new Error(formatApiError(error, 'Error al crear receta'));
     }
     return response.json();
 }
@@ -101,12 +121,12 @@ export async function crearIngredienteAPI(
     if (!response.ok) {
         const text = await response.text();
         console.error('Error body:', text);
-        try {
-            const error = JSON.parse(text);
-            throw new Error(error.detail || 'Error al agregar ingrediente');
-        } catch (e) {
-            throw new Error(`Error ${response.status}: ${text}`);
+        let parsed: any = null;
+        try { parsed = JSON.parse(text); } catch { /* respuesta no-JSON */ }
+        if (parsed) {
+            throw new Error(formatApiError(parsed, 'Error al agregar ingrediente'));
         }
+        throw new Error(`Error ${response.status}: ${text}`);
     }
 
     const data = await response.json();

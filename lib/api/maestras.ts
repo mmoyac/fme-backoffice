@@ -27,6 +27,7 @@ export interface TipoProducto {
     nombre: string;
     descripcion: string | null;
     activo: boolean;
+    afecta_inventario: boolean;
 }
 
 // ============================================
@@ -148,6 +149,7 @@ export interface TipoCreate {
     nombre: string;
     descripcion?: string;
     activo: boolean;
+    afecta_inventario?: boolean;
 }
 
 export interface UnidadCreate {
