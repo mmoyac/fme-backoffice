@@ -148,6 +148,13 @@ export default function ComprasPage() {
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-right space-x-3">
+                                        <Link
+                                            href={`/admin/compras/${compra.id}/detalle`}
+                                            className="text-gray-300 hover:text-white font-medium text-sm transition-colors"
+                                            title="Ver Detalle"
+                                        >
+                                            👁️ Ver
+                                        </Link>
                                         {compra.estado === 'PENDIENTE' && (
                                             <>
                                                 <button
@@ -172,9 +179,6 @@ export default function ComprasPage() {
                                                     🗑️ Borrar
                                                 </button>
                                             </>
-                                        )}
-                                        {compra.estado === 'RECIBIDA' && (
-                                            <span className="text-green-500 text-xs text-opacity-70">Procesada</span>
                                         )}
                                     </td>
                                 </tr>
