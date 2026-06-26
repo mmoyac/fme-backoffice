@@ -20,37 +20,71 @@ export default function EtiquetaPreview({ etiqueta, onClose }: EtiquetaPreviewPr
   const [tamano, setTamano] = useState<TamanoEtiqueta>('A4');
   const [generandoPDF, setGenerandoPDF] = useState(false);
 
-  const handlePrint = () => {
-    window.print();
+  const generarPDF = async (): Promise<jsPDF | null> => {
+    const target = pdfRef.current;
+    if (!target) return null;
+    const canvas = await html2canvas(target, {
+      scale: 3,
+      backgroundColor: '#ffffff',
+      logging: false,
+      useCORS: true,
+      allowTaint: true,
+    });
+    const config = configs[tamano];
+    const widthMM = parseFloat(config.ancho);
+    const heightMM = parseFloat(config.alto);
+    const pdf = new jsPDF({
+      orientation: widthMM > heightMM ? 'landscape' : 'portrait',
+      unit: 'mm',
+      format: [widthMM, heightMM],
+    });
+    const imgData = canvas.toDataURL('image/png');
+    pdf.addImage(imgData, 'PNG', 0, 0, widthMM, heightMM);
+    return pdf;
   };
 
   const handleDownloadPDF = async () => {
-    // Usa el div oculto a tamaño real, NO el preview escalado
-    const target = pdfRef.current;
-    if (!target) return;
     setGenerandoPDF(true);
     try {
-      const canvas = await html2canvas(target, {
-        scale: 3,
-        backgroundColor: '#ffffff',
-        logging: false,
-        useCORS: true,
-        allowTaint: true,
-      });
-      const config = configs[tamano];
-      const widthMM = parseFloat(config.ancho);
-      const heightMM = parseFloat(config.alto);
-      const pdf = new jsPDF({
-        orientation: widthMM > heightMM ? 'landscape' : 'portrait',
-        unit: 'mm',
-        format: [widthMM, heightMM],
-      });
-      const imgData = canvas.toDataURL('image/png');
-      pdf.addImage(imgData, 'PNG', 0, 0, widthMM, heightMM);
-      pdf.save(`etiqueta_${etiqueta.producto_sku}_${tamano}.pdf`);
+      const pdf = await generarPDF();
+      if (pdf) pdf.save(`etiqueta_${etiqueta.producto_sku}_${tamano}.pdf`);
     } catch (error) {
       console.error('Error generando PDF:', error);
       alert('Error al generar PDF');
+    } finally {
+      setGenerandoPDF(false);
+    }
+  };
+
+  const handlePrint = async () => {
+    setGenerandoPDF(true);
+    try {
+      const pdf = await generarPDF();
+      if (!pdf) return;
+      const blob = pdf.output('blob');
+      const url = URL.createObjectURL(blob);
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      iframe.src = url;
+      iframe.onload = () => {
+        setTimeout(() => {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+        }, 100);
+      };
+      document.body.appendChild(iframe);
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+        if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+      }, 60000);
+    } catch (error) {
+      console.error('Error imprimiendo:', error);
+      alert('Error al imprimir');
     } finally {
       setGenerandoPDF(false);
     }
@@ -62,8 +96,8 @@ export default function EtiquetaPreview({ etiqueta, onClose }: EtiquetaPreviewPr
       ancho: '100mm',
       alto: '62mm',
       fontSize: { titulo: '11px', normal: '7px', small: '6px' },
-      barcodeHeight: 28,
-      barcodeWidth: 0.7,
+      barcodeHeight: 22,
+      barcodeWidth: 1.6,
     },
     '62x29': {
       nombre: '62mm x 29mm (Brother QL - Etiqueta Compacta)',
@@ -287,7 +321,7 @@ export default function EtiquetaPreview({ etiqueta, onClose }: EtiquetaPreviewPr
       <div style={{
         width: '100mm', height: '62mm',
         fontFamily: 'Arial, sans-serif', color: '#000', background: '#fff',
-        padding: '2mm', boxSizing: 'border-box',
+        padding: '2mm 2mm 2mm 4mm', boxSizing: 'border-box',
         display: 'flex', flexDirection: 'column', overflow: 'hidden',
       }}>
         {/* Nombre + ingredientes */}
@@ -347,37 +381,39 @@ export default function EtiquetaPreview({ etiqueta, onClose }: EtiquetaPreviewPr
             )}
           </div>
 
-          {/* Col central - tabla nutricional (se renderiza a 58mm y se escala a 35mm) */}
+          {/* Col central - tabla nutricional (se renderiza a 70mm y se escala a 0.50 = 35mm visual) */}
           <div style={{ width: '40mm', flexShrink: 0, position: 'relative', overflow: 'hidden', alignSelf: 'stretch' }}>
             {info && (
-              <div style={{ position: 'absolute', top: 0, left: 0, width: '70mm', transform: 'scale(0.57)', transformOrigin: 'top left' }}>
+              <div style={{ position: 'absolute', top: 0, left: 0, width: '70mm', transform: 'scale(0.50)', transformOrigin: 'top left' }}>
                 <NutritionalLabel info={info} />
               </div>
             )}
           </div>
 
-          {/* Col derecha - sellos + código */}
+          {/* Col derecha - sellos */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5mm' }}>
             {etiqueta.sellos?.map((sello) => (
               <SelloHexagonal key={sello.codigo} nombre={sello.nombre} />
             ))}
-            {etiqueta.codigo_barra && (
-              <div style={{ marginTop: 'auto' }}>
-                <Barcode
-                  value={etiqueta.codigo_barra}
-                  format="CODE128"
-                  width={cfg.barcodeWidth}
-                  height={cfg.barcodeHeight}
-                  fontSize={5}
-                  background="#ffffff"
-                  lineColor="#000000"
-                  displayValue={true}
-                  margin={0}
-                />
-              </div>
-            )}
           </div>
         </div>
+
+        {/* Franja inferior - código de barras a todo el ancho */}
+        {etiqueta.codigo_barra && (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            <Barcode
+              value={etiqueta.codigo_barra}
+              format="CODE128"
+              width={cfg.barcodeWidth}
+              height={cfg.barcodeHeight}
+              fontSize={8}
+              background="#ffffff"
+              lineColor="#000000"
+              displayValue={true}
+              margin={0}
+            />
+          </div>
+        )}
 
       </div>
     );
@@ -405,9 +441,10 @@ export default function EtiquetaPreview({ etiqueta, onClose }: EtiquetaPreviewPr
                 </button>
                 <button
                   onClick={handlePrint}
-                  className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg font-medium transition-colors"
+                  disabled={generandoPDF}
+                  className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50"
                 >
-                  🖨️ Imprimir
+                  {generandoPDF ? '⏳ Generando...' : '🖨️ Imprimir'}
                 </button>
                 <button
                   onClick={onClose}
