@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { AuthService } from '@/lib/auth';
+import { useTenant } from '@/lib/TenantContext';
 import {
   listarHojasRuta,
   listarPedidosDisponibles,
@@ -46,6 +47,11 @@ function KgBar({ usado, capacidad }: { usado: number; capacidad: number | null }
 
 export default function HojasRutaPage() {
   const router = useRouter();
+  const { config: tenantConfig } = useTenant();
+  const deliveryCfg = (tenantConfig as any)?.delivery ?? {};
+  const CFG_FIJO: number = deliveryCfg.costo_fijo ?? 2000;
+  const CFG_KM: number = deliveryCfg.costo_por_km ?? 150;
+  const CFG_KILO: number = deliveryCfg.costo_por_kilo ?? 0;
   const [hojas, setHojas] = useState<HojaRuta[]>([]);
   const [pedidosDisponibles, setPedidosDisponibles] = useState<PedidoResumen[]>([]);
   const [vehiculos, setVehiculos] = useState<Vehiculo[]>([]);
@@ -67,6 +73,36 @@ export default function HojasRutaPage() {
   // Vehículo seleccionado (para mostrar capacidad)
   const vehiculoSel = vehiculos.find((v) => v.id === Number(vehiculoId)) ?? null;
   const capacidadNum = vehiculoSel?.capacidad_kg ?? 0;
+
+  // Auto-rellenar tarifa desde config del tenant al cambiar tipo de cobro
+  useEffect(() => {
+    if (tipoCobro === 'POR_KG') setTarifaChofer(String(CFG_KILO || ''));
+    else if (tipoCobro === 'FIJO') setTarifaChofer(String(CFG_FIJO || ''));
+    else setTarifaChofer('');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tipoCobro]);
+
+  // Cálculo en tiempo real del estimado al chofer
+  const kgSeleccionados = pedidosDisponibles
+    .filter((p) => pedidosSeleccionados.has(p.id))
+    .reduce((s, p) => s + (p.kg_brutos ?? 0), 0);
+  const tarifaNum = Number(tarifaChofer) || 0;
+  
+  // Contar direcciones únicas (costo fijo se cobra por dirección de entrega, no por pedido)
+  const direccionesUnicas = new Set(
+    pedidosDisponibles
+      .filter((p) => pedidosSeleccionados.has(p.id))
+      .map((p) => p.direccion || '')
+  ).size;
+  const estimadoFijo = CFG_FIJO * direccionesUnicas;
+  
+  const estimadoKilo = Math.round(kgSeleccionados * CFG_KILO);
+  const costoDeliverySeleccionados = pedidosDisponibles
+    .filter((p) => pedidosSeleccionados.has(p.id))
+    .reduce((s, p) => s + (p.costo_delivery ?? 0), 0);
+  // Pago al chofer = suma de los 3 conceptos (fijo + kilo + delivery)
+  const estimadoChoferPorKg = tipoCobro === 'POR_KG' ? Math.round(estimadoFijo + estimadoKilo + costoDeliverySeleccionados) : null;
+  const estimadoChoferFijo = tipoCobro === 'FIJO' ? Math.round(estimadoFijo + costoDeliverySeleccionados) : null;
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -101,10 +137,6 @@ export default function HojasRutaPage() {
       return next;
     });
   };
-
-  const kgSeleccionados = pedidosDisponibles
-    .filter((p) => pedidosSeleccionados.has(p.id))
-    .reduce((s, p) => s + p.kg_brutos, 0);
 
   const excedeLimite = capacidadNum > 0 && kgSeleccionados > capacidadNum;
 
@@ -626,7 +658,7 @@ export default function HojasRutaPage() {
 
                 {/* Cobro chofer */}
                 <div>
-                  <label className="text-slate-300 text-sm block mb-1">Cobro al chofer</label>
+                  <label className="text-slate-300 text-sm block mb-1">Cobro del chofer</label>
                   <select
                     value={tipoCobro}
                     onChange={(e) => setTipoCobro(e.target.value as '' | 'FIJO' | 'POR_KG')}
@@ -702,6 +734,9 @@ export default function HojasRutaPage() {
                                 <span className="text-xs bg-blue-900/50 text-blue-300 border border-blue-700 px-1.5 py-0.5 rounded-full">Transferencia</span>
                               )}
                               <span className="text-slate-300 text-sm truncate">{p.cliente_nombre}</span>
+                              {!esSolicitud && p.local_nombre && (
+                                <span className="text-xs bg-slate-700 text-slate-300 border border-slate-600 px-1.5 py-0.5 rounded-full">📦 {p.local_nombre}</span>
+                              )}
                               {!esSolicitud && !p.es_pagado && (
                                 <span className="text-xs bg-amber-900/50 text-amber-400 border border-amber-700 px-1.5 py-0.5 rounded-full">⚠️ No pagado</span>
                               )}
@@ -734,6 +769,41 @@ export default function HojasRutaPage() {
                   </div>
                 )}
               </div>
+
+              {/* Panel de estimado en tiempo real */}
+              {tipoCobro && pedidosSeleccionados.size > 0 && (
+                <div className="bg-slate-800/60 border border-slate-600 rounded-lg p-4 space-y-2">
+                  <p className="text-slate-300 text-sm font-semibold">Estimado cobro del chofer</p>
+                  <div className="grid grid-cols-1 gap-1 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Costo fijo ({direccionesUnicas} dirección{direccionesUnicas !== 1 ? 'es única' : ' única'}{direccionesUnicas > 1 ? 's' : ''} × ${CFG_FIJO.toLocaleString('es-CL')}):</span>
+                      <span className="text-white">${estimadoFijo.toLocaleString('es-CL')}</span>
+                    </div>
+                    {CFG_KILO > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Por kilo ({kgSeleccionados.toFixed(1)} kg × ${CFG_KILO.toLocaleString('es-CL')}):</span>
+                        <span className="text-white">${estimadoKilo.toLocaleString('es-CL')}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Por km / delivery ({pedidosSeleccionados.size} pedido{pedidosSeleccionados.size !== 1 ? 's' : ''}):</span>
+                      <span className="text-white">${costoDeliverySeleccionados.toLocaleString('es-CL')}</span>
+                    </div>
+                    {tipoCobro === 'POR_KG' && tarifaNum > 0 && (
+                      <div className="flex justify-between border-t border-slate-600 pt-2 mt-1">
+                        <span className="text-slate-300 font-medium">Pago al chofer (TOTAL):</span>
+                        <span className="text-cyan-400 font-bold">${estimadoChoferPorKg!.toLocaleString('es-CL')}</span>
+                      </div>
+                    )}
+                    {tipoCobro === 'FIJO' && tarifaNum > 0 && (
+                      <div className="flex justify-between border-t border-slate-600 pt-2 mt-1">
+                        <span className="text-slate-300 font-medium">Pago al chofer (TOTAL):</span>
+                        <span className="text-cyan-400 font-bold">${estimadoChoferFijo!.toLocaleString('es-CL')}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {errorCrear && (
                 <div className="bg-red-900/40 border border-red-700 text-red-300 rounded-lg px-4 py-2 text-sm">{errorCrear}</div>

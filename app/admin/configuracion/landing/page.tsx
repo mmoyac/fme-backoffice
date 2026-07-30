@@ -88,6 +88,7 @@ export default function ConfiguracionLandingPage() {
         habilitar_carrito: data.habilitar_carrito,
         costo_fijo_delivery: data.costo_fijo_delivery ?? null,
         costo_por_km_delivery: data.costo_por_km_delivery ?? null,
+        costo_por_kilo_delivery: data.costo_por_kilo_delivery ?? null,
         monto_minimo_delivery_gratis: data.monto_minimo_delivery_gratis ?? null,
         max_km_delivery: data.max_km_delivery ?? null,
       });
@@ -816,6 +817,18 @@ export default function ConfiguracionLandingPage() {
                 min={0}
               />
               <p className="text-xs text-slate-400 mt-1">Cargo adicional por kilómetro</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">Costo por kilo ($)</label>
+              <input
+                type="number"
+                value={formData.costo_por_kilo_delivery ?? ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, costo_por_kilo_delivery: e.target.value ? parseFloat(e.target.value) : null }))}
+                className="w-full p-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
+                placeholder="20"
+                min={0}
+              />
+              <p className="text-xs text-slate-400 mt-1">Cargo adicional por kilogramo del pedido</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">Monto mínimo para delivery gratis ($)</label>

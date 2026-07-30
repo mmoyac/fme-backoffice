@@ -80,6 +80,7 @@ export interface ConfiguracionLanding {
     // Configuración de Delivery
     costo_fijo_delivery?: number | null;
     costo_por_km_delivery?: number | null;
+    costo_por_kilo_delivery?: number | null;
     monto_minimo_delivery_gratis?: number | null;
     max_km_delivery?: number | null;
 
@@ -116,6 +117,7 @@ export interface ConfiguracionLandingCreate {
     habilitar_carrito?: boolean;
     costo_fijo_delivery?: number | null;
     costo_por_km_delivery?: number | null;
+    costo_por_kilo_delivery?: number | null;
     monto_minimo_delivery_gratis?: number | null;
     max_km_delivery?: number | null;
 }

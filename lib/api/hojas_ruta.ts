@@ -32,6 +32,8 @@ export interface PedidoResumen {
   kg_brutos: number;
   items_count: number;
   fecha_pedido?: string;
+  local_nombre?: string | null;
+  local_direccion?: string | null;
   // Extras para solicitudes
   local_origen_nombre?: string;
   local_destino_nombre?: string;

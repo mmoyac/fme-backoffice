@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { useTenant } from '@/lib/TenantContext';
 
 interface CalculoDespacho {
   direccionOrigen: string;
@@ -8,7 +9,8 @@ interface CalculoDespacho {
   distanciaKm: number;
   tiempoMinutos: number;
   costoFijo: number;
-  costoVariable: number;
+  costoKm: number;
+  costoKilo: number;
   costoTotal: number;
 }
 
@@ -19,8 +21,10 @@ interface DireccionSugerencia {
 }
 
 export default function CalculadoraDespachoPage() {
+  const { config: tenantConfig } = useTenant();
   const [direccionOrigen, setDireccionOrigen] = useState('');
   const [direccionDestino, setDireccionDestino] = useState('');
+  const [kgTotal, setKgTotal] = useState('');
   const [calculando, setCalculando] = useState(false);
   const [resultado, setResultado] = useState<CalculoDespacho | null>(null);
   const [error, setError] = useState('');
@@ -41,9 +45,10 @@ export default function CalculadoraDespachoPage() {
   const timeoutOrigenRef = useRef<NodeJS.Timeout>();
   const timeoutDestinoRef = useRef<NodeJS.Timeout>();
 
-  // Constantes de precios
-  const COSTO_FIJO = 2000; // CLP
-  const COSTO_POR_KM = 150; // CLP
+  // Tarifas desde config del tenant (con fallback)
+  const COSTO_FIJO = (tenantConfig as any)?.delivery?.costo_fijo ?? 2000;
+  const COSTO_POR_KM = (tenantConfig as any)?.delivery?.costo_por_km ?? 150;
+  const COSTO_POR_KILO = (tenantConfig as any)?.delivery?.costo_por_kilo ?? 0;
 
   // Función para obtener sugerencias de Mapbox
   const obtenerSugerencias = async (query: string): Promise<DireccionSugerencia[]> => {
@@ -206,8 +211,9 @@ export default function CalculadoraDespachoPage() {
       const { distanciaKm, tiempoMinutos } = await calcularRuta(coordsOrigen, coordsDestino);
 
       // 3. Calcular costos
-      const costoVariable = Math.round(distanciaKm * COSTO_POR_KM);
-      const costoTotal = COSTO_FIJO + costoVariable;
+      const costoKm = Math.round(distanciaKm * COSTO_POR_KM);
+      const costoKilo = COSTO_POR_KILO > 0 ? Math.round(parseFloat(kgTotal || '0') * COSTO_POR_KILO) : 0;
+      const costoTotal = COSTO_FIJO + costoKm + costoKilo;
 
       setResultado({
         direccionOrigen,
@@ -215,7 +221,8 @@ export default function CalculadoraDespachoPage() {
         distanciaKm: Math.round(distanciaKm * 100) / 100, // 2 decimales
         tiempoMinutos: Math.round(tiempoMinutos),
         costoFijo: COSTO_FIJO,
-        costoVariable,
+        costoKm,
+        costoKilo,
         costoTotal
       });
 
@@ -229,6 +236,7 @@ export default function CalculadoraDespachoPage() {
   const limpiarFormulario = () => {
     setDireccionOrigen('');
     setDireccionDestino('');
+    setKgTotal('');
     setResultado(null);
     setError('');
   };
@@ -347,8 +355,33 @@ export default function CalculadoraDespachoPage() {
                   <span>Costo por km:</span>
                   <span className="font-semibold">${COSTO_POR_KM.toLocaleString('es-CL')} CLP/km</span>
                 </div>
+                {COSTO_POR_KILO > 0 && (
+                  <div className="flex justify-between">
+                    <span>Costo por kilo:</span>
+                    <span className="font-semibold">${COSTO_POR_KILO.toLocaleString('es-CL')} CLP/kg</span>
+                  </div>
+                )}
               </div>
             </div>
+
+            {/* Kilos del pedido */}
+            {COSTO_POR_KILO > 0 && (
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Peso total del pedido (kg)
+                </label>
+                <input
+                  type="number"
+                  value={kgTotal}
+                  onChange={(e) => setKgTotal(e.target.value)}
+                  placeholder="Ej: 5.5"
+                  min={0}
+                  step={0.1}
+                  className="w-full bg-slate-700 text-white rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500"
+                  disabled={calculando}
+                />
+              </div>
+            )}
 
             {/* Error */}
             {error && (
@@ -423,9 +456,15 @@ export default function CalculadoraDespachoPage() {
                     <span className="text-white">${resultado.costoFijo.toLocaleString('es-CL')}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-400">Variable ({resultado.distanciaKm} km × $150):</span>
-                    <span className="text-white">${resultado.costoVariable.toLocaleString('es-CL')}</span>
+                    <span className="text-gray-400">Por distancia ({resultado.distanciaKm} km × ${COSTO_POR_KM.toLocaleString('es-CL')}):</span>
+                    <span className="text-white">${resultado.costoKm.toLocaleString('es-CL')}</span>
                   </div>
+                  {resultado.costoKilo > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Por peso ({kgTotal} kg × ${COSTO_POR_KILO.toLocaleString('es-CL')}):</span>
+                      <span className="text-white">${resultado.costoKilo.toLocaleString('es-CL')}</span>
+                    </div>
+                  )}
                   <div className="border-t border-slate-600 pt-2 mt-2">
                     <div className="flex justify-between">
                       <span className="text-lg font-semibold text-white">Total:</span>
