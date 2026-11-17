@@ -87,3 +87,22 @@ export async function eliminarPrecio(precioId: number): Promise<void> {
   });
   if (!response.ok) throw new Error('Error al eliminar precio');
 }
+// Exportar precios a Excel con los filtros de la pantalla (reunión cliente 16-11-26, punto 1.6.1)
+export async function descargarPreciosExcel(f: { q?: string; local_id?: number; categoria_id?: number } = {}): Promise<void> {
+  const params = new URLSearchParams();
+  if (f.q?.trim()) params.set('q', f.q.trim());
+  if (f.local_id) params.set('local_id', String(f.local_id));
+  if (f.categoria_id) params.set('categoria_id', String(f.categoria_id));
+  const res = await fetch(`${API_URL}/api/precios/excel?${params}`, { headers: AuthService.getAuthHeaders() });
+  if (!res.ok) throw new Error('Error al exportar precios a Excel');
+  const disp = res.headers.get('Content-Disposition') || '';
+  const nombre = /filename="?([^"]+)"?/.exec(disp)?.[1] || 'precios.xlsx';
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = nombre;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}

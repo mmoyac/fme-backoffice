@@ -87,6 +87,20 @@ const NUEVO_CHEQUE_INICIAL = {
     fecha_vencimiento: '', librador_nombre: '', librador_rut: '', observaciones: '',
 };
 
+// Modalidad y estado de entrega del pedido (add-modalidad-entrega-pedido)
+function BadgeEntrega({ modalidad, entregado, fecha }: { modalidad?: string | null; entregado?: boolean; fecha?: string | null }) {
+    if (!modalidad) return null;
+    const texto = modalidad === 'DESPACHO' ? '🚚 Despacho' : '🏪 Retiro';
+    const estado = entregado
+        ? `entregado${fecha ? ' ' + new Date(fecha).toLocaleDateString('es-CL') : ''}`
+        : 'pendiente de entrega';
+    return (
+        <span className={`text-xs px-2 py-0.5 rounded-full ${entregado ? 'bg-green-900/40 text-green-300' : 'bg-amber-900/40 text-amber-300'}`}>
+            {texto} · {estado}
+        </span>
+    );
+}
+
 export default function CobranzaPage() {
     const [items, setItems] = useState<ItemCobranza[]>([]);
     const [loading, setLoading] = useState(true);
@@ -413,6 +427,7 @@ export default function CobranzaPage() {
                                     <BadgeTipo tipo={item.tipo} />
                                     <BadgeVencimiento dias={item.dias_vencimiento} sinCheques={item.sin_cheques} />
                                     <BadgeEstadoPedido nombre={item.estado_pedido_nombre} color={item.estado_pedido_color} />
+<BadgeEntrega modalidad={item.modalidad_entrega} entregado={item.entregado} fecha={item.fecha_entrega} />
                                 </div>
                             </div>
                             <div className="flex justify-between text-sm">
@@ -529,6 +544,7 @@ export default function CobranzaPage() {
                                     </td>
                                     <td className="px-4 py-3">
                                         <BadgeEstadoPedido nombre={item.estado_pedido_nombre} color={item.estado_pedido_color} />
+<BadgeEntrega modalidad={item.modalidad_entrega} entregado={item.entregado} fecha={item.fecha_entrega} />
                                     </td>
                                     <td className="px-4 py-3 text-sm text-right font-semibold text-white">
                                         {formatMonto(item.monto_pendiente)}

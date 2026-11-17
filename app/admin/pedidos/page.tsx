@@ -9,6 +9,9 @@ export default function PedidosPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filtroEstado, setFiltroEstado] = useState<string>('');
+  // Entrega (add-modalidad-entrega-pedido)
+  const [filtroModalidad, setFiltroModalidad] = useState<'' | 'RETIRO' | 'DESPACHO'>('');
+  const [filtroEntregado, setFiltroEntregado] = useState<'' | 'si' | 'no'>('');
 
   const estados = [
     { value: '', label: 'Todos' },
@@ -23,7 +26,10 @@ export default function PedidosPage() {
     try {
       setLoading(true);
       setError('');
-      const data = await listarPedidos(filtroEstado || undefined);
+      const data = await listarPedidos(filtroEstado || undefined, undefined, undefined, {
+        modalidad_entrega: filtroModalidad || undefined,
+        entregado: filtroEntregado === '' ? undefined : filtroEntregado === 'si',
+      });
       setPedidos(data);
     } catch (err) {
       setError('Error al cargar los pedidos');
@@ -35,7 +41,7 @@ export default function PedidosPage() {
 
   useEffect(() => {
     cargarPedidos();
-  }, [filtroEstado]);
+  }, [filtroEstado, filtroModalidad, filtroEntregado]);
 
   const getEstadoBadge = (estado: string) => {
     const estadoObj = estados.find(e => e.value === estado);
@@ -82,6 +88,27 @@ export default function PedidosPage() {
               {estado.label}
             </button>
           ))}
+        </div>
+        <div className="flex flex-wrap gap-3 items-center mt-3">
+          <span className="text-gray-400 font-semibold">Entrega:</span>
+          <select
+            value={filtroModalidad}
+            onChange={e => setFiltroModalidad(e.target.value as '' | 'RETIRO' | 'DESPACHO')}
+            className="bg-slate-700 text-white rounded-lg px-3 py-2"
+          >
+            <option value="">Retiro y despacho</option>
+            <option value="RETIRO">🏪 Retiro en local</option>
+            <option value="DESPACHO">🚚 Despacho</option>
+          </select>
+          <select
+            value={filtroEntregado}
+            onChange={e => setFiltroEntregado(e.target.value as '' | 'si' | 'no')}
+            className="bg-slate-700 text-white rounded-lg px-3 py-2"
+          >
+            <option value="">Entregados y pendientes</option>
+            <option value="no">Pendientes de entrega</option>
+            <option value="si">Entregados</option>
+          </select>
         </div>
       </div>
 
@@ -145,6 +172,9 @@ export default function PedidosPage() {
                     Estado
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 uppercase">
+                    Entrega
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 uppercase">
                     Documento
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 uppercase">
@@ -190,6 +220,21 @@ export default function PedidosPage() {
                     </td>
                     <td className="px-4 py-4">
                       {getEstadoBadge(pedido.estado)}
+                    </td>
+                    <td className="px-4 py-4 text-sm">
+                      <div className="text-white">
+                        {pedido.modalidad_entrega === 'DESPACHO' ? '🚚 Despacho' : '🏪 Retiro'}
+                      </div>
+                      {pedido.fecha_entrega ? (
+                        <div className="text-xs text-green-400" title={pedido.retirado_por_nombre ? `Retiró: ${pedido.retirado_por_nombre}` : undefined}>
+                          Entregado {formatFecha(pedido.fecha_entrega)}
+                          {pedido.entregado_por_nombre && <span className="text-gray-400"> · {pedido.entregado_por_nombre}</span>}
+                        </div>
+                      ) : pedido.estado === 'ENTREGADO' ? (
+                        <div className="text-xs text-green-400">Entregado</div>
+                      ) : pedido.estado !== 'CANCELADO' ? (
+                        <div className="text-xs text-amber-400">Pendiente de entrega</div>
+                      ) : null}
                     </td>
                     <td className="px-4 py-4">
                       {pedido.tipo_documento_codigo === 'FAC' ? (

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { AuthService } from '@/lib/auth';
+import ModulosTenantModal from '@/components/superadmin/ModulosTenantModal';
 
 interface TenantStats {
     id: number;
@@ -30,6 +31,7 @@ export default function SuperAdminPage() {
     const [stats, setStats] = useState<PlatformStats | null>(null);
     const [loading, setLoading] = useState(true);
     const [switching, setSwitching] = useState<number | null>(null);
+    const [modulosDe, setModulosDe] = useState<TenantStats | null>(null);
 
     const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -172,6 +174,12 @@ export default function SuperAdminPage() {
                                             {switching === t.id ? '...' : 'Entrar'}
                                         </button>
                                         <button
+                                            onClick={() => setModulosDe(t)}
+                                            className="bg-slate-600 hover:bg-slate-500 text-white px-3 py-1 rounded text-xs font-semibold"
+                                        >
+                                            Módulos
+                                        </button>
+                                        <button
                                             onClick={() => handleToggleActivo(t)}
                                             className={`px-3 py-1 rounded text-xs font-semibold ${t.activo ? 'bg-red-700 hover:bg-red-800 text-white' : 'bg-green-700 hover:bg-green-800 text-white'}`}
                                         >
@@ -184,6 +192,10 @@ export default function SuperAdminPage() {
                     </tbody>
                 </table>
             </div>
+
+            {modulosDe && (
+                <ModulosTenantModal tenant={modulosDe} onClose={() => setModulosDe(null)} />
+            )}
         </div>
     );
 }

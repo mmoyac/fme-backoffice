@@ -311,6 +311,7 @@ export default function DetalleCotizacionPage({ params }: { params: { id: string
           notas: aceptarForm.notas || null,
           medio_pago_id: aceptarForm.medio_pago_id ? Number(aceptarForm.medio_pago_id) : null,
           requiere_delivery: requiereDelivery,
+          modalidad_entrega: requiereDelivery ? 'DESPACHO' : 'RETIRO',
           costo_delivery: requiereDelivery
             ? (noCobraDelivery ? 0 : (costoDeliveryCalc?.costoTotal ?? null))
             : null,
@@ -697,9 +698,15 @@ export default function DetalleCotizacionPage({ params }: { params: { id: string
                   <div className="flex items-center gap-2">
                     <span>🚚</span>
                     <div>
-                      <p className="text-sm text-white font-medium">Requiere Delivery</p>
+                      <p className="text-sm text-white font-medium">
+                        Modalidad de entrega: {requiereDelivery ? 'Despacho' : 'Retiro en local'}
+                      </p>
                       <p className="text-xs text-gray-400">
-                        {cotizacion.cliente.direccion || 'Selecciona un cliente con dirección para activar'}
+                        {requiereDelivery
+                          ? `Se despacha a: ${cotizacion.cliente.direccion}`
+                          : cotizacion.cliente.direccion
+                            ? 'El cliente lo retira. Activa para despachar a su dirección.'
+                            : 'El cliente lo retira (sin dirección registrada para despacho).'}
                       </p>
                     </div>
                   </div>

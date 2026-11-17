@@ -1,4 +1,5 @@
 import { AuthService } from '../auth';
+import { fetchConTimeout, esErrorDeRed, ErrorDeRed, generarUUID, esperar } from '../net';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -44,6 +45,14 @@ export interface Pedido {
   estado: string;
   total: number;
   costo_delivery?: number | null;
+  // Entrega (add-modalidad-entrega-pedido)
+  modalidad_entrega?: 'RETIRO' | 'DESPACHO';
+  fecha_entrega?: string | null;
+  entregado_por_id?: number | null;
+  entregado_por_nombre?: string | null;
+  retirado_por_nombre?: string | null;
+  retirado_por_rut?: string | null;
+  nota_entrega?: string | null;
   pagado: boolean;
   inventario_descontado: boolean;
   notas?: string;
@@ -130,6 +139,12 @@ export interface PedidoCreate {
   cliente_razon_social?: string;
   cliente_giro?: string;
   cliente_es_empresa?: boolean;
+
+  // Idempotencia / ventas offline: misma venta => mismo client_uuid en todos los intentos
+  client_uuid?: string;
+  fecha_venta_cliente?: string;
+  origen?: 'ONLINE' | 'OFFLINE';
+  numero_provisorio?: string;
 }
 
 export interface PedidoCreateResponse {
@@ -138,10 +153,17 @@ export interface PedidoCreateResponse {
   monto_total: number;
   estado: string;
   mensaje: string;
+  /** true si la venta ya existía (reintento) y el servidor devolvió la original */
+  duplicado?: boolean;
 }
 
-export async function listarPedidos(estado?: string, fecha?: string, tipo_pedido_id?: number): Promise<Pedido[]> {
+export async function listarPedidos(
+  estado?: string, fecha?: string, tipo_pedido_id?: number,
+  entrega?: { modalidad_entrega?: 'RETIRO' | 'DESPACHO'; entregado?: boolean }
+): Promise<Pedido[]> {
   const url = new URL(`${API_URL}/api/pedidos/`);
+  if (entrega?.modalidad_entrega) url.searchParams.append('modalidad_entrega', entrega.modalidad_entrega);
+  if (entrega?.entregado !== undefined) url.searchParams.append('entregado', String(entrega.entregado));
   if (estado) {
     url.searchParams.append('estado', estado);
   }
@@ -199,19 +221,50 @@ export async function actualizarPedido(id: number, data: PedidoUpdate): Promise<
   return result;
 }
 
+// Venta: timeout por intento y esperas entre reintentos automáticos (solo errores de red/5xx).
+// Reintentar es seguro: el backend es idempotente por client_uuid y nunca duplica la venta.
+const TIMEOUT_VENTA_MS = 12000;
+const ESPERAS_REINTENTO_VENTA_MS = [0, 1500];
+
 export async function crearPedido(data: PedidoCreate): Promise<PedidoCreateResponse> {
-  console.log('🚀 Enviando pedido:', data);
-  
-  const response = await fetch(`${API_URL}/api/pedidos/backoffice`, {
-    method: 'POST',
-    headers: AuthService.getAuthHeaders(),
-    body: JSON.stringify(data),
-  });
+  const payload: PedidoCreate = { ...data, client_uuid: data.client_uuid || generarUUID() };
+  console.log('🚀 Enviando pedido:', payload);
+
+  let response: Response | null = null;
+  for (const espera of ESPERAS_REINTENTO_VENTA_MS) {
+    if (espera) await esperar(espera);
+    try {
+      response = await fetchConTimeout(`${API_URL}/api/pedidos/backoffice`, {
+        method: 'POST',
+        headers: AuthService.getAuthHeaders(),
+        body: JSON.stringify(payload),
+      }, TIMEOUT_VENTA_MS);
+    } catch (error) {
+      if (esErrorDeRed(error)) {
+        console.warn('⚠️ Venta: falla de red, reintentando con el mismo client_uuid...', error.message);
+        response = null;
+        continue;
+      }
+      throw error;
+    }
+    if (response.status >= 500) {
+      console.warn('⚠️ Venta: servidor respondió', response.status, '- reintentando...');
+      continue;
+    }
+    break;
+  }
+
+  if (!response || response.status >= 500) {
+    throw new ErrorDeRed(
+      'No se pudo confirmar la venta porque el servidor no responde. ' +
+      'Puede presionar "Finalizar" nuevamente: la venta NO se duplicará.'
+    );
+  }
 
   console.log('📡 Respuesta del servidor:', response.status, response.statusText);
 
   if (!response.ok) {
-    const errorData = await response.json();
+    const errorData = await response.json().catch(() => ({}));
     console.error('❌ Error del servidor:', errorData);
     
     // Crear un error más descriptivo
@@ -291,5 +344,23 @@ export async function actualizarEstadoSII(
     throw new Error(errorData.detail || 'Error al actualizar estado SII');
   }
 
+  return response.json();
+}
+
+
+// Marcar pedido de retiro como retirado por el cliente (add-modalidad-entrega-pedido)
+export async function marcarPedidoRetirado(
+  pedidoId: number,
+  data: { retirado_por_nombre?: string; retirado_por_rut?: string; nota_entrega?: string }
+): Promise<Pedido> {
+  const response = await fetch(`${API_URL}/api/pedidos/${pedidoId}/retiro`, {
+    method: 'POST',
+    headers: AuthService.getAuthHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(typeof err.detail === 'string' ? err.detail : 'Error al registrar el retiro');
+  }
   return response.json();
 }

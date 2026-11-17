@@ -283,6 +283,10 @@ export default function RecetaPage({ params }: { params: { id: string } }) {
         return productos.find(p => p.id === id)?.nombre || 'Desconocido';
     }
 
+    function getProductoSku(id: number): string {
+        return productos.find(p => p.id === id)?.sku || '—';
+    }
+
 
 
     function getUnidadSimbolo(id: number): string {
@@ -411,7 +415,8 @@ export default function RecetaPage({ params }: { params: { id: string } }) {
                                         {receta.ingredientes.map((ing) => (
                                             <tr key={ing.id}>
                                                 <td className="px-4 py-3 text-sm text-white">
-                                                    {getProductoNombre(ing.producto_ingrediente_id)}
+                                                    <div>{getProductoNombre(ing.producto_ingrediente_id)}</div>
+                                                    <div className="text-xs text-gray-400">SKU: {getProductoSku(ing.producto_ingrediente_id)}</div>
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     <TipoIngredienteBadge productoId={ing.producto_ingrediente_id} />
@@ -676,7 +681,8 @@ export default function RecetaPage({ params }: { params: { id: string } }) {
                                         {formData.ingredientes.map((ing, index) => (
                                             <tr key={index}>
                                                 <td className="px-4 py-3 text-sm text-white">
-                                                    {getProductoNombre(ing.producto_ingrediente_id)}
+                                                    <div>{getProductoNombre(ing.producto_ingrediente_id)}</div>
+                                                    <div className="text-xs text-gray-400">SKU: {getProductoSku(ing.producto_ingrediente_id)}</div>
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     <TipoIngredienteBadge productoId={ing.producto_ingrediente_id} />

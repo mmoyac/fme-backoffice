@@ -8,9 +8,30 @@ export interface DetalleOrden {
     producto_id: number;
     unidad_medida_id: number;
     cantidad_programada: number;
-    cantidad_producida?: number;
-    // Included fields via join usually, but for now we might need to fetch manually or check backend response
-    // Backend "OrdenProduccionRead" includes full structure if configured, let's assume we might need to enhance backend or fetch aux data.
+    cantidad_producida?: number | null;
+    motivo_diferencia?: string | null;
+    /** producida - programada (negativo = se produjo menos). null si la OP no está finalizada. */
+    diferencia?: number | null;
+}
+
+export interface UsuarioRef {
+    id: number;
+    nombre_completo?: string | null;
+    email: string;
+}
+
+/** Roles que pueden solicitar (crear) y eliminar OP. Debe coincidir con utils/permisos.py del backend. */
+export const ROLES_ADMIN_OP = ['admin', 'administrador', 'superadmin'];
+
+/** Rol `produccion`: solo finaliza órdenes; no crea, edita ni cancela OT. */
+export function esRolProduccion(user?: { is_superadmin?: boolean; role?: { nombre?: string } | null } | null): boolean {
+    if (!user || user.is_superadmin) return false;
+    return (user.role?.nombre?.toLowerCase() ?? '') === 'produccion';
+}
+
+export function esAdminProduccion(user?: { is_superadmin?: boolean; role?: { nombre?: string } | null } | null): boolean {
+    if (!user) return false;
+    return !!user.is_superadmin || ROLES_ADMIN_OP.includes(user.role?.nombre?.toLowerCase() ?? '');
 }
 
 export interface DetalleOrdenCreate {
@@ -28,6 +49,8 @@ export interface OrdenProduccion {
     estado: string; // PLANIFICADA, FINALIZADA, CANCELADA
     notas?: string;
     detalles: DetalleOrden[];
+    solicitado_por?: UsuarioRef | null;
+    producido_por?: UsuarioRef | null;
 }
 
 export interface OrdenProduccionCreate {
@@ -70,6 +93,7 @@ export async function createOrden(orden: OrdenProduccionCreate): Promise<OrdenPr
 export interface AjusteProduccion {
     detalle_id: number;
     cantidad_producida_real: number;
+    motivo_diferencia?: string;
 }
 
 export interface AjusteConsumo {
@@ -125,6 +149,24 @@ export async function getRequisitosOrden(id: number): Promise<RequisitoInsumo[]>
 
     if (!response.ok) {
         throw new Error('Error al calcular requisitos');
+    }
+    return response.json();
+}
+
+/** Editar cantidades programadas de una OP PLANIFICADA (solo admin). */
+export async function editarCantidadesOrden(
+    id: number,
+    detalles: { detalle_id: number; cantidad_programada: number }[],
+    motivo?: string,
+): Promise<OrdenProduccion> {
+    const response = await fetch(`${API_URL}/api/produccion/ordenes/${id}/cantidades`, {
+        method: 'PUT',
+        headers: AuthService.getAuthHeaders(),
+        body: JSON.stringify({ detalles, motivo: motivo || undefined }),
+    });
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(typeof error.detail === 'string' ? error.detail : 'Error al editar la orden');
     }
     return response.json();
 }

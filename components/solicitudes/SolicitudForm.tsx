@@ -139,12 +139,10 @@ const SolicitudForm: React.FC<Props> = ({ solicitud, onSubmit, onCancel }) => {
         local_destino_id: Number(localDestino),
       });
     } else {
+      // tenant, solicitante y estado inicial los fija el backend (fix-seguridad-inventario)
       onSubmit({
-        tenant_id: (user as any)?.tenant_id || 1,
-        usuario_solicitante_id: user?.id || 1,
         local_origen_id: Number(localOrigen),
         local_destino_id: Number(localDestino),
-        estado_id: Number(estado),
         items,
         nota: nota.trim() || undefined,
       });

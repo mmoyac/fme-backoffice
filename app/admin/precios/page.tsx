@@ -3,13 +3,18 @@
 import { useState, useEffect } from 'react';
 import { getProductos, type Producto } from '@/lib/api/productos';
 import { getLocales, type Local } from '@/lib/api/locales';
-import { getPrecios, crearPrecio, updatePrecio, eliminarPrecio, type Precio } from '@/lib/api/precios';
+import { getPrecios, crearPrecio, updatePrecio, eliminarPrecio, descargarPreciosExcel, type Precio } from '@/lib/api/precios';
 import { getUnidadesMedida, type UnidadMedida } from '@/lib/api/maestras';
 
 export default function PreciosPage() {
   const [productos, setProductos] = useState<Producto[]>([]);
   // Productos ordenados alfabéticamente por nombre
   const productosOrdenados = [...productos].sort((a, b) => a.nombre.localeCompare(b.nombre));
+  // Filtros (reunión cliente 16-11-26, punto 1.6.1)
+  const [busqueda, setBusqueda] = useState('');
+  const [filtroLocal, setFiltroLocal] = useState<number>(0);
+  const [filtroCategoria, setFiltroCategoria] = useState<number>(0);
+  const [exportando, setExportando] = useState(false);
   const [locales, setLocales] = useState<Local[]>([]);
   const [unidades, setUnidades] = useState<UnidadMedida[]>([]);
   const [precios, setPrecios] = useState<Precio[]>([]);
@@ -50,7 +55,7 @@ export default function PreciosPage() {
   }
 
   function getPreciosPorProducto(productoId: number) {
-    return precios.filter(p => p.producto_id === productoId);
+    return precios.filter(p => p.producto_id === productoId && (!filtroLocal || p.local_id === filtroLocal));
   }
 
   function getLocalNombre(localId: number) {
@@ -136,6 +141,27 @@ export default function PreciosPage() {
     );
   }
 
+  const categoriasDisponibles = Array.from(
+    new Map(productos.filter(p => p.categoria_id).map(p => [p.categoria_id, p.categoria_nombre || `Categoría ${p.categoria_id}`])).entries()
+  ).sort((a, b) => a[1].localeCompare(b[1], 'es'));
+
+  async function exportarExcel() {
+    try {
+      setExportando(true);
+      await descargarPreciosExcel({ q: busqueda, local_id: filtroLocal || undefined, categoria_id: filtroCategoria || undefined });
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Error al exportar a Excel');
+    } finally {
+      setExportando(false);
+    }
+  }
+
+  const texto = busqueda.trim().toLowerCase();
+  const productosFiltrados = productosOrdenados.filter(p =>
+    (!texto || p.nombre.toLowerCase().includes(texto) || (p.sku || '').toLowerCase().includes(texto)) &&
+    (!filtroCategoria || p.categoria_id === filtroCategoria)
+  );
+
   return (
     <div>
       {/* Header */}
@@ -164,9 +190,51 @@ export default function PreciosPage() {
         </p>
       </div>
 
+      {/* Filtros */}
+      <div className="bg-slate-800 rounded-lg p-4 mb-6 flex flex-wrap gap-3 items-center">
+        <input
+          type="text"
+          value={busqueda}
+          onChange={e => setBusqueda(e.target.value)}
+          placeholder="Buscar producto o SKU..."
+          className="px-4 py-2 rounded-lg bg-slate-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary w-full max-w-xs"
+        />
+        <select
+          value={filtroLocal}
+          onChange={e => setFiltroLocal(Number(e.target.value))}
+          className="px-4 py-2 rounded-lg bg-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-primary"
+        >
+          <option value={0}>Todos los locales</option>
+          {locales.filter(l => l.activo !== false).map(l => (
+            <option key={l.id} value={l.id}>{l.nombre}</option>
+          ))}
+        </select>
+        <select
+          value={filtroCategoria}
+          onChange={e => setFiltroCategoria(Number(e.target.value))}
+          className="px-4 py-2 rounded-lg bg-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-primary"
+        >
+          <option value={0}>Todas las categorías</option>
+          {categoriasDisponibles.map(([id, nombre]) => (
+            <option key={id} value={id}>{nombre}</option>
+          ))}
+        </select>
+        <span className="text-sm text-gray-400 ml-auto">{productosFiltrados.length} producto(s)</span>
+        <button
+          onClick={exportarExcel}
+          disabled={exportando || productosFiltrados.length === 0}
+          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-semibold rounded-lg transition-colors"
+        >
+          {exportando ? 'Exportando...' : 'Exportar a Excel'}
+        </button>
+      </div>
+
       {/* Lista de productos con sus precios */}
       <div className="space-y-6">
-        {productosOrdenados.map(producto => {
+        {productosFiltrados.length === 0 && (
+          <p className="text-gray-400 text-center py-8 bg-slate-800 rounded-lg">No hay productos que coincidan con los filtros</p>
+        )}
+        {productosFiltrados.map(producto => {
           const preciosProducto = getPreciosPorProducto(producto.id);
           
           return (

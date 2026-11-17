@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { AuthService, User } from '@/lib/auth';
+import { esErrorDeRed } from '@/lib/net';
 
 interface AuthContextType {
     user: User | null;
@@ -28,6 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     useEffect(() => {
         async function loadUser() {
+            // `finally` (setLoading(false)) también corre tras el `return` del catch
             try {
                 const hasToken = AuthService.isAuthenticated();
                 console.log('🔐 AuthProvider: pathname =', pathname, ', hasToken =', hasToken);
@@ -52,9 +54,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     }
                 }
             } catch (error) {
+                // Si la API no responde (red caída, timeout, 5xx) NO se cierra la sesión:
+                // se sigue con el último usuario cargado para no interrumpir la operación.
+                const cachedUser = esErrorDeRed(error) ? AuthService.getCachedUser() : null;
+                if (cachedUser) {
+                    console.warn('⚠️ AuthProvider: API no disponible, usando usuario en caché:', cachedUser.email);
+                    setUser({ ...cachedUser, access_token: AuthService.getToken() });
+                    return;
+                }
                 console.error('❌ AuthProvider: Error loading user:', error);
                 setUser(null);
-                // Si hay error al cargar el usuario, limpiar token solo si estamos en rutas protegidas
+                // Sesión inválida (401) o sin respaldo en caché: volver al login
                 if (pathname?.startsWith('/admin')) {
                     AuthService.logout();
                     router.push('/login');

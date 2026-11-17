@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/lib/AuthProvider';
+import { esRolProduccion } from '@/lib/api/produccion';
 
 interface TipoOT { id: number; codigo: string; nombre: string; }
 interface EstadoOT { id: number; codigo: string; nombre: string; color: string; es_final: boolean; }
@@ -69,6 +70,7 @@ const ACCION_LABELS: Record<string, string> = {
 
 export default function OTDetallePage() {
   const { user } = useAuth();
+  const soloFinaliza = esRolProduccion(user); // rol produccion: no cancela OT
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
@@ -217,12 +219,12 @@ export default function OTDetallePage() {
             >
               Ir a Producción →
             </a>
-            <button
+            {!soloFinaliza && (<button
               onClick={cancelarOT}
               className="ml-2 text-red-400 hover:text-red-300 text-xs underline"
             >
               Cancelar OT
-            </button>
+            </button>)}
           </div>
         )}
         {!esFinal && ot.tipo_ot.codigo !== 'OP' && (
@@ -239,12 +241,12 @@ export default function OTDetallePage() {
             >
               Cerrar OT
             </button>
-            <button
+            {!soloFinaliza && (<button
               onClick={cancelarOT}
               className="px-4 py-2 rounded bg-slate-700 hover:bg-red-900 text-gray-300 hover:text-red-300 text-sm font-medium"
             >
               Cancelar OT
-            </button>
+            </button>)}
           </div>
         )}
       </div>

@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/AuthProvider';
 import { useTenant } from '@/lib/TenantContext';
 import NotificationBell from '@/components/notifications/NotificationBell';
@@ -12,6 +14,8 @@ interface TopBarProps {
 export default function TopBar({ onMenuClick, sidebarCollapsed }: TopBarProps) {
     const { user, logout } = useAuth();
     const { config } = useTenant();
+    const pathname = usePathname();
+    const enCapacitacion = pathname?.startsWith('/admin/capacitacion') ?? false;
 
     return (
         <header className="bg-slate-800 border-b border-slate-700 h-16 flex items-center justify-between px-4 shrink-0">
@@ -28,6 +32,15 @@ export default function TopBar({ onMenuClick, sidebarCollapsed }: TopBarProps) {
 
             {/* Right: User Info & Logout */}
             <div className="flex items-center space-x-4 ml-auto">
+                {/* Centro de Capacitación: siempre visible para todo usuario autenticado (la API filtra por módulo) */}
+                <Link
+                    href="/admin/capacitacion"
+                    className={`p-2 rounded-lg transition-colors ${enCapacitacion ? 'bg-primary text-slate-900' : 'text-slate-300 hover:bg-slate-700 hover:text-white'}`}
+                    title="Capacitación"
+                    aria-label="Capacitación"
+                >
+                    <span className="text-xl leading-none">🎓</span>
+                </Link>
                 <NotificationBell />
                 {user && (
                     <div className="hidden md:flex flex-col items-end mr-2">

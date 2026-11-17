@@ -52,10 +52,12 @@ export async function transferirInventario(data: TransferenciaInventario): Promi
 export async function listarMovimientos(
   productoId?: number,
   localId?: number,
-  tipoMovimiento?: string
+  tipoMovimiento?: string,
+  busqueda?: string
 ): Promise<MovimientoInventario[]> {
   const params = new URLSearchParams();
   if (productoId) params.append('producto_id', productoId.toString());
+  if (busqueda?.trim()) params.append('q', busqueda.trim());
   if (localId) params.append('local_id', localId.toString());
   if (tipoMovimiento) params.append('tipo_movimiento', tipoMovimiento);
 

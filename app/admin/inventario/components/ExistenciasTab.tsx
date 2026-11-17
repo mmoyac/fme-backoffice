@@ -1,16 +1,19 @@
 'use client';
 
+import { FiltroCompartido, FILTRO_VACIO } from './filtroCompartido';
 import { useState, useEffect } from 'react';
 import { getProductos, type Producto } from '@/lib/api/productos';
 import { getLocales, type Local } from '@/lib/api/locales';
 import { getInventarios, ajusteMerma, type Inventario } from '@/lib/api/inventario';
 
-export function ExistenciasTab() {
+export function ExistenciasTab({ localPropio = null, filtroCompartido = FILTRO_VACIO }: { localPropio?: number | null; filtroCompartido?: FiltroCompartido } = {}) {
+    // Selector de local (solo alcance total). 0 = todos los locales.
+    const { local: localSel, setLocal: setLocalSel } = filtroCompartido;
     const [soloNoVerde, setSoloNoVerde] = useState(false);
 
     // Determina si un producto tiene al menos un local en amarillo o rojo
     function productoTieneNoVerde(producto: Producto): boolean {
-      return localesActivos.some(local => {
+      return localesVisibles.some(local => {
         const esTiendaOnline = local.codigo === 'WEB';
         const stock = getStock(producto.id, local.id);
         const displayStock = esTiendaOnline
@@ -26,9 +29,18 @@ export function ExistenciasTab() {
   const [locales, setLocales] = useState<Local[]>([]);
   // Solo mostrar locales activos
   const localesActivos = locales.filter(l => l.activo !== false);
+  const localesFisicos = localesActivos.filter(l => l.codigo !== 'WEB');
+  // add-inventario-alcance-por-local: usuario de tienda ve solo su local (sin WEB);
+  // alcance total ve todos o el local elegido en el selector.
+  const localesVisibles = localPropio
+    ? localesActivos.filter(l => l.id === localPropio)
+    : localSel
+      ? localesActivos.filter(l => l.id === localSel)
+      : localesActivos;
+  const mostrarSelector = !localPropio && localesFisicos.length > 1;
   const [inventarios, setInventarios] = useState<Inventario[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filtro, setFiltro] = useState('');
+  const { busqueda: filtro, setBusqueda: setFiltro } = filtroCompartido;
 
   // Estado modal de merma
   const [modalMerma, setModalMerma] = useState<{ producto: Producto; local: Local; stockActual: number } | null>(null);
@@ -133,6 +145,19 @@ export function ExistenciasTab() {
           </div>
         </div>
         <div className="flex gap-3 items-center">
+          {mostrarSelector && (
+            <select
+              value={localSel}
+              onChange={e => setLocalSel(Number(e.target.value))}
+              className="px-3 py-2 rounded-lg bg-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-primary"
+              aria-label="Local"
+            >
+              <option value={0}>Todos los locales</option>
+              {localesFisicos.map(l => (
+                <option key={l.id} value={l.id}>{l.nombre}</option>
+              ))}
+            </select>
+          )}
           <input
             type="text"
             className="px-4 py-2 rounded-lg bg-slate-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary w-full max-w-xs"
@@ -166,7 +191,7 @@ export function ExistenciasTab() {
                 </div>
               </div>
               <ul className="divide-y divide-slate-700">
-                {localesActivos.map(local => {
+                {localesVisibles.map(local => {
                   const esTiendaOnline = local.codigo === 'WEB';
                   const stock = getStock(producto.id, local.id);
                   const displayStock = esTiendaOnline
@@ -195,7 +220,20 @@ export function ExistenciasTab() {
                         )}
                       </span>
                       <div className="flex items-center gap-3">
-                        <span className="font-semibold text-lg">{displayStock}</span>
+                        <span className="text-right leading-tight">
+                          <span className="font-semibold text-lg">
+                            {Number(displayStock).toLocaleString('es-CL', { maximumFractionDigits: 3 })}
+                          </span>
+                          {producto.unidad_medida_simbolo && (
+                            <span className="ml-1 text-xs text-gray-400">{producto.unidad_medida_simbolo}</span>
+                          )}
+                          {/* Equivalencia en unidad de compra (ej. sacos de 25 kg) */}
+                          {producto.unidad_compra_descripcion && (producto.factor_conversion_compra || 1) > 1 && displayStock !== 0 && (
+                            <span className="block text-xs text-gray-400">
+                              ≈ {(Number(displayStock) / Number(producto.factor_conversion_compra)).toLocaleString('es-CL', { maximumFractionDigits: 1 })} × {producto.unidad_compra_descripcion}
+                            </span>
+                          )}
+                        </span>
                         {!esTiendaOnline && (
                           <button
                             onClick={() => abrirModalMerma(producto, local)}

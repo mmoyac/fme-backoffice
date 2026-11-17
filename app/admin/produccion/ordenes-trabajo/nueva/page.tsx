@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/AuthProvider';
+import { esAdminProduccion, esRolProduccion } from '@/lib/api/produccion';
 import ProductoAutocomplete from '../../../cotizaciones/components/ProductoAutocomplete';
 
 interface TipoOT { id: number; codigo: string; nombre: string; activo?: boolean; }
@@ -52,7 +53,9 @@ export default function NuevaOTPage() {
       fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/productos/`, { headers }).then(r => r.json()),
       fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/maestras/unidades`, { headers }).then(r => r.json()),
     ]).then(([t, l, p, u]) => {
-      setTipos((t as TipoOT[]).filter((x: TipoOT) => x.activo !== false));
+      // Solo administradores solicitan producción (OT tipo OP); el backend también lo valida
+      const puedeOP = esAdminProduccion(user);
+      setTipos((t as TipoOT[]).filter((x: TipoOT) => x.activo !== false && (puedeOP || x.codigo !== 'OP')));
       setLocales(l);
       setProductos(p);
       setUnidades(u);
@@ -117,6 +120,19 @@ export default function NuevaOTPage() {
       setGuardando(false);
     }
   };
+
+  // Rol produccion: solo finaliza órdenes, no las crea (el backend también lo valida)
+  if (esRolProduccion(user)) {
+    return (
+      <div className="max-w-xl mx-auto mt-10 bg-slate-800 border border-slate-700 rounded-lg p-6 text-center">
+        <p className="text-white font-semibold mb-2">Tu rol no puede crear Órdenes de Trabajo</p>
+        <p className="text-gray-400 text-sm mb-4">El rol Producción solo finaliza las órdenes que crea el administrador.</p>
+        <button onClick={() => router.push('/admin/produccion')} className="px-4 py-2 rounded bg-primary text-slate-900 font-semibold text-sm">
+          Ir a Producción
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-4xl">

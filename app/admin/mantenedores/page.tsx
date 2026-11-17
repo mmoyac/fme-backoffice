@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useAuth } from "@/lib/AuthProvider";
+import { tieneModulo } from "@/lib/modulos";
 import CategoriasList from "./components/CategoriasList";
 import TiposList from "./components/TiposList";
 import UnidadesList from "./components/UnidadesList";
@@ -23,32 +25,38 @@ import BancosList from "./components/BancosList";
 
 export default function MantenedoresPage() {
     const [activeTab, setActiveTab] = useState<string | null>(null);
+    const { user } = useAuth();
 
-    const opciones = [
-        { id: "ubicaciones",           icono: "🗄️",  titulo: "Ubicaciones",             desc: "Ubicaciones físicas del almacén" },
-        { id: "estados_enrolamiento",  icono: "🟢",  titulo: "Estados de Enrolamiento", desc: "Estados del proceso de enrolamiento" },
-        { id: "tipos_vehiculo",        icono: "🚚",  titulo: "Tipos de Vehículo",        desc: "Vehículos para logística y enrolamientos" },
-        { id: "paletas_colores",       icono: "🎨",  titulo: "Paleta de Colores",        desc: "Colores del sistema" },
+    const todasLasOpciones: { id: string; icono: string; titulo: string; desc: string; modulos?: string[]; soloSuperadmin?: boolean }[] = [
+        { id: "ubicaciones",           icono: "🗄️",  titulo: "Ubicaciones",             desc: "Ubicaciones físicas del almacén", modulos: ["inventario"] },
+        { id: "estados_enrolamiento",  icono: "🟢",  titulo: "Estados de Enrolamiento", desc: "Estados del proceso de enrolamiento", modulos: ["compras"] },
+        { id: "tipos_vehiculo",        icono: "🚚",  titulo: "Tipos de Vehículo",        desc: "Vehículos para logística y enrolamientos", modulos: ["despacho", "compras"] },
+        { id: "paletas_colores",       icono: "🎨",  titulo: "Paleta de Colores",        desc: "Colores del sistema", modulos: ["tienda_online"] },
         { id: "categorias",            icono: "📦",  titulo: "Categorías",               desc: "Categorías de productos y puntos" },
         { id: "tipos_venta",           icono: "🛒",  titulo: "Tipos de Venta",           desc: "Unitario, Por Peso, etc. — se asignan a categorías" },
         { id: "tipos",                 icono: "🏷️",  titulo: "Tipos de Producto",        desc: "Materia Prima, Elaborado, etc." },
         { id: "unidades",              icono: "📏",  titulo: "Unidades de Medida",       desc: "Unidades con soporte de conversiones" },
         { id: "locales",               icono: "🏪",  titulo: "Locales",                  desc: "Locales y puntos de venta" },
-        { id: "proveedores",           icono: "🏢",  titulo: "Proveedores",              desc: "Proveedores de insumos y materias primas" },
-        { id: "tipos_proveedor",       icono: "🏭",  titulo: "Tipos Proveedor",          desc: "Clasificación de proveedores" },
+        { id: "proveedores",           icono: "🏢",  titulo: "Proveedores",              desc: "Proveedores de insumos y materias primas", modulos: ["compras"] },
+        { id: "tipos_proveedor",       icono: "🏭",  titulo: "Tipos Proveedor",          desc: "Clasificación de proveedores", modulos: ["compras"] },
         { id: "tipos_documento",       icono: "📄",  titulo: "Tipos Documento",          desc: "Factura, Boleta, Guía, etc." },
         { id: "tipos_pedido",          icono: "📦",  titulo: "Tipos Pedido",             desc: "Tipos de pedido y locales de despacho" },
         { id: "medios_pago",           icono: "💳",  titulo: "Medios de Pago",           desc: "Medios de pago y descuentos al contado" },
-        { id: "estados_cheque",        icono: "🏦",  titulo: "Estados de Cheque",         desc: "Estados del ciclo de vida de un cheque" },
-        { id: "bancos",                icono: "🏛️",  titulo: "Bancos",                     desc: "Bancos disponibles para registrar cheques" },
+        { id: "estados_cheque",        icono: "🏦",  titulo: "Estados de Cheque",         desc: "Estados del ciclo de vida de un cheque", modulos: ["cobranza"] },
+        { id: "bancos",                icono: "🏛️",  titulo: "Bancos",                     desc: "Bancos disponibles para registrar cheques", modulos: ["cobranza"] },
         { id: "canales_venta",         icono: "📡",  titulo: "Canales de Venta",         desc: "POS, Landing, WhatsApp, Teléfono y otros" },
-        { id: "config_landing",        icono: "🌐",  titulo: "Config. Landing",          desc: "Apariencia de la landing page" },
-        { id: "tipos_ot",              icono: "⚙️",  titulo: "Tipos de OT",              desc: "Tipos de Orden de Trabajo: Producción, Servicio, etc." },
-        { id: "ot_etapas",             icono: "🔧",  titulo: "Etapas de OT",             desc: "Flujo de etapas por tipo de Orden de Trabajo" },
+        { id: "config_landing",        icono: "🌐",  titulo: "Config. Landing",          desc: "Apariencia de la landing page", modulos: ["tienda_online"] },
+        { id: "tipos_ot",              icono: "⚙️",  titulo: "Tipos de OT",              desc: "Tipos de Orden de Trabajo: Producción, Servicio, etc.", modulos: ["produccion"] },
+        { id: "ot_etapas",             icono: "🔧",  titulo: "Etapas de OT",             desc: "Flujo de etapas por tipo de Orden de Trabajo", modulos: ["produccion"] },
         { id: "roles_permisos",        icono: "🔐",  titulo: "Roles y Permisos",         desc: "Roles del sistema y permisos de menú" },
         { id: "usuarios",              icono: "👤",  titulo: "Usuarios",                 desc: "Usuarios del sistema" },
-        { id: "tenants",               icono: "🏢",  titulo: "Tenants (SaaS)",           desc: "Gestión de clientes de la plataforma" },
+        { id: "tenants",               icono: "🏢",  titulo: "Tenants (SaaS)",           desc: "Gestión de clientes de la plataforma", soloSuperadmin: true },
     ];
+
+    // Solo pestañas del núcleo o de módulos contratados; "Tenants" solo para superadmin.
+    const opciones = todasLasOpciones.filter(o =>
+        (!o.soloSuperadmin || !!user?.is_superadmin) && tieneModulo(user, ...(o.modulos ?? []))
+    );
 
     const opcionActiva = opciones.find(o => o.id === activeTab);
 

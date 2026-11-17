@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { AuthService } from '@/lib/auth';
 import { useTenant } from '@/lib/TenantContext';
 import { useAuth } from '@/lib/AuthProvider';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const ULTIMO_EMAIL_KEY = 'fme_ultimo_email_login';
 
 function handleGoogleLogin() {
     const frontendUrl = window.location.origin;
@@ -18,6 +19,13 @@ export default function LoginPage() {
     const { config, loading: tenantLoading } = useTenant();
     const { loading: authLoading } = useAuth();
     const [email, setEmail] = useState('');
+    // Recordar el último correo usado en este navegador (la contraseña la guarda el gestor del navegador)
+    useEffect(() => {
+        try {
+            const ultimo = localStorage.getItem(ULTIMO_EMAIL_KEY);
+            if (ultimo) setEmail((actual) => actual || ultimo);
+        } catch { /* almacenamiento no disponible */ }
+    }, []);
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
@@ -32,6 +40,7 @@ export default function LoginPage() {
 
         try {
             await AuthService.login({ username: email, password });
+            try { localStorage.setItem(ULTIMO_EMAIL_KEY, email); } catch { /* sin almacenamiento */ }
             console.log('✅ Login: Token obtenido exitosamente');
             // Redirigir según rol
             const user = await AuthService.getCurrentUser();
@@ -103,14 +112,16 @@ export default function LoginPage() {
                     )}
 
                     {/* Login Form */}
-                    <form onSubmit={handleSubmit} className="space-y-6">
+                    <form onSubmit={handleSubmit} method="post" action="#" autoComplete="on" className="space-y-6">
                         <div>
                             <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-2">
                                 Correo Electrónico
                             </label>
                             <input
                                 id="email"
+                                name="username"
                                 type="email"
+                                autoComplete="username"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 required
@@ -127,7 +138,9 @@ export default function LoginPage() {
                             <div className="relative">
                                 <input
                                     id="password"
+                                    name="password"
                                     type={showPassword ? "text" : "password"}
+                                    autoComplete="current-password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     required

@@ -1,38 +1,39 @@
 'use client';
 
+import { FiltroCompartido, FILTRO_VACIO } from './filtroCompartido';
 import { useState, useEffect } from 'react';
 import { listarMovimientos, MovimientoInventario } from '@/lib/api/movimientos';
-import { getProductos, Producto } from '@/lib/api/productos';
 import { getLocales, Local } from '@/lib/api/locales';
 
-export function HistorialTab() {
+export function HistorialTab({ onVerConteo, localPropio = null, filtroCompartido = FILTRO_VACIO }: { onVerConteo?: (conteoId: number) => void; localPropio?: number | null; filtroCompartido?: FiltroCompartido } = {}) {
   const [movimientos, setMovimientos] = useState<MovimientoInventario[]>([]);
-  const [productos, setProductos] = useState<Producto[]>([]);
   const [locales, setLocales] = useState<Local[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   // Filtros
-  const [filtroProducto, setFiltroProducto] = useState<number>(0);
-  const [filtroLocal, setFiltroLocal] = useState<number>(0);
+  const { busqueda, setBusqueda } = filtroCompartido;
+  const [filtroTexto, setFiltroTexto] = useState(busqueda);
+  const { local: filtroLocal, setLocal: setFiltroLocal } = filtroCompartido;
   const [filtroTipo, setFiltroTipo] = useState<string>('');
 
   useEffect(() => {
     cargarDatos();
   }, []);
 
+  // Búsqueda por nombre o SKU con debounce (se filtra en el backend)
+  useEffect(() => {
+    const t = setTimeout(() => setFiltroTexto(busqueda), 350);
+    return () => clearTimeout(t);
+  }, [busqueda]);
+
   useEffect(() => {
     cargarMovimientos();
-  }, [filtroProducto, filtroLocal, filtroTipo]);
+  }, [filtroTexto, filtroLocal, filtroTipo]);
 
   const cargarDatos = async () => {
     try {
-      const [prodData, locData] = await Promise.all([
-        getProductos(),
-        getLocales()
-      ]);
-      setProductos(prodData);
-      setLocales(locData);
+      setLocales(await getLocales());
     } catch (err) {
       console.error('Error al cargar datos:', err);
     }
@@ -43,9 +44,10 @@ export function HistorialTab() {
       setLoading(true);
       setError('');
       const data = await listarMovimientos(
-        filtroProducto || undefined,
+        undefined,
         filtroLocal || undefined,
-        filtroTipo || undefined
+        filtroTipo || undefined,
+        filtroTexto || undefined
       );
       setMovimientos(data);
     } catch (err) {
@@ -62,6 +64,7 @@ export function HistorialTab() {
       'PEDIDO': { label: 'Pedido', color: 'bg-purple-500' },
       'AJUSTE': { label: 'Ajuste', color: 'bg-yellow-500' },
       'MERMA': { label: 'Merma', color: 'bg-orange-500' },
+      'AJUSTE_CONTEO': { label: 'Ajuste por conteo', color: 'bg-teal-600' },
       'ENTRADA_INICIAL': { label: 'Entrada Inicial', color: 'bg-green-500' }
     };
     return tipos[tipo] || { label: tipo, color: 'bg-gray-500' };
@@ -85,23 +88,19 @@ export function HistorialTab() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              Filtrar por Producto
+              Buscar producto
             </label>
-            <select
-              value={filtroProducto}
-              onChange={(e) => setFiltroProducto(Number(e.target.value))}
-              className="w-full bg-slate-700 text-white rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary"
-            >
-              <option value={0}>Todos los productos</option>
-              {productos.map(producto => (
-                <option key={producto.id} value={producto.id}>
-                  {producto.nombre}
-                </option>
-              ))}
-            </select>
+            <input
+              type="text"
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              placeholder="Buscar producto o SKU..."
+              className="w-full bg-slate-700 text-white placeholder-gray-400 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+            />
           </div>
 
-          <div>
+          {/* Usuario de tienda: el backend ya limita a su local (add-inventario-alcance-por-local) */}
+          {!localPropio && (<div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
               Filtrar por Local
             </label>
@@ -117,7 +116,7 @@ export function HistorialTab() {
                 </option>
               ))}
             </select>
-          </div>
+          </div>)}
 
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -133,6 +132,7 @@ export function HistorialTab() {
               <option value="PEDIDO">Pedido</option>
               <option value="AJUSTE">Ajuste</option>
               <option value="MERMA">Merma</option>
+              <option value="AJUSTE_CONTEO">Ajuste por conteo</option>
             </select>
           </div>
         </div>
@@ -225,6 +225,14 @@ export function HistorialTab() {
                         {mov.usuario}
                       </td>
                       <td className="px-4 py-4 text-gray-400 text-sm max-w-xs truncate">
+                        {mov.tipo_movimiento === 'AJUSTE_CONTEO' && mov.referencia_id && onVerConteo ? (
+                          <button
+                            onClick={() => onVerConteo(mov.referencia_id!)}
+                            className="text-teal-300 hover:underline mr-2"
+                          >
+                            Ver conteo #{mov.referencia_id}
+                          </button>
+                        ) : null}
                         {mov.notas || '-'}
                       </td>
                     </tr>

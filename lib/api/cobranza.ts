@@ -27,6 +27,8 @@ export interface ItemCobranza {
     fecha_creacion: string | null;
     observaciones?: string | null;
     entregado?: boolean;
+    modalidad_entrega?: 'RETIRO' | 'DESPACHO' | null;  // add-modalidad-entrega-pedido
+    fecha_entrega?: string | null;
     estado_pedido_nombre?: string | null;
     estado_pedido_color?: string | null;
 }

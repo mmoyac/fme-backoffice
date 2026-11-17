@@ -1,3 +1,5 @@
+import { fetchConTimeout, ErrorDeRed, ErrorSesion } from './net';
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 export interface LoginCredentials {
@@ -19,6 +21,7 @@ export interface User {
     local_defecto_id?: number;
     tenant_id?: number;
     tenant_nombre?: string;
+    modulos?: string[]; // módulos contratados por el tenant (lib/modulos.ts)
     access_token?: string | null;
     role?: {
         id: number;
@@ -36,6 +39,8 @@ export interface TenantContext {
 const TOKEN_KEY = 'fme_auth_token';
 const SUPERADMIN_TOKEN_KEY = 'fme_superadmin_token'; // token original del superadmin
 const TENANT_CONTEXT_KEY = 'fme_tenant_context';    // tenant activo del superadmin
+const USER_CACHE_KEY = 'fme_user_cache';            // último usuario cargado OK (respaldo si la API no responde)
+const MENU_CACHE_KEY = 'fme_menu_cache';            // último menú permitido cargado OK
 
 export class AuthService {
     static async login(credentials: LoginCredentials): Promise<AuthToken> {
@@ -74,7 +79,8 @@ export class AuthService {
 
         const currentHostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
 
-        const response = await fetch(`${API_URL}/api/auth/users/me`, {
+        // fetchConTimeout lanza ErrorDeRed si no hay conexión o la API no responde a tiempo
+        const response = await fetchConTimeout(`${API_URL}/api/auth/users/me`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'X-Forwarded-Host': currentHostname,
@@ -83,12 +89,51 @@ export class AuthService {
 
         if (!response.ok) {
             if (response.status === 401) {
-                this.logout();
+                throw new ErrorSesion();
             }
-            throw new Error('Error al obtener usuario');
+            // 5xx u otros: problema del servidor, NO de la sesión
+            throw new ErrorDeRed(`Servidor no disponible (${response.status})`);
         }
 
-        return response.json();
+        const user: User = await response.json();
+        this.setCachedUser(user);
+        return user;
+    }
+
+    /** Último usuario cargado correctamente; se usa si la API no responde para no expulsar al usuario. */
+    static getCachedUser(): User | null {
+        if (typeof window === 'undefined') return null;
+        try {
+            const raw = localStorage.getItem(USER_CACHE_KEY);
+            return raw ? JSON.parse(raw) : null;
+        } catch {
+            return null;
+        }
+    }
+
+    static setCachedUser(user: User): void {
+        if (typeof window === 'undefined') return;
+        try {
+            const { access_token, ...sinToken } = user;
+            localStorage.setItem(USER_CACHE_KEY, JSON.stringify(sinToken));
+        } catch { /* almacenamiento no disponible */ }
+    }
+
+    static getCachedMenu(): string[] | null {
+        if (typeof window === 'undefined') return null;
+        try {
+            const raw = localStorage.getItem(MENU_CACHE_KEY);
+            return raw ? JSON.parse(raw) : null;
+        } catch {
+            return null;
+        }
+    }
+
+    static setCachedMenu(hrefs: string[]): void {
+        if (typeof window === 'undefined') return;
+        try {
+            localStorage.setItem(MENU_CACHE_KEY, JSON.stringify(hrefs));
+        } catch { /* almacenamiento no disponible */ }
     }
 
     static setToken(token: string): void {
@@ -119,6 +164,8 @@ export class AuthService {
             localStorage.removeItem(TOKEN_KEY);
             localStorage.removeItem(SUPERADMIN_TOKEN_KEY);
             localStorage.removeItem(TENANT_CONTEXT_KEY);
+            localStorage.removeItem(USER_CACHE_KEY);
+            localStorage.removeItem(MENU_CACHE_KEY);
             window.location.href = '/login';
         }
     }

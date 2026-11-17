@@ -1,13 +1,17 @@
 'use client';
 
+import { FiltroCompartido, FILTRO_VACIO } from './filtroCompartido';
 import { useState, useEffect } from 'react';
 import { transferirInventario, TransferenciaInventario } from '@/lib/api/movimientos';
 import { getProductos, Producto } from '@/lib/api/productos';
 import { getLocales, Local } from '@/lib/api/locales';
 import { getInventarios, Inventario } from '@/lib/api/inventario';
 
-export function TransferenciasTab() {
+export function TransferenciasTab({ localPropio = null, filtroCompartido = FILTRO_VACIO }: { localPropio?: number | null; filtroCompartido?: FiltroCompartido } = {}) {
+  // add-inventario-alcance-por-local: el usuario de tienda transfiere solo desde su local
+  const origenFijo = localPropio ?? 0;
   const [productos, setProductos] = useState<Producto[]>([]);
+  const { busqueda: busquedaProducto, setBusqueda: setBusquedaProducto } = filtroCompartido;
   const [locales, setLocales] = useState<Local[]>([]);
   const [inventarios, setInventarios] = useState<Inventario[]>([]);
   const [loading, setLoading] = useState(false);
@@ -16,7 +20,7 @@ export function TransferenciasTab() {
 
   const [formData, setFormData] = useState<TransferenciaInventario>({
     producto_id: 0,
-    local_origen_id: 0,
+    local_origen_id: origenFijo,
     local_destino_id: 0,
     cantidad: 1,
     notas: ''
@@ -25,6 +29,11 @@ export function TransferenciasTab() {
   useEffect(() => {
     cargarDatos();
   }, []);
+
+  // El usuario se carga asíncrono: fijar el origen cuando se conoce su local
+  useEffect(() => {
+    if (localPropio) setFormData(f => ({ ...f, local_origen_id: localPropio }));
+  }, [localPropio]);
 
   const cargarDatos = async () => {
     try {
@@ -78,7 +87,7 @@ export function TransferenciasTab() {
       // Limpiar formulario
       setFormData({
         producto_id: 0,
-        local_origen_id: 0,
+        local_origen_id: origenFijo,
         local_destino_id: 0,
         cantidad: 1,
         notas: ''
@@ -93,6 +102,20 @@ export function TransferenciasTab() {
       setLoading(false);
     }
   };
+
+  // Búsqueda de producto por nombre o SKU (igual que en Existencias e Historial)
+  function filtrarProductos(texto: string): Producto[] {
+    const t = texto.trim().toLowerCase();
+    const ordenados = [...productos].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }));
+    if (!t) return ordenados;
+    return ordenados.filter(p => p.nombre.toLowerCase().includes(t) || (p.sku || '').toLowerCase().includes(t));
+  }
+  const productosFiltrados = (() => {
+    const lista = filtrarProductos(busquedaProducto);
+    // Mantener visible el producto ya seleccionado aunque no coincida con la búsqueda
+    const sel = productos.find(p => p.id === formData.producto_id);
+    return sel && !lista.some(p => p.id === sel.id) ? [sel, ...lista] : lista;
+  })();
 
   const productoSeleccionado = productos.find(p => p.id === formData.producto_id);
   const stockOrigen = formData.local_origen_id ? getStockDisponible(formData.producto_id, formData.local_origen_id) : 0;
@@ -125,14 +148,33 @@ export function TransferenciasTab() {
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 Producto *
               </label>
+              <input
+                type="text"
+                value={busquedaProducto}
+                onChange={(e) => {
+                  const texto = e.target.value;
+                  setBusquedaProducto(texto);
+                  // Si la búsqueda deja un solo producto, se selecciona automáticamente
+                  const coincidencias = filtrarProductos(texto);
+                  if (texto.trim() && coincidencias.length === 1) {
+                    setFormData({ ...formData, producto_id: coincidencias[0].id });
+                  }
+                }}
+                placeholder="Buscar producto o SKU..."
+                className="w-full mb-2 bg-slate-700 text-white placeholder-gray-400 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
+              />
               <select
                 value={formData.producto_id}
                 onChange={(e) => setFormData({ ...formData, producto_id: Number(e.target.value) })}
                 className="w-full bg-slate-700 text-white rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary"
                 required
               >
-                <option value={0}>-- Seleccionar producto --</option>
-                {productos.map(producto => (
+                <option value={0}>
+                  {busquedaProducto.trim()
+                    ? `-- ${productosFiltrados.length} producto(s) encontrado(s) --`
+                    : '-- Seleccionar producto --'}
+                </option>
+                {productosFiltrados.map(producto => (
                   <option key={producto.id} value={producto.id}>
                     {producto.nombre} (SKU: {producto.sku})
                   </option>
@@ -148,7 +190,8 @@ export function TransferenciasTab() {
               <select
                 value={formData.local_origen_id}
                 onChange={(e) => setFormData({ ...formData, local_origen_id: Number(e.target.value) })}
-                className="w-full bg-slate-700 text-white rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary"
+                className="w-full bg-slate-700 text-white rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary disabled:opacity-70"
+                disabled={!!localPropio}
                 required
               >
                 <option value={0}>-- Seleccionar local origen --</option>
@@ -183,7 +226,7 @@ export function TransferenciasTab() {
                   </option>
                 ))}
               </select>
-              {formData.producto_id > 0 && formData.local_destino_id > 0 && (
+              {formData.producto_id > 0 && formData.local_destino_id > 0 && !localPropio && (
                 <p className="text-sm text-gray-400 mt-1">
                   Stock actual: <span className="font-semibold text-white">{stockDestino}</span> unidades
                 </p>
@@ -266,7 +309,7 @@ export function TransferenciasTab() {
                     <p className="text-white font-semibold">
                       {locales.find(l => l.id === formData.local_destino_id)?.nombre || '-'}
                     </p>
-                    <p className="text-xs text-gray-400">Stock: {stockDestino}</p>
+                    {!localPropio && <p className="text-xs text-gray-400">Stock: {stockDestino}</p>}
                   </div>
                 </div>
               </div>
@@ -282,7 +325,7 @@ export function TransferenciasTab() {
                     </p>
                     <p className="text-white">
                       <span className="font-semibold">{locales.find(l => l.id === formData.local_destino_id)?.nombre}:</span>{' '}
-                      {stockDestino} → {stockDestino + formData.cantidad} unidades
+                      {localPropio ? `+${formData.cantidad} unidades` : `${stockDestino} → ${stockDestino + formData.cantidad} unidades`}
                     </p>
                   </div>
                 </div>

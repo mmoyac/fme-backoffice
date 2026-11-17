@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/AuthProvider';
+import { esRolProduccion } from '@/lib/api/produccion';
 
 interface TipoOT { id: number; codigo: string; nombre: string; }
 interface EstadoOT { id: number; codigo: string; nombre: string; color: string; }
@@ -87,12 +88,12 @@ export default function OrdenesTrabajoPage() {
           <h1 className="text-3xl font-bold text-white">Órdenes de Trabajo</h1>
           <p className="text-gray-400 text-sm mt-1">Producción y servicios con seguimiento por etapas</p>
         </div>
-        <Link
+        {!esRolProduccion(user) && (<Link
           href="/admin/produccion/ordenes-trabajo/nueva"
           className="bg-primary hover:bg-primary-dark text-slate-900 px-4 py-2 rounded-lg font-semibold transition-colors text-sm"
         >
           + Nueva OT
-        </Link>
+        </Link>)}
       </div>
 
       {/* Filtros */}

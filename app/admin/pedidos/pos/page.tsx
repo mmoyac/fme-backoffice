@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { getProductos, type Producto } from '@/lib/api/productos';
 import { getClientes, type Cliente } from '@/lib/api/clientes';
@@ -15,6 +15,7 @@ import { CheckCircleIcon, XMarkIcon, PlusIcon, MinusIcon } from '@heroicons/reac
 import { BoletaTermica } from '@/components/pos/BoletaTermica';
 import { useTenant } from '@/lib/TenantContext';
 import { useCashDrawer } from '@/lib/hooks/useCashDrawer';
+import { fetchConTimeout, esErrorDeRed, generarUUID } from '@/lib/net';
 
 // ⚙️ CONFIGURACIÓN: Tipo de documento por defecto para el POS
 // Según tu base de datos:
@@ -131,6 +132,9 @@ export default function POSPedidoPage() {
   const [loading, setLoading] = useState(true);
   const [loadingProductos, setLoadingProductos] = useState(false);
   const [procesando, setProcesando] = useState(false);
+  // Venta en curso: su client_uuid se reutiliza en cada reintento de la MISMA venta
+  // (mismo carrito/cliente/pago) para que el backend nunca la duplique.
+  const ventaEnCursoRef = useRef<{ uuid: string; firma: string } | null>(null);
   
   // Estados para impresión de boleta
   const [mostrarBoleta, setMostrarBoleta] = useState<boolean>(false);
@@ -618,7 +622,7 @@ export default function POSPedidoPage() {
       
       // IMPORTANTE: Siempre validar que el ID corresponda al tipo correcto
       console.log('🔍 Validando tipo de documento antes de crear pedido...');
-      const tiposResp = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/config/tipos-documento`);
+      const tiposResp = await fetchConTimeout(`${process.env.NEXT_PUBLIC_API_URL}/api/config/tipos-documento`);
       const tiposDoc = await tiposResp.json();
       
       console.log('📋 Tipos de documento disponibles:', tiposDoc);
@@ -679,19 +683,29 @@ export default function POSPedidoPage() {
         items: itemsPedido
       };
 
+      // Misma venta => mismo client_uuid. Si el vendedor cambia el carrito, cliente o
+      // medio de pago, se trata como una venta distinta (uuid nuevo).
+      const firmaVenta = JSON.stringify({ itemsPedido, clienteId, localId, medioPagoId, tipoDocFinal });
+      if (!ventaEnCursoRef.current || ventaEnCursoRef.current.firma !== firmaVenta) {
+        ventaEnCursoRef.current = { uuid: generarUUID(), firma: firmaVenta };
+      }
+
       console.log('📦 Datos del pedido:', pedidoData);
-      
-      const nuevoPedido = await crearPedido(pedidoData);
-      
+
+      const nuevoPedido = await crearPedido({ ...pedidoData, client_uuid: ventaEnCursoRef.current.uuid });
+
       console.log('✅ Pedido creado exitosamente:', nuevoPedido);
+      if (nuevoPedido.duplicado) {
+        console.info('ℹ️ La venta ya estaba registrada (reintento tras corte):', nuevoPedido.numero_pedido);
+      }
       
       // Preparar datos para la boleta
       const localSeleccionado = locales.find(l => l.id === localId);
       const medioPagoSeleccionado = mediosPago.find(mp => mp.id === medioPagoId);
       
       // Obtener información del tipo de documento
-      const tiposDocumento = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/config/tipos-documento`)
-        .then(res => res.json()).catch(() => []);
+      const tiposDocumento = await fetchConTimeout(`${process.env.NEXT_PUBLIC_API_URL}/api/config/tipos-documento`, {}, 4000)
+        .then(res => res.json()).catch(() => tiposDoc);
       const tipoDocumentoSeleccionado = tiposDocumento.find((t: any) => t.id === tipoDocumentoId);
       
       console.log('🔍 Debug tipos documento:', {
@@ -755,7 +769,12 @@ export default function POSPedidoPage() {
       }
       
       console.error('📝 Mensaje de error procesado:', mensajeError);
-      alert(`Error al crear el pedido:\n${mensajeError}`);
+      if (esErrorDeRed(error)) {
+        // Se conserva el carrito y el client_uuid: reintentar no duplica la venta
+        alert(`⚠️ Problema de conexión\n\n${mensajeError}`);
+      } else {
+        alert(`Error al crear el pedido:\n${mensajeError}`);
+      }
     } finally {
       setProcesando(false);
     }
@@ -765,6 +784,8 @@ export default function POSPedidoPage() {
   const cerrarBoleta = () => {
     setMostrarBoleta(false);
     setDatosBoleta(null);
+    // Venta completada: la próxima usará un client_uuid nuevo
+    ventaEnCursoRef.current = null;
     // Limpiar carrito y regresar a productos
     setCarrito([]);
     setEtapaActual('productos');

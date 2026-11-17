@@ -33,12 +33,13 @@ export interface ItemSolicitudTransferenciaCreate {
 }
 
 export interface SolicitudTransferenciaCreate {
-  tenant_id: number;
+  // tenant_id, usuario_solicitante_id y estado_id los fija el backend; se mantienen opcionales por compatibilidad
+  tenant_id?: number;
   local_origen_id: number;
   local_destino_id: number;
-  usuario_solicitante_id: number;
+  usuario_solicitante_id?: number;
   usuario_finalizador_id?: number;
-  estado_id: number;
+  estado_id?: number;
   nota?: string;
   requiere_delivery?: boolean;
   items: ItemSolicitudTransferenciaCreate[];

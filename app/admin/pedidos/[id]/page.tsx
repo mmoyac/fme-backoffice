@@ -12,6 +12,7 @@ import { getInventarios, Inventario } from '@/lib/api/inventario';
 import { obtenerPedidoConCheques, actualizarCheque, obtenerEstadosCheque, PedidoConCheques, Cheque, EstadoCheque } from '@/lib/api/cheques';
 import { getMediosPago, MedioPago } from '@/lib/api/maestras';
 import { AuthService } from '@/lib/auth';
+import { EntregaPedidoCard } from '@/components/pedidos/EntregaPedidoCard';
 
 export default function DetallePedidoPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -1043,6 +1044,9 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
               ))}
             </div>
           </div>
+
+          {/* Entrega (add-modalidad-entrega-pedido) */}
+          <EntregaPedidoCard pedido={pedido} onActualizado={cargarPedido} />
 
           {/* Estado de Pago */}
           <div className="bg-slate-800 rounded-lg p-6">
