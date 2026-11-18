@@ -13,6 +13,11 @@ const withPWA = pwa.default({
   disable: process.env.NODE_ENV === 'development',
   workboxOptions: {
     disableDevLogs: true,
+    // Versión nueva: el SW nuevo toma el control apenas se instala y borra las cachés de
+    // versiones anteriores. La pestaña se recarga sola desde components/SwUpdater.tsx.
+    skipWaiting: true,
+    clientsClaim: true,
+    cleanupOutdatedCaches: true,
     runtimeCaching: [
       {
         urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
@@ -30,6 +35,15 @@ const nextConfig = {
   output: 'standalone',
   reactStrictMode: true,
   swcMinify: true,
+  // El navegador debe revalidar siempre el service worker para detectar versiones nuevas.
+  async headers() {
+    return [
+      {
+        source: '/:file(sw\\.js|workbox-.*\\.js|swe-worker-.*\\.js)',
+        headers: [{ key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' }],
+      },
+    ]
+  },
   images: {
     remotePatterns: [
       {

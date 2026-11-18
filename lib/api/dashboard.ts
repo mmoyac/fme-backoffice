@@ -147,3 +147,20 @@ export async function getMetricasCaja(): Promise<MetricasCaja> {
   if (!response.ok) throw new Error('Error al obtener métricas de caja');
   return response.json();
 }
+
+// Pedidos aún no entregados (tarjeta "Por entregar" del dashboard; change add-pasarelas-pago)
+export interface PorEntregar {
+  confirmados: { cantidad: number; monto: number };
+  en_preparacion: { cantidad: number; monto: number };
+  en_ruta: { cantidad: number; monto: number };
+  pagados_sin_confirmar: number;
+  total: number;
+}
+
+export async function getPorEntregar(): Promise<PorEntregar> {
+  const response = await fetch(`${API_URL}/api/dashboard/por-entregar`, {
+    headers: AuthService.getAuthHeaders(),
+  });
+  if (!response.ok) throw new Error('Error al obtener pedidos por entregar');
+  return response.json();
+}

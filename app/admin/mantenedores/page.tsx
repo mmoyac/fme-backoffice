@@ -46,6 +46,7 @@ export default function MantenedoresPage() {
         { id: "bancos",                icono: "🏛️",  titulo: "Bancos",                     desc: "Bancos disponibles para registrar cheques", modulos: ["cobranza"] },
         { id: "canales_venta",         icono: "📡",  titulo: "Canales de Venta",         desc: "POS, Landing, WhatsApp, Teléfono y otros" },
         { id: "config_landing",        icono: "🌐",  titulo: "Config. Landing",          desc: "Apariencia de la landing page", modulos: ["tienda_online"] },
+        { id: "pasarelas_pago",        icono: "💳",  titulo: "Pasarelas de pago",        desc: "Pagos en línea de la tienda (Mercado Pago, Flow, Khipu)", modulos: ["tienda_online"] },
         { id: "tipos_ot",              icono: "⚙️",  titulo: "Tipos de OT",              desc: "Tipos de Orden de Trabajo: Producción, Servicio, etc.", modulos: ["produccion"] },
         { id: "ot_etapas",             icono: "🔧",  titulo: "Etapas de OT",             desc: "Flujo de etapas por tipo de Orden de Trabajo", modulos: ["produccion"] },
         { id: "roles_permisos",        icono: "🔐",  titulo: "Roles y Permisos",         desc: "Roles del sistema y permisos de menú" },
@@ -283,6 +284,26 @@ export default function MantenedoresPage() {
                                 className="inline-block bg-primary hover:bg-primary-dark text-slate-900 font-semibold px-6 py-3 rounded-lg transition-colors"
                             >
                                 🌐 Ir a Configuración de Landing
+                            </a>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === "pasarelas_pago" && (
+                    <div>
+                        <h2 className="text-xl font-semibold text-white mb-2">Pasarelas de pago</h2>
+                        <p className="text-gray-400 mb-4">
+                            Configura los pagos en línea de la tienda: credenciales, pruebas de conexión y paso a producción
+                        </p>
+                        <div className="bg-slate-700 rounded-lg p-6 text-center">
+                            <p className="text-gray-300 mb-4">
+                                La configuración de pasarelas de pago está disponible en una página dedicada
+                            </p>
+                            <a
+                                href="/admin/configuracion/pasarelas"
+                                className="inline-block bg-primary hover:bg-primary-dark text-slate-900 font-semibold px-6 py-3 rounded-lg transition-colors"
+                            >
+                                💳 Ir a Pasarelas de pago
                             </a>
                         </div>
                     </div>

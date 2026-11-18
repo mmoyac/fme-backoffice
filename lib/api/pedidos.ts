@@ -84,6 +84,8 @@ export interface Pedido {
   // Información del usuario que creó el pedido
   usuario_id?: number;
   usuario_nombre?: string;
+  canal_venta_codigo?: string | null;
+  canal_venta_nombre?: string | null;
   usuario_email?: string;
   // Resumen de cobro de cheques
   monto_cobrado_cheques?: number;
@@ -159,11 +161,12 @@ export interface PedidoCreateResponse {
 
 export async function listarPedidos(
   estado?: string, fecha?: string, tipo_pedido_id?: number,
-  entrega?: { modalidad_entrega?: 'RETIRO' | 'DESPACHO'; entregado?: boolean }
+  entrega?: { modalidad_entrega?: 'RETIRO' | 'DESPACHO'; entregado?: boolean; pagado?: boolean }
 ): Promise<Pedido[]> {
   const url = new URL(`${API_URL}/api/pedidos/`);
   if (entrega?.modalidad_entrega) url.searchParams.append('modalidad_entrega', entrega.modalidad_entrega);
   if (entrega?.entregado !== undefined) url.searchParams.append('entregado', String(entrega.entregado));
+  if (entrega?.pagado !== undefined) url.searchParams.append('pagado', String(entrega.pagado));
   if (estado) {
     url.searchParams.append('estado', estado);
   }

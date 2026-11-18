@@ -4,6 +4,7 @@ import { headers } from 'next/headers'
 import './globals.css'
 import { AuthProvider } from '@/lib/AuthProvider'
 import { TenantProvider } from '@/lib/TenantContext'
+import SwUpdater from '@/components/SwUpdater'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -101,6 +102,7 @@ export default async function RootLayout({
         <meta name="msapplication-TileImage" content="/icons/icon-144x144.png" />
       </head>
       <body className={inter.className}>
+        <SwUpdater />
         <TenantProvider>
           <AuthProvider>
             {children}
