@@ -199,7 +199,7 @@ export default function UsuariosPage() {
                             </button>
                         </div>
 
-                        <div className="bg-slate-800 rounded-lg overflow-hidden">
+                        <div className="bg-slate-800 rounded-lg overflow-x-auto">
                             <table className="w-full text-left text-slate-300">
                                 <thead className="bg-slate-900 text-slate-400 uppercase text-xs">
                                     <tr>

@@ -149,7 +149,7 @@ export default function ProduccionPage() {
                     No hay órdenes de producción activas.
                 </div>
             ) : (
-                <div className="bg-slate-800 rounded-lg overflow-hidden">
+                <div className="bg-slate-800 rounded-lg overflow-x-auto">
                     <table className="w-full">
                         <thead className="bg-slate-700">
                             <tr>

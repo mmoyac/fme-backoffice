@@ -12,7 +12,9 @@ import {
   type InformacionNutricional,
   type InformacionNutricionalUpdate
 } from '@/lib/api/etiquetas';
-import EtiquetaPreview from './EtiquetaPreview';
+import dynamic from 'next/dynamic';
+// Vista previa con código de barras y PDF: se carga solo al mostrarla (react-barcode, jspdf, html2canvas)
+const EtiquetaPreview = dynamic(() => import('./EtiquetaPreview'), { ssr: false });
 
 interface TabEtiquetasProps {
   productoId: number;

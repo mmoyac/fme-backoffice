@@ -223,7 +223,7 @@ export default function TableroDespachoPage() {
                 <p>Todos los pedidos confirmados tienen ruta asignada</p>
               </div>
             ) : (
-              <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
+              <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-slate-700 text-slate-400 text-xs">
@@ -288,7 +288,7 @@ export default function TableroDespachoPage() {
                   Total: ${Math.round(totalCobros).toLocaleString('es-CL')}
                 </span>
               </div>
-              <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
+              <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-slate-700 text-slate-400 text-xs">

@@ -2,23 +2,17 @@
 
 import { useEffect, useState } from 'react';
 import { AuthService, TenantContext } from '@/lib/auth';
+import { useAuth } from '@/lib/AuthProvider';
 
 export default function TenantSwitcher() {
+    // Usa el usuario ya cargado por AuthProvider (antes hacía su propio GET /users/me)
+    const { user } = useAuth();
+    const isSuperadmin = !!user?.is_superadmin;
     const [ctx, setCtx] = useState<TenantContext | null>(null);
-    const [isSuperadmin, setIsSuperadmin] = useState(false);
 
     useEffect(() => {
-        const checkSuperadmin = async () => {
-            try {
-                const user = await AuthService.getCurrentUser();
-                if (user.is_superadmin) {
-                    setIsSuperadmin(true);
-                    setCtx(AuthService.getTenantContext());
-                }
-            } catch {}
-        };
-        checkSuperadmin();
-    }, []);
+        if (isSuperadmin) setCtx(AuthService.getTenantContext());
+    }, [isSuperadmin]);
 
     if (!isSuperadmin) return null;
 

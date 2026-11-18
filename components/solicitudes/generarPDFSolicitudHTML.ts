@@ -1,10 +1,11 @@
-import jsPDF from "jspdf";
-import html2canvas from "html2canvas";
+// jspdf y html2canvas se cargan solo al generar un PDF (no en el bundle de /admin/solicitudes)
+import type jsPDF from "jspdf";
 
 async function buildPDF(htmlElement: HTMLElement): Promise<jsPDF> {
+  const [{ default: html2canvas }, { default: JsPDF }] = await Promise.all([import('html2canvas'), import('jspdf')]);
   const canvas = await html2canvas(htmlElement, { scale: 2, backgroundColor: '#fff' });
   const imgData = canvas.toDataURL('image/png');
-  const pdf = new jsPDF({ unit: 'pt', format: 'a4' });
+  const pdf = new JsPDF({ unit: 'pt', format: 'a4' });
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
   const ratio = Math.min(pageWidth / canvas.width, pageHeight / canvas.height);

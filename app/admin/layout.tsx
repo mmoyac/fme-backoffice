@@ -6,24 +6,28 @@ import Sidebar from '@/components/layout/Sidebar';
 import TopBar from '@/components/layout/TopBar';
 import TenantSwitcher from '@/components/superadmin/TenantSwitcher';
 import { useAuth } from '@/lib/AuthProvider';
-import { AuthService } from '@/lib/auth';
-import { fetchConTimeout } from '@/lib/net';
+import { MenuProvider, useMenu } from '@/lib/MenuContext';
 import { moduloDeRuta, tieneModulo, NOMBRES_MODULO } from '@/lib/modulos';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <MenuProvider>
+      <AdminShell>{children}</AdminShell>
+    </MenuProvider>
+  );
+}
 
-export default function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+function AdminShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { user, loading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [authorized, setAuthorized] = useState<boolean | null>(null);
+  const { hrefs, estado: estadoMenu } = useMenu();
+  const esAdmin = !!(user?.is_superadmin || user?.role?.nombre?.toLowerCase() === 'admin');
 
+  // Autorización de ruta con el menú ya cargado (MenuProvider): navegar no vuelve a pedirlo.
   useEffect(() => {
     if (loading) return;
 
@@ -33,69 +37,28 @@ export default function AdminLayout({
     }
 
     // Superadmin y admin: acceso total sin restricción de ruta
-    if (user.is_superadmin || user.role?.nombre?.toLowerCase() === 'admin') {
+    if (esAdmin) {
       setAuthorized(true);
       return;
     }
 
-    // Para otros roles: verificar si la ruta actual está en su menú permitido
-    const token = AuthService.getToken();
-    const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+    if (estadoMenu === 'cargando') return;
+    if (estadoMenu === 'sin-sesion' || !hrefs.length) {
+      router.push('/login');
+      return;
+    }
 
-    const aplicarMenu = (hrefs: string[]) => {
-      if (!hrefs.length) {
-        router.push('/login');
-        return;
-      }
-      // Capacitación: visible para todo usuario autenticado (el filtro por módulo lo hace la API)
-      const permitida = (pathname?.startsWith('/admin/capacitacion') ?? false) || hrefs.some((href) => pathname?.startsWith(href));
-      if (permitida) {
-        setAuthorized(true);
-      } else {
-        // Redirigir al primer ítem del menú permitido
-        router.replace(hrefs[0]);
-      }
-    };
+    // Capacitación: visible para todo usuario autenticado (el filtro por módulo lo hace la API)
+    const permitida = (pathname?.startsWith('/admin/capacitacion') ?? false) || hrefs.some((href) => pathname?.startsWith(href));
+    if (permitida) {
+      setAuthorized(true);
+    } else {
+      // Redirigir al primer ítem del menú permitido
+      router.replace(hrefs[0]);
+    }
+  }, [user, loading, esAdmin, estadoMenu, hrefs, pathname, router]);
 
-    // Si la API no responde (red/timeout/5xx) se usa el último menú válido en caché,
-    // para no expulsar al usuario por una falla momentánea del servidor.
-    const usarMenuEnCache = () => {
-      const cache = AuthService.getCachedMenu();
-      if (cache && cache.length) {
-        console.warn('⚠️ Menú: API no disponible, usando menú en caché');
-        aplicarMenu(cache);
-      } else {
-        router.push('/login');
-      }
-    };
-
-    fetchConTimeout(`${API_URL}/api/auth/menu`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'X-Forwarded-Host': hostname,
-      },
-    })
-      .then(async (r) => {
-        if (r.status === 401 || r.status === 403) {
-          router.push('/login');
-          return;
-        }
-        if (!r.ok) {
-          usarMenuEnCache();
-          return;
-        }
-        const items: { href: string }[] = await r.json();
-        const hrefs = items.map((item) => item.href);
-        if (hrefs.length) AuthService.setCachedMenu(hrefs);
-        aplicarMenu(hrefs);
-      })
-      .catch(() => {
-        usarMenuEnCache();
-      });
-  }, [user, loading, pathname, router]);
-
-  const isAdmin = user?.is_superadmin || user?.role?.nombre?.toLowerCase() === 'admin';
-  if (loading || (authorized === null && !isAdmin)) {
+  if (loading || (authorized === null && !esAdmin)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-900">
         <div className="text-center">
@@ -131,7 +94,7 @@ export default function AdminLayout({
         />
       )}
 
-      <main className="flex-1 flex flex-col w-full relative">
+      <main className="flex-1 min-w-0 flex flex-col relative">
         <TenantSwitcher />
         <TopBar onMenuClick={() => setSidebarOpen(true)} sidebarCollapsed={sidebarCollapsed} />
 

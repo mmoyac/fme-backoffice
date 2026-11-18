@@ -2,16 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useAuth } from '@/lib/AuthProvider';
 import { useTenant } from '@/lib/TenantContext';
-import { useState, useEffect } from 'react';
-import { AuthService } from '@/lib/auth';
-
-interface MenuItem {
-  nombre: string;
-  href: string;
-  icon: string;
-}
+import { useMenu } from '@/lib/MenuContext';
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -22,49 +14,15 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen = true, onClose, collapsed = false, onToggleCollapse }: SidebarProps) {
   const pathname = usePathname();
-  const { user, logout } = useAuth();
   const { config } = useTenant();
-  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchMenu() {
-      if (!user) return;
-      try {
-        const token = AuthService.getToken();
-        // Usar fetch directo o un helper si existe. 
-        // Usaremos el NEXT_PUBLIC_API_URL del environment
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-        const currentHostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-
-        const res = await fetch(`${apiUrl}/api/auth/menu`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-            'X-Forwarded-Host': currentHostname
-          }
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          setMenuItems(data);
-        } else {
-          console.error('Error fetching menu:', res.statusText);
-        }
-      } catch (error) {
-        console.error('Error fetching menu:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchMenu();
-  }, [user]);
+  // Menú compartido con el layout (MenuProvider): se carga una vez por sesión, no en cada navegación
+  const { items: menuItems, estado } = useMenu();
+  const loading = estado === 'cargando' && menuItems.length === 0;
 
   return (
     <div className={`
       fixed bottom-0 left-0 right-0 z-50 bg-slate-800 text-white rounded-t-2xl max-h-[85vh] flex flex-col transform transition-transform duration-300 ease-in-out
-      md:relative md:bottom-auto md:left-auto md:right-auto md:translate-y-0 md:rounded-none md:max-h-none md:min-h-screen md:transition-all md:duration-300
+      md:relative md:shrink-0 md:bottom-auto md:left-auto md:right-auto md:translate-y-0 md:rounded-none md:max-h-none md:min-h-screen md:transition-all md:duration-300
       ${isOpen ? 'translate-y-0 shadow-2xl' : 'translate-y-full'}
       ${collapsed ? 'md:w-16' : 'md:w-64'}
     `}>

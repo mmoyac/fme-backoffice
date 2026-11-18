@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/AuthProvider';
-import CapturaEtiquetaGemini from '@/components/CapturaEtiquetaGemini';
+import dynamic from 'next/dynamic';
+// Lector QR + cámara: se carga solo al abrir la captura (html5-qrcode es pesado)
+const CapturaEtiquetaGemini = dynamic(() => import('@/components/CapturaEtiquetaGemini'), { ssr: false });
 import {
   getEnrolamientos,
   getProductosCarnes,

@@ -280,7 +280,7 @@ export default function TenantsPage() {
             </div>
 
             {/* Tabla de tenants */}
-            <div className="bg-slate-800 shadow-md rounded-lg overflow-hidden border border-slate-700">
+            <div className="bg-slate-800 shadow-md rounded-lg overflow-x-auto border border-slate-700">
                 <table className="min-w-full">
                     <thead className="bg-slate-700">
                         <tr>
@@ -542,7 +542,7 @@ export default function TenantsPage() {
                         </div>
 
                         {/* Tabla de usuarios */}
-                        <div className="bg-slate-900 rounded-lg overflow-hidden">
+                        <div className="bg-slate-900 rounded-lg overflow-x-auto">
                             <table className="min-w-full divide-y divide-slate-700">
                                 <thead className="bg-slate-800">
                                     <tr>

@@ -154,7 +154,7 @@ export default function NotasCreditoPage() {
       ) : notas.length === 0 ? (
         <div className="text-center text-gray-400 py-12">No hay notas de crédito registradas.</div>
       ) : (
-        <div className="bg-slate-800 rounded-lg overflow-hidden">
+        <div className="bg-slate-800 rounded-lg overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-slate-700 text-left text-gray-400 text-sm">

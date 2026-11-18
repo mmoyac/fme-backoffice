@@ -144,7 +144,7 @@ export default function OrdenesTrabajoPage() {
           <p className="text-sm mt-1">Crea la primera OT con el botón de arriba</p>
         </div>
       ) : (
-        <div className="bg-slate-800 rounded-lg overflow-hidden">
+        <div className="bg-slate-800 rounded-lg overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-700">
             <thead className="bg-slate-700">
               <tr>

@@ -23,7 +23,7 @@ export default function InventarioPage() {
     return (
         <div>
             {/* Header con botones */}
-            <div className="flex justify-between items-start mb-6">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-6">
                 <div>
                     <h1 className="text-3xl font-bold text-white">Inventario</h1>
                     <p className="text-gray-400">Gestión de stock regular y cajas por proveedor</p>

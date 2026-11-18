@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { AuthService, User } from '@/lib/auth';
 import { esErrorDeRed } from '@/lib/net';
@@ -26,43 +26,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [loading, setLoading] = useState(true);
     const router = useRouter();
     const pathname = usePathname();
+    // Token con el que se cargó el usuario actual. El efecto corre en cada navegación (así detecta
+    // el login, que guarda el token y navega), pero solo pide /users/me si el token cambió.
+    const tokenCargado = useRef<string | null>(null);
 
     useEffect(() => {
+        const token = AuthService.isAuthenticated() ? AuthService.getToken() : null;
+
+        if (!token) {
+            tokenCargado.current = null;
+            setUser(null);
+            setLoading(false);
+            if (pathname?.startsWith('/admin')) router.push('/login');
+            return;
+        }
+        if (token === tokenCargado.current) return; // usuario ya cargado para esta sesión
+
+        let cancelado = false;
         async function loadUser() {
-            // `finally` (setLoading(false)) también corre tras el `return` del catch
             try {
-                const hasToken = AuthService.isAuthenticated();
-                console.log('🔐 AuthProvider: pathname =', pathname, ', hasToken =', hasToken);
-                
-                if (hasToken) {
-                    console.log('🔐 AuthProvider: Token encontrado, cargando usuario...');
-                    const currentUser = await AuthService.getCurrentUser();
-                    const token = AuthService.getToken();
-                    // Agregar el token al objeto user
-                    setUser({
-                        ...currentUser,
-                        access_token: token
-                    });
-                    console.log('✅ AuthProvider: Usuario cargado:', currentUser.email);
-                } else {
-                    console.log('⚠️ AuthProvider: No hay token, usuario no autenticado');
-                    setUser(null);
-                    // Si no está autenticado y está en ruta protegida, redirigir
-                    if (pathname?.startsWith('/admin')) {
-                        console.log('🔀 AuthProvider: Redirigiendo a /login desde', pathname);
-                        router.push('/login');
-                    }
-                }
+                const currentUser = await AuthService.getCurrentUser();
+                if (cancelado) return;
+                tokenCargado.current = token;
+                setUser({ ...currentUser, access_token: token });
             } catch (error) {
+                if (cancelado) return;
                 // Si la API no responde (red caída, timeout, 5xx) NO se cierra la sesión:
                 // se sigue con el último usuario cargado para no interrumpir la operación.
                 const cachedUser = esErrorDeRed(error) ? AuthService.getCachedUser() : null;
                 if (cachedUser) {
                     console.warn('⚠️ AuthProvider: API no disponible, usando usuario en caché:', cachedUser.email);
-                    setUser({ ...cachedUser, access_token: AuthService.getToken() });
+                    tokenCargado.current = token;
+                    setUser({ ...cachedUser, access_token: token });
                     return;
                 }
                 console.error('❌ AuthProvider: Error loading user:', error);
+                tokenCargado.current = null;
                 setUser(null);
                 // Sesión inválida (401) o sin respaldo en caché: volver al login
                 if (pathname?.startsWith('/admin')) {
@@ -70,20 +69,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     router.push('/login');
                 }
             } finally {
-                setLoading(false);
+                if (!cancelado) setLoading(false);
             }
         }
 
         loadUser();
+        return () => { cancelado = true; };
     }, [pathname, router]);
 
-    const logout = () => {
+    const logout = useCallback(() => {
+        tokenCargado.current = null;
         setUser(null);
         AuthService.logout();
-    };
+    }, []);
+
+    const value = useMemo(() => ({ user, loading, logout }), [user, loading, logout]);
 
     return (
-        <AuthContext.Provider value={{ user, loading, logout }}>
+        <AuthContext.Provider value={value}>
             {children}
         </AuthContext.Provider>
     );

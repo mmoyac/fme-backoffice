@@ -193,9 +193,9 @@ export default function SolicitudesTable() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
         <h1 className="text-3xl font-bold text-white">Solicitudes</h1>
-        <div className="flex gap-3 items-center">
+        <div className="flex flex-wrap gap-3 items-center">
           <select
             value={filtroEstado}
             onChange={e => setFiltroEstado(e.target.value)}

@@ -12,6 +12,12 @@ export interface AuthToken {
     token_type: string;
 }
 
+export interface MenuItemCache {
+    nombre: string;
+    href: string;
+    icon: string;
+}
+
 export interface User {
     id: number;
     email: string;
@@ -119,20 +125,26 @@ export class AuthService {
         } catch { /* almacenamiento no disponible */ }
     }
 
-    static getCachedMenu(): string[] | null {
+    /** Último menú permitido cargado OK (ítems completos). Acepta el formato antiguo (solo hrefs). */
+    static getCachedMenu(): MenuItemCache[] | null {
         if (typeof window === 'undefined') return null;
         try {
             const raw = localStorage.getItem(MENU_CACHE_KEY);
-            return raw ? JSON.parse(raw) : null;
+            if (!raw) return null;
+            const data = JSON.parse(raw);
+            if (!Array.isArray(data)) return null;
+            return data.map((m: string | MenuItemCache) =>
+                typeof m === 'string' ? { nombre: m, href: m, icon: '' } : m,
+            );
         } catch {
             return null;
         }
     }
 
-    static setCachedMenu(hrefs: string[]): void {
+    static setCachedMenu(items: MenuItemCache[]): void {
         if (typeof window === 'undefined') return;
         try {
-            localStorage.setItem(MENU_CACHE_KEY, JSON.stringify(hrefs));
+            localStorage.setItem(MENU_CACHE_KEY, JSON.stringify(items));
         } catch { /* almacenamiento no disponible */ }
     }
 
