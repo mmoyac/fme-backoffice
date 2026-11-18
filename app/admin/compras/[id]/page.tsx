@@ -173,13 +173,13 @@ export default function EditarCompraPage({ params }: { params: { id: string } })
 
     return (
         <div className="max-w-5xl">
-            <h1 className="text-3xl font-bold text-white mb-6">Editar Compra #{id}</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-white mb-6">Editar Compra #{id}</h1>
 
             <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Cabecera */}
-                <div className="bg-slate-800 rounded-lg p-6">
+                <div className="bg-slate-800 rounded-lg p-4 md:p-6">
                     <h2 className="text-xl font-bold text-white mb-4">Información General</h2>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm text-gray-300 mb-1">Proveedor *</label>
                             <select
@@ -253,10 +253,10 @@ export default function EditarCompraPage({ params }: { params: { id: string } })
                 </div>
 
                 {/* Agregar Productos */}
-                <div className="bg-slate-800 rounded-lg p-6">
+                <div className="bg-slate-800 rounded-lg p-4 md:p-6">
                     <h2 className="text-xl font-bold text-white mb-4">Agregar Productos</h2>
-                    <div className="grid grid-cols-4 gap-4 items-end">
-                        <div className="col-span-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                        <div className="sm:col-span-2">
                             <label className="block text-sm text-gray-300 mb-1">Producto</label>
                             <select
                                 className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white"
@@ -301,8 +301,9 @@ export default function EditarCompraPage({ params }: { params: { id: string } })
 
                 {/* Lista de Productos */}
                 {detalles.length > 0 && (
-                    <div className="bg-slate-800 rounded-lg p-6">
+                    <div className="bg-slate-800 rounded-lg p-4 md:p-6">
                         <h2 className="text-xl font-bold text-white mb-4">Detalle de Compra</h2>
+                        <div className="hidden lg:block overflow-x-auto">
                         <table className="w-full">
                             <thead className="bg-slate-700">
                                 <tr>
@@ -350,6 +351,39 @@ export default function EditarCompraPage({ params }: { params: { id: string } })
                                 </tr>
                             </tfoot>
                         </table>
+                        </div>
+                        {/* Móvil: una tarjeta por producto, con el mismo botón de eliminar */}
+                        <ul className="lg:hidden space-y-3">
+                            {detalles.map((det, idx) => {
+                                const producto = productos.find(p => p.id === det.producto_id);
+                                const subtotal = det.cantidad * det.precio_unitario;
+                                return (
+                                    <li key={idx} className="bg-slate-700/60 rounded-lg p-3 space-y-1">
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div className="text-white font-medium break-words min-w-0">{producto?.nombre}</div>
+                                            <button
+                                                type="button"
+                                                onClick={() => eliminarDetalle(idx)}
+                                                className="text-red-400 hover:text-red-300 shrink-0"
+                                            >
+                                                🗑️
+                                            </button>
+                                        </div>
+                                        <div className="text-sm text-gray-300">
+                                            Cantidad: {det.cantidad}
+                                        </div>
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-gray-400">Precio unit.: <span className="font-mono text-gray-300">${det.precio_unitario.toLocaleString('es-CL')}</span></span>
+                                            <span className="text-white font-mono">${subtotal.toLocaleString('es-CL')}</span>
+                                        </div>
+                                    </li>
+                                );
+                            })}
+                            <li className="flex justify-between bg-slate-700 rounded-lg px-3 py-2 text-white font-bold">
+                                <span>TOTAL:</span>
+                                <span className="font-mono">${montoTotal.toLocaleString('es-CL')}</span>
+                            </li>
+                        </ul>
                     </div>
                 )}
 

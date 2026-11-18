@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { listarFacturas, registrarFolio, descargarFactura } from '@/lib/api/facturas';
 import type { Pedido } from '@/lib/api/pedidos';
+import DataList from '@/components/ui/DataList';
 
 const ESTADOS_SII = [
   { value: '', label: 'Todos los estados' },
@@ -141,11 +142,60 @@ export default function FacturasPage() {
     }
   };
 
+  const esPendientePicking = (f: Pedido) => !f.total || f.total === 0;
+
+  const cliente = (f: Pedido) => (
+    <>
+      <p className="text-white text-sm truncate" title={f.cliente?.razon_social || f.cliente?.nombre}>{f.cliente?.razon_social || f.cliente?.nombre}</p>
+      {f.cliente?.rut && <p className="text-slate-400 text-xs mt-0.5">RUT: {f.cliente.rut}</p>}
+      {f.cliente?.giro && <p className="text-slate-500 text-xs truncate">{f.cliente.giro}</p>}
+    </>
+  );
+
+  const monto = (f: Pedido) =>
+    esPendientePicking(f) ? (
+      <span className="bg-orange-500/20 text-orange-400 border border-orange-500/30 px-2 py-0.5 rounded text-xs font-medium">
+        Picking pendiente
+      </span>
+    ) : (
+      <span className="text-white font-semibold text-sm">{formatMonto(f.total)}</span>
+    );
+
+  const folio = (f: Pedido) =>
+    f.folio_sii ? (
+      <span className="text-cyan-400 font-mono text-sm">{f.folio_sii}</span>
+    ) : (
+      <span className="text-slate-600 text-sm italic">Sin folio</span>
+    );
+
+  const acciones = (f: Pedido) =>
+    f.estado === 'CANCELADO' ? (
+      <span className="text-red-400 text-xs italic">Pedido cancelado</span>
+    ) : esPendientePicking(f) ? (
+      <span className="text-slate-500 text-xs italic">Confirmar pedido primero</span>
+    ) : (
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          onClick={() => abrirModalFolio(f)}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-medium transition-colors whitespace-nowrap"
+        >
+          {f.folio_sii ? 'Editar folio' : 'Registrar folio'}
+        </button>
+        <button
+          onClick={() => handleDescargarPDF(f)}
+          disabled={descargandoId === f.id}
+          className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white px-3 py-1.5 rounded text-xs font-medium transition-colors whitespace-nowrap"
+        >
+          {descargandoId === f.id ? 'Descargando...' : 'PDF'}
+        </button>
+      </div>
+    );
+
   return (
-    <div className="p-6 space-y-6">
+    <div className="md:p-6 space-y-6">
       {/* Encabezado */}
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold text-white">Facturas</h1>
           <p className="text-slate-400 text-sm mt-1">
             Registro de folios SII y descarga de documentos tributarios
@@ -160,7 +210,7 @@ export default function FacturasPage() {
       </div>
 
       {/* Filtros */}
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex flex-col lg:flex-row gap-3">
         <input
           type="text"
           placeholder="Buscar por N° pedido, cliente, RUT, razon social o folio..."
@@ -225,111 +275,65 @@ export default function FacturasPage() {
         </div>
       </div>
 
-      {/* Tabla */}
-      <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
-        {loading ? (
-          <div className="p-12 text-center text-slate-400">Cargando facturas...</div>
-        ) : facturasFiltradas.length === 0 ? (
-          <div className="p-12 text-center text-slate-400">
-            {busqueda || filtroEstadoSii ? 'No hay facturas que coincidan con el filtro.' : 'No hay facturas registradas aun.'}
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-slate-700 bg-slate-900/50">
-                  <th className="text-left text-slate-400 text-xs font-semibold px-4 py-3 uppercase tracking-wider">N° Pedido</th>
-                  <th className="text-left text-slate-400 text-xs font-semibold px-4 py-3 uppercase tracking-wider">Cliente / RUT</th>
-                  <th className="text-left text-slate-400 text-xs font-semibold px-4 py-3 uppercase tracking-wider">Vendedor</th>
-                  <th className="text-left text-slate-400 text-xs font-semibold px-4 py-3 uppercase tracking-wider">Fecha</th>
-                  <th className="text-left text-slate-400 text-xs font-semibold px-4 py-3 uppercase tracking-wider">Monto</th>
-                  <th className="text-left text-slate-400 text-xs font-semibold px-4 py-3 uppercase tracking-wider">Estado SII</th>
-                  <th className="text-left text-slate-400 text-xs font-semibold px-4 py-3 uppercase tracking-wider">Folio SII</th>
-                  <th className="text-left text-slate-400 text-xs font-semibold px-4 py-3 uppercase tracking-wider">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-700">
-                {facturasFiltradas.map(factura => {
-                  const pendientePicking = !factura.total || factura.total === 0;
-                  const esCancelado = factura.estado === 'CANCELADO';
-                  return (
-                    <tr key={factura.id} className={`hover:bg-slate-700/30 transition-colors ${pendientePicking || esCancelado ? 'opacity-60' : ''}`}>
-                      <td className="px-4 py-3">
-                        <span className="text-white font-mono text-sm">{factura.numero_pedido}</span>
-                        <div className="text-slate-500 text-xs mt-0.5">#{factura.id}</div>
-                        {esCancelado && (
-                          <span className="bg-red-500/20 text-red-400 border border-red-500/30 px-1.5 py-0.5 rounded text-xs font-medium mt-0.5 inline-block">Cancelado</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <p className="text-white text-sm">{factura.cliente?.razon_social || factura.cliente?.nombre}</p>
-                        {factura.cliente?.rut && (
-                          <p className="text-slate-400 text-xs mt-0.5">RUT: {factura.cliente.rut}</p>
-                        )}
-                        {factura.cliente?.giro && (
-                          <p className="text-slate-500 text-xs truncate max-w-[180px]">{factura.cliente.giro}</p>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        {factura.usuario_nombre ? (
-                          <p className="text-white text-sm">{factura.usuario_nombre}</p>
-                        ) : (
-                          <span className="text-slate-500 text-xs italic">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-slate-300 text-sm whitespace-nowrap">
-                        {formatFecha(factura.fecha_pedido)}
-                      </td>
-                      <td className="px-4 py-3 text-sm whitespace-nowrap">
-                        {pendientePicking ? (
-                          <span className="bg-orange-500/20 text-orange-400 border border-orange-500/30 px-2 py-0.5 rounded text-xs font-medium">
-                            Picking pendiente
-                          </span>
-                        ) : (
-                          <span className="text-white font-semibold">{formatMonto(factura.total)}</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <EstadoSiiBadge estado={factura.estado_sii} />
-                      </td>
-                      <td className="px-4 py-3">
-                        {factura.folio_sii ? (
-                          <span className="text-cyan-400 font-mono text-sm">{factura.folio_sii}</span>
-                        ) : (
-                          <span className="text-slate-600 text-sm italic">Sin folio</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        {esCancelado ? (
-                          <span className="text-red-400 text-xs italic">Pedido cancelado</span>
-                        ) : pendientePicking ? (
-                          <span className="text-slate-500 text-xs italic">Confirmar pedido primero</span>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => abrirModalFolio(factura)}
-                              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-medium transition-colors whitespace-nowrap"
-                            >
-                              {factura.folio_sii ? 'Editar folio' : 'Registrar folio'}
-                            </button>
-                            <button
-                              onClick={() => handleDescargarPDF(factura)}
-                              disabled={descargandoId === factura.id}
-                              className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white px-3 py-1.5 rounded text-xs font-medium transition-colors whitespace-nowrap"
-                            >
-                              {descargandoId === factura.id ? 'Descargando...' : 'PDF'}
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+      {/* Lista: tabla en escritorio, tarjetas en celular */}
+      {loading ? (
+        <div className="bg-slate-800 rounded-xl border border-slate-700 p-12 text-center text-slate-400">Cargando facturas...</div>
+      ) : (
+        <DataList
+          items={facturasFiltradas}
+          getKey={(f) => f.id}
+          itemClassName={(f) => (esPendientePicking(f) || f.estado === 'CANCELADO' ? 'opacity-60' : '')}
+          empty={busqueda || filtroEstadoSii ? 'No hay facturas que coincidan con el filtro.' : 'No hay facturas registradas aun.'}
+          columns={[
+            {
+              header: 'N° Pedido',
+              className: 'w-[14%]',
+              sinTruncar: true,
+              cell: (f) => (
+                <>
+                  <span className="text-white font-mono text-xs break-all">{f.numero_pedido}</span>
+                  <div className="text-slate-500 text-xs mt-0.5">#{f.id}</div>
+                  {f.estado === 'CANCELADO' && (
+                    <span className="bg-red-500/20 text-red-400 border border-red-500/30 px-1.5 py-0.5 rounded text-xs font-medium mt-0.5 inline-block">Cancelado</span>
+                  )}
+                </>
+              ),
+            },
+            { header: 'Cliente / RUT', className: 'w-[16%]', cell: (f) => cliente(f) },
+            {
+              header: 'Vendedor',
+              className: 'w-[10%]',
+              cell: (f) => (f.usuario_nombre ? <span className="text-white text-sm">{f.usuario_nombre}</span> : <span className="text-slate-500 text-xs italic">—</span>),
+            },
+            { header: 'Fecha', className: 'w-[11%]', sinTruncar: true, cell: (f) => <span className="text-slate-300 text-sm">{formatFecha(f.fecha_pedido)}</span> },
+            { header: 'Monto', className: 'w-[10%]', sinTruncar: true, cell: (f) => monto(f) },
+            { header: 'Estado SII', className: 'w-[12%]', sinTruncar: true, cell: (f) => <EstadoSiiBadge estado={f.estado_sii} /> },
+            { header: 'Folio SII', className: 'w-[11%]', sinTruncar: true, cell: (f) => folio(f) },
+            { header: 'Acciones', className: 'w-[16%]', sinTruncar: true, cell: (f) => acciones(f) },
+          ]}
+          card={(f) => (
+            <div className="space-y-2">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-white font-mono text-xs break-all">{f.numero_pedido}</div>
+                  <div className="text-slate-500 text-xs">#{f.id} · {formatFecha(f.fecha_pedido)}</div>
+                </div>
+                <div className="shrink-0 text-right">{monto(f)}</div>
+              </div>
+              <div className="min-w-0">{cliente(f)}</div>
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <EstadoSiiBadge estado={f.estado_sii} />
+                <span>Folio: {folio(f)}</span>
+                {f.usuario_nombre && <span className="text-slate-400">· {f.usuario_nombre}</span>}
+                {f.estado === 'CANCELADO' && (
+                  <span className="bg-red-500/20 text-red-400 border border-red-500/30 px-1.5 py-0.5 rounded font-medium">Cancelado</span>
+                )}
+              </div>
+              <div className="pt-2 border-t border-slate-700">{acciones(f)}</div>
+            </div>
+          )}
+        />
+      )}
 
       {/* Modal registrar folio */}
       {modalFolio && facturaSeleccionada && (

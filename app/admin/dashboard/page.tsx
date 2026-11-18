@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { getEstadisticasDashboard, getMetricasCaja } from '@/lib/api/dashboard';
+import { getEstadisticasDashboard, getMetricasCaja, getPorEntregar, PorEntregar } from '@/lib/api/dashboard';
 import { listarFacturas } from '@/lib/api/facturas';
 import { listarHojasRuta } from '@/lib/api/hojas_ruta';
 import { getSolicitudes } from '@/lib/api/solicitudes';
@@ -17,6 +17,7 @@ export default function DashboardPage() {
   const [rutasData, setRutasData] = useState<any>(null);
   const [solicitudesData, setSolicitudesData] = useState<any>(null);
   const [stockData, setStockData] = useState<any>(null);
+  const [porEntregar, setPorEntregar] = useState<PorEntregar | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -26,6 +27,7 @@ export default function DashboardPage() {
   const cargarResumenes = async () => {
     try {
       setLoading(true);
+      getPorEntregar().then(setPorEntregar).catch(() => null);
       const [ventasData, cajasData, facturasArr, hojasArr, solicitudesArr, productosArr, estadosArr] = await Promise.all([
         getEstadisticasDashboard().catch(() => null),
         getMetricasCaja().catch(() => null),
@@ -89,7 +91,24 @@ export default function DashboardPage() {
     }).format(amount);
   };
 
-  const tableros = [
+  type Metrica = { label: string; valor: string; icon: string; ruta?: string; alerta?: boolean };
+  type Tablero = { id: string; titulo: string; descripcion: string; icono: string; ruta: string; color: string; metricas: Metrica[] };
+
+  const tableros: Tablero[] = [
+    {
+      id: 'por_entregar',
+      titulo: 'Por Entregar',
+      descripcion: 'Pedidos confirmados que aún no se entregan, y pagos en línea que requieren confirmación',
+      icono: '📦',
+      ruta: '/admin/pedidos?estado=CONFIRMADO',
+      color: 'from-teal-500 to-cyan-500',
+      metricas: porEntregar ? [
+        { label: 'Confirmados', valor: porEntregar.confirmados.cantidad.toString(), icon: '✅', ruta: '/admin/pedidos?estado=CONFIRMADO' },
+        { label: 'En Preparación', valor: porEntregar.en_preparacion.cantidad.toString(), icon: '👨‍🍳', ruta: '/admin/pedidos?estado=EN_PREPARACION' },
+        { label: 'En Ruta', valor: porEntregar.en_ruta.cantidad.toString(), icon: '🚚', ruta: '/admin/pedidos?estado=EN_RUTA' },
+        { label: 'Pagados sin confirmar', valor: porEntregar.pagados_sin_confirmar.toString(), icon: '⚠️', ruta: '/admin/pedidos?estado=PENDIENTE&pagado=si', alerta: porEntregar.pagados_sin_confirmar > 0 },
+      ] : []
+    },
     {
       id: 'ventas',
       titulo: 'Tablero de Ventas',
@@ -233,7 +252,11 @@ export default function DashboardPage() {
                 {tablero.metricas.length > 0 ? (
                   <div className="grid grid-cols-2 gap-4">
                     {tablero.metricas.slice(0, 4).map((metrica, idx) => (
-                      <div key={idx} className="bg-slate-700 rounded-lg p-4">
+                      <div
+                        key={idx}
+                        onClick={metrica.ruta ? (e) => { e.stopPropagation(); router.push(metrica.ruta!); } : undefined}
+                        className={`rounded-lg p-4 ${metrica.alerta ? 'bg-amber-900/50 ring-1 ring-amber-500' : 'bg-slate-700'} ${metrica.ruta ? 'hover:bg-slate-600' : ''}`}
+                      >
                         <div className="flex items-center space-x-2 mb-2">
                           <span className="text-lg">{metrica.icon}</span>
                           <span className="text-slate-300 text-sm">{metrica.label}</span>

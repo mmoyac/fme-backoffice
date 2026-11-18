@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { AuthService } from '@/lib/auth';
+import DataList from '@/components/ui/DataList';
 
 // Tipos TypeScript
 interface PrecioProveedorConDetalles {
@@ -179,12 +180,40 @@ export default function PreciosProveedorPage() {
   if (loading) return <div className="p-6 text-white">Cargando precios...</div>;
   if (error) return <div className="p-6 text-red-400">Error: {error}</div>;
 
+  const precioKg = (p: PrecioProveedorConDetalles) => (
+    <div className="text-lg font-bold text-primary">${p.precio_kg.toLocaleString('es-CL')}</div>
+  );
+  const precioMinimo = (p: PrecioProveedorConDetalles) =>
+    p.precio_minimo_kg !== null ? (
+      <div className="text-base font-semibold text-amber-400">${p.precio_minimo_kg.toLocaleString('es-CL')}</div>
+    ) : (
+      <div className="text-sm text-gray-500">— sin límite</div>
+    );
+  const vigencia = (p: PrecioProveedorConDetalles) => new Date(p.fecha_vigencia).toLocaleDateString('es-CL');
+  const estadoBadge = (p: PrecioProveedorConDetalles) => (
+    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+      p.activo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+    }`}>
+      {p.activo ? 'Activo' : 'Inactivo'}
+    </span>
+  );
+  const accionesPrecio = (p: PrecioProveedorConDetalles) => (
+    <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm font-medium">
+      <button onClick={() => abrirModal(p)} className="text-blue-400 hover:text-blue-300">
+        Editar
+      </button>
+      <button onClick={() => eliminarPrecio(p.id)} className="text-red-400 hover:text-red-300">
+        Desactivar
+      </button>
+    </div>
+  );
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-start">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Precios por Proveedor</h1>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+        <div className="min-w-0">
+          <h1 className="text-2xl md:text-3xl font-bold text-white">Precios por Proveedor</h1>
           <p className="text-gray-400">Gestión de precios por kilogramo para cajas variables</p>
         </div>
         <button
@@ -205,13 +234,13 @@ export default function PreciosProveedorPage() {
       </div>
 
       {/* Tabla de precios */}
-      <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-700">
+      <div>
+        <div className="mb-3">
           <h3 className="text-lg font-semibold text-white">Precios Configurados ({precios.length})</h3>
         </div>
 
         {precios.length === 0 ? (
-          <div className="p-8 text-center">
+          <div className="p-8 text-center bg-slate-800 rounded-lg border border-slate-700">
             <div className="text-gray-400 mb-4">No hay precios configurados</div>
             <button
               onClick={() => abrirModal()}
@@ -221,95 +250,71 @@ export default function PreciosProveedorPage() {
             </button>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-700">
-              <thead className="bg-slate-700">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                    Producto
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                    Proveedor
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                    Precio/kg
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                    Precio Mínimo/kg
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                    Estado
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                    Acciones
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-slate-800 divide-y divide-slate-700">
-                {precios.map((precio) => (
-                  <tr key={precio.id} className="hover:bg-slate-700">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-white">{precio.producto_nombre}</div>
-                      <div className="text-sm text-gray-400">{precio.producto_sku}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-white">{precio.proveedor_nombre}</div>
-                      <div className="text-sm text-gray-400">{precio.proveedor_rut}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-lg font-bold text-primary">
-                        ${precio.precio_kg.toLocaleString('es-CL')}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {precio.precio_minimo_kg !== null ? (
-                        <div className="text-base font-semibold text-amber-400">
-                          ${precio.precio_minimo_kg.toLocaleString('es-CL')}
-                        </div>
-                      ) : (
-                        <div className="text-sm text-gray-500">— sin límite</div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-300">
-                        {new Date(precio.fecha_vigencia).toLocaleDateString('es-CL')}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        precio.activo 
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {precio.activo ? 'Activo' : 'Inactivo'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button
-                        onClick={() => abrirModal(precio)}
-                        className="text-blue-400 hover:text-blue-300 mr-3"
-                      >
-                        Editar
-                      </button>
-                      <button
-                        onClick={() => eliminarPrecio(precio.id)}
-                        className="text-red-400 hover:text-red-300"
-                      >
-                        Desactivar
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataList
+            items={precios}
+            getKey={(p) => p.id}
+            columns={[
+              {
+                header: 'Producto',
+                className: 'w-[22%]',
+                cell: (p) => (
+                  <>
+                    <div className="font-medium text-white truncate" title={p.producto_nombre}>{p.producto_nombre}</div>
+                    <div className="text-xs text-gray-400">{p.producto_sku}</div>
+                  </>
+                ),
+              },
+              {
+                header: 'Proveedor',
+                className: 'w-[20%]',
+                cell: (p) => (
+                  <>
+                    <div className="font-medium text-white truncate" title={p.proveedor_nombre}>{p.proveedor_nombre}</div>
+                    <div className="text-xs text-gray-400">{p.proveedor_rut}</div>
+                  </>
+                ),
+              },
+              { header: 'Precio/kg', className: 'w-[12%]', sinTruncar: true, cell: precioKg },
+              { header: 'Mínimo/kg', className: 'w-[12%]', sinTruncar: true, cell: precioMinimo },
+              { header: 'Vigencia', className: 'w-[10%]', sinTruncar: true, cell: (p) => <span className="text-gray-300">{vigencia(p)}</span> },
+              { header: 'Estado', className: 'w-[9%]', sinTruncar: true, cell: estadoBadge },
+              { header: 'Acciones', className: 'w-[15%]', sinTruncar: true, cell: accionesPrecio },
+            ]}
+            card={(p) => (
+              <div className="space-y-2">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-medium text-white break-words">{p.producto_nombre}</div>
+                    <div className="text-xs text-gray-400">{p.producto_sku}</div>
+                  </div>
+                  <div className="shrink-0">{estadoBadge(p)}</div>
+                </div>
+                <div className="text-sm">
+                  <span className="text-white">{p.proveedor_nombre}</span>{' '}
+                  <span className="text-xs text-gray-400">{p.proveedor_rut}</span>
+                </div>
+                <div className="flex flex-wrap items-end justify-between gap-3">
+                  <div>
+                    <div className="text-xs text-gray-400">Precio/kg</div>
+                    {precioKg(p)}
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-400">Precio Mínimo/kg</div>
+                    {precioMinimo(p)}
+                  </div>
+                  <div className="text-xs text-gray-400">Vigencia {vigencia(p)}</div>
+                </div>
+                <div className="pt-2 border-t border-slate-700">{accionesPrecio(p)}</div>
+              </div>
+            )}
+          />
         )}
       </div>
 
       {/* Modal de creación/edición */}
       {modalAbierto && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-slate-800 rounded-lg border border-slate-700 p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-lg border border-slate-700 p-4 sm:p-6 w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto">
             <h3 className="text-lg font-semibold text-white mb-4">
               {editandoId ? 'Editar Precio' : 'Nuevo Precio'}
             </h3>

@@ -108,6 +108,25 @@ El backoffice debe tener una estructura modular con navegación lateral o superi
 * **PDFs de Cierre:** Solo se generan para turnos cerrados.
 * **Auditoría:** (Futuro) Registrar cambios con usuario y timestamp.
 
+### 3.3. Pasarelas de pago y pedidos de la tienda (desde 2026-11-18)
+
+Guía completa: `fme-backend/docs/PASARELAS_PAGO.md`. Especificación: change OpenSpec `add-pasarelas-pago` en fme-backend (capabilities `pasarelas-pago` y `pedidos-por-entregar`).
+
+* **Mantenedores → Pasarelas de pago** (`app/admin/configuracion/pasarelas/page.tsx`, `lib/api/pasarelas.ts`, pestaña en `app/admin/mantenedores/page.tsx` restringida al módulo `tienda_online`):
+  - crear pasarelas (Mercado Pago, Flow, Khipu; la Simulada solo en desarrollo) y cargar credenciales, que son de solo escritura;
+  - probar la conexión y activar o desactivar; en Producción, activar exige una prueba exitosa posterior a las credenciales;
+  - ver "Pagos en línea recientes", con los EN_REVISION destacados porque requieren acción manual.
+  - API: `/api/admin/pasarelas/*`.
+  - El **superadmin** configura las de cada tenant entrando a él (Superadmin → Operar en tenant).
+* **Dashboard → tarjeta "Por entregar"** (`app/admin/dashboard/page.tsx`, `GET /api/dashboard/por-entregar`):
+  - muestra Confirmados, En Preparación y En Ruta, más **Pagados sin confirmar** (en ámbar si hay alguno);
+  - cada métrica abre Pedidos filtrado.
+* **Pedidos** (`app/admin/pedidos/page.tsx`):
+  - estado **En Ruta** y filtro **Pago** (pagados / por pagar);
+  - filtros iniciales desde la URL (`?estado=`, `?pagado=si|no`);
+  - "Creado por" muestra **🛒 Tienda online** en pedidos hechos por el cliente en la landing (canal LANDING).
+* **Confirmación automática:** un pedido pagado en línea se confirma solo y descuenta inventario del local de despacho por defecto de su tipo. Si no hay stock ahí, queda pagado y PENDIENTE y los admins reciben una notificación en la campana para confirmarlo a mano eligiendo otro local.
+
 ---
 
 ## 4. 🐳 Despliegue y Comandos de Docker
@@ -305,45 +324,44 @@ Utilizar componentes de **shadcn/ui** o **Headless UI** para:
   {/* Vista Desktop: Tabla */}
   <div className="hidden lg:block ...">...</div>
   ```
+- **Para listas usar `components/ui/DataList.tsx`** (ya aplica `lg`): tabla `table-fixed` desde 1024 px y tarjetas debajo.
+  - `columns`: `{ header, cell, className, sinTruncar }`. Los anchos van en % en `className` (`w-[24%]`) y **deben sumar 100**.
+  - `sinTruncar` en números, badges, acciones e identificadores largos (estos con `break-all`).
+  - `card(item)`: lo principal arriba (nombre/número + estado o monto a la derecha), acciones abajo.
+  - `onItemClick` si la fila abre un detalle; los botones/enlaces internos llevan `e.stopPropagation()`.
+  - `itemClassName(item)` para atenuar o resaltar filas/tarjetas.
+  - Más de ~8 columnas: agruparlas (p. ej. "Pedido + fecha", "Estado + pago").
+- **Reportes numéricos densos o tablas con edición en línea** (Valorización, Notas de crédito, ítems de compra/receta): tabla en `hidden lg:block overflow-x-auto` + tarjetas `lg:hidden` que reutilicen **los mismos** handlers/inputs.
+- **Encabezados:** `components/ui/PageHeader.tsx` (título, subtítulo, acciones, filtros; se apila en móvil). Filas de botones/filtros siempre con `flex-wrap` o `flex-col sm:flex-row`; inputs/selects dentro de flex con `min-w-0`.
+- **Nunca** `overflow-x: hidden` global: el desborde se corrige en su origen. El `<main>` del layout lleva `min-w-0` (sin él, cualquier tabla ancha ensancha toda la página).
+- **Prueba obligatoria:** toda pantalla nueva se agrega a `e2e/ancho.spec.ts` (ver §8).
 
 ---
 
-## 8. 🧪 Tests (Pendiente)
+## 8. 🧪 Tests
 
-### 8.1. Estado Actual
+### 8.1. Pruebas e2e de ancho y de Capacitación (Playwright, desde 2026-11-18)
 
-**⏳ Tests pendientes de implementación**
-
-El backoffice está funcional y operativo, pero aún no cuenta con tests automatizados. Se recomienda implementar:
-
-### 8.2. Tests Recomendados
-
-#### Tests de Componentes (Jest + React Testing Library):
-- [ ] Formulario de productos (validaciones)
-- [ ] Formulario de locales
-- [ ] Grid de inventario (edición inline)
-- [ ] Tabla de pedidos con filtros
-- [ ] Dashboard (carga de estadísticas)
-- [ ] Formulario de clientes
-- [ ] Sistema de despachos (asignar, picking, dashboard)
-
-#### Tests de Integración:
-- [ ] Flujo completo: Login → Crear producto → Configurar precio → Ajustar inventario
-- [ ] Flujo de pedidos: Ver pedido → Cambiar estado → Confirmar
-- [ ] Flujo de despachos: Asignar → Picking → Completar → Entregar
-- [ ] Búsqueda y filtros en tablas
-
-#### Configuración Sugerida:
+- `e2e/ancho.spec.ts`: ninguna pantalla puede tener scroll horizontal de página en 320, 390, 768, 1024 y 1280 px (63 pantallas + detalles `/[id]`).
+- `e2e/capacitacion.spec.ts`: índice, visor aislado (sandbox), quiz, `localStorage` bloqueado, 403/404, acceso 🎓 y redirección sin sesión (solo en escritorio).
+- Usan el Chrome instalado (`channel: 'chrome'`), no descargan navegadores. `retries: 1` por cargas lentas ocasionales.
 
 ```bash
-# Instalar dependencias
-npm install --save-dev @testing-library/react @testing-library/jest-dom @testing-library/user-event jest jest-environment-jsdom
-
-# Configurar jest.config.js
-npx jest --init
+# 1) Backoffice en localhost:3000 (la API local solo acepta CORS desde ese origen)
+npm run dev -- -p 3000
+# 2) Token de la API local (sin contraseña)
+docker exec fme-backend python -c "from datetime import timedelta; from utils.security import create_access_token; print(create_access_token({'sub':'admin@fme.cl','role':'admin','tenant_id':1}, timedelta(hours=4)))"
+# 3) Correr (E2E_TOKEN_ROL = token de un rol no admin, opcional; E2E_IDS = ids reales para pantallas de detalle)
+E2E_TOKEN=<jwt> E2E_TOKEN_ROL=<jwt> E2E_IDS='{"pedido":332,"producto":1671,"productoReceta":1664,"cliente":79,"local":1,"cotizacion":17,"compra":26,"ot":28,"ruta":17}' npm run test:ancho
+# Un solo ancho o archivo:
+npm run test:ancho -- --project=movil-320 e2e/ancho.spec.ts
 ```
 
-**Nota:** El backend ya cuenta con 32 tests automatizados (100% pasando) que validan todos los endpoints consumidos por el backoffice.
+- **No correr `next build` en este repo mientras hay un `next dev` levantado**: comparten `.next` y se rompen mutuamente. Para probar un build de producción sin tocar el dev, copiar el repo a una carpeta del mismo disco (D:) con `node_modules` enlazado por junction.
+
+### 8.2. Pendiente
+
+- Tests de componentes/flujos (crear producto, pedido, despacho). El backend tiene sus propios tests.
 
 ---
 
@@ -682,3 +700,16 @@ cobro_chofer_pagado: boolean       // Cuando es true, la hoja desaparece de /des
 Una hoja desaparece de la vista del despachador cuando `cobro_chofer_pagado = true`.
 El admin la marca como pagada desde `/admin/despacho/rutas/[id]` con el botón "💰 Marcar como pagado".
 
+---
+
+## Estructura de la app, caché y service worker (change `improve-backoffice-responsive-performance`, 2026-11-18)
+
+Detalle completo en `openspec/changes/improve-backoffice-responsive-performance/` y en `docs/RESPONSIVE_Y_RENDIMIENTO.md`.
+
+- **Sesión:** `lib/AuthProvider.tsx` pide `/api/auth/users/me` solo cuando cambia el token (detecta el login al navegar), no en cada navegación. El `value` del contexto está memoizado.
+- **Menú:** `lib/MenuContext.tsx` (`MenuProvider` dentro de `app/admin/layout.tsx`) lo pide una vez por usuario/tenant y lo comparten el layout (autorización de rutas) y el `Sidebar`. Caché en localStorage (`fme_menu_cache`, ítems completos) para operar si la API no responde. `/admin/capacitacion` está permitido para todos los roles.
+- **`app/admin/loading.tsx`:** skeleton inmediato al navegar.
+- **Catálogos con caché (SWR):** `lib/hooks/catalogos.ts` (`useProductos`, `useInventarios`, `useLocales`, `useCategorias`, `stockPorProducto`). Muestra al instante lo cacheado y revalida en segundo plano. Las funciones de `lib/api/*` que crean/editan productos o mueven stock (merma, transferencia, conteo finalizado, solicitud) invalidan la caché con `revalidar(CLAVE.x)` de `lib/hooks/claves.ts`. Pantallas nuevas que necesiten esos catálogos deben usar los hooks, no `getProductos()` directo.
+- **Service worker (`next.config.js`):** solo estáticos. Toda ruta `/api/` va en `NetworkOnly` (la caché por URL no distingue sesión ni tenant). `cacheOnFrontEndNav` y `aggressiveFrontEndNavCaching` en `false`. Las ventas offline usan su propia cola (IndexedDB), no esta caché.
+- **Librerías pesadas bajo demanda:** jspdf/html2canvas con `await import()` dentro de la función; componentes con lector QR, código de barras o gráficos con `next/dynamic` + `{ ssr: false }`.
+- **Navegación interna:** siempre `<Link>` / `router.push`. `<a href="/admin...">` o `window.location.href` recargan toda la app; solo se permiten donde se recarga a propósito (login, cambio de tenant del superadmin).

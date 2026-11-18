@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { ExistenciasTab } from './components/ExistenciasTab';
 import { TransferenciasTab } from './components/TransferenciasTab';
 import { HistorialTab } from './components/HistorialTab';
@@ -29,13 +30,13 @@ export default function InventarioPage() {
                     <p className="text-gray-400">Gestión de stock regular y cajas por proveedor</p>
                 </div>
                 <div className="space-x-3">
-                    <a
+                    <Link
                         href="/admin/inventario/stock-cajas"
                         className="inline-flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors"
                     >
                         <span className="mr-2">📦</span>
                         Stock de Cajas
-                    </a>
+                    </Link>
                 </div>
             </div>
 

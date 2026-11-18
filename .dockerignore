@@ -49,3 +49,9 @@ logs/
 # Scripts de deployment
 deploy.ps1
 docker-build-push.ps1
+
+# Pruebas e2e (no van a la imagen)
+e2e
+playwright.config.ts
+test-results
+playwright-report

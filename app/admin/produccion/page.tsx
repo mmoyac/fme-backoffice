@@ -8,6 +8,8 @@ import { getLocales, Local } from '@/lib/api/locales';
 import { getProductos } from '@/lib/api/productos';
 import { useAuth } from '@/lib/AuthProvider';
 import { EditarCantidadesOPModal } from '@/components/produccion/EditarCantidadesOPModal';
+import DataList, { type Columna } from '@/components/ui/DataList';
+import PageHeader from '@/components/ui/PageHeader';
 
 const nombreUsuario = (u?: UsuarioRef | null) => (u ? (u.nombre_completo || u.email) : '-');
 
@@ -132,126 +134,130 @@ export default function ProduccionPage() {
         );
     }
 
+    const estadoBadge = (orden: OrdenProduccion) => (
+        <span
+            className={`px-2 py-1 rounded text-xs font-bold ${orden.estado === 'FINALIZADA' ? 'bg-green-900 text-green-300' :
+                orden.estado === 'PLANIFICADA' ? 'bg-blue-900 text-blue-300' :
+                    'bg-gray-700 text-gray-300'
+                }`}
+        >
+            {orden.estado}
+        </span>
+    );
+
+    const pedidoProducido = (orden: OrdenProduccion) => (
+        <div className="text-sm text-gray-300 min-w-0">
+            {orden.detalles.map(d => (
+                <div key={d.id} className="break-words">
+                    <span className="text-white">{productosMap[d.producto_id] || `Prod #${d.producto_id}`}</span>
+                    {': '}{Number(d.cantidad_programada)}
+                    {d.cantidad_producida != null && (
+                        <>
+                            {' → '}{Number(d.cantidad_producida)}
+                            {d.diferencia != null && Number(d.diferencia) !== 0 && (
+                                <span className={`ml-1 font-bold ${Number(d.diferencia) < 0 ? 'text-red-400' : 'text-green-400'}`}>
+                                    ({Number(d.diferencia) > 0 ? '+' : ''}{Number(d.diferencia)})
+                                </span>
+                            )}
+                        </>
+                    )}
+                    {d.motivo_diferencia && (
+                        <div className="text-xs text-gray-400 italic">Motivo: {d.motivo_diferencia}</div>
+                    )}
+                </div>
+            ))}
+            <div className="text-xs text-gray-500 mt-1">
+                Pidió: {nombreUsuario(orden.solicitado_por)}
+                {orden.producido_por && <> · Produjo: {nombreUsuario(orden.producido_por)}</>}
+            </div>
+        </div>
+    );
+
+    const acciones = (orden: OrdenProduccion) => (
+        <div className="flex flex-wrap gap-2 md:justify-end">
+            <Link
+                href={`/admin/produccion/${orden.id}/imprimir`}
+                target="_blank"
+                className="bg-slate-700 hover:bg-slate-600 text-gray-200 px-3 py-1 rounded text-xs flex items-center gap-1"
+                title="Imprimir Hoja de Producción"
+            >
+                🖨️
+            </Link>
+
+            {orden.estado === 'PLANIFICADA' && (
+                <>
+                    <button
+                        onClick={() => openFinalizarModal(orden)}
+                        className="bg-green-600 hover:bg-green-500 text-white px-3 py-1 rounded text-xs"
+                    >
+                        ✓ Finalizar
+                    </button>
+                    {esAdmin && (
+                        <button
+                            onClick={() => setOrdenEditar(orden)}
+                            className="bg-blue-700 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs"
+                            title="Editar cantidades"
+                        >
+                            ✎ Editar
+                        </button>
+                    )}
+                    {esAdmin && (
+                        <button
+                            onClick={() => handleDelete(orden.id)}
+                            className="bg-red-900/40 hover:bg-red-900/60 text-red-400 border border-red-900 px-3 py-1 rounded text-xs"
+                        >
+                            🗑️
+                        </button>
+                    )}
+                </>
+            )}
+        </div>
+    );
+
+    const columnas: Columna<OrdenProduccion>[] = [
+        { header: 'ID', className: 'w-[6%]', cell: (o) => <span className="text-gray-300">#{o.id}</span> },
+        { header: 'Local', className: 'w-[11%]', cell: (o) => <span className="text-white">{locales[o.local_id] || o.local_id}</span> },
+        { header: 'Fecha Prog.', className: 'w-[12%]', sinTruncar: true, cell: (o) => <span className="text-gray-300">{new Date(o.fecha_programada).toLocaleDateString()}</span> },
+        { header: 'Estado', className: 'w-[12%]', sinTruncar: true, cell: estadoBadge },
+        { header: 'Pedido / Producido', className: 'w-[28%]', sinTruncar: true, cell: pedidoProducido },
+        { header: 'Notas', className: 'w-[15%]', cell: (o) => <span className="text-gray-400 italic" title={o.notas || undefined}>{o.notas || '-'}</span> },
+        { header: 'Acciones', className: 'w-[16%] text-right', sinTruncar: true, cell: acciones },
+    ];
+
     return (
         <div>
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-3xl font-bold text-white">Producción</h1>
-                <Link
-                    href="/admin/produccion/ordenes-trabajo"
-                    className="text-sm text-gray-400 hover:text-primary transition-colors"
-                >
-                    ← Gestionar desde Órdenes de Trabajo
-                </Link>
-            </div>
+            <PageHeader
+                title="Producción"
+                actions={
+                    <Link
+                        href="/admin/produccion/ordenes-trabajo"
+                        className="text-sm text-gray-400 hover:text-primary transition-colors"
+                    >
+                        ← Gestionar desde Órdenes de Trabajo
+                    </Link>
+                }
+            />
 
-            {ordenes.length === 0 ? (
-                <div className="bg-slate-800 rounded-lg p-8 text-center text-gray-400">
-                    No hay órdenes de producción activas.
-                </div>
-            ) : (
-                <div className="bg-slate-800 rounded-lg overflow-x-auto">
-                    <table className="w-full">
-                        <thead className="bg-slate-700">
-                            <tr>
-                                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">ID</th>
-                                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">Local</th>
-                                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">Fecha Prog.</th>
-                                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">Estado</th>
-                                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">Pedido / Producido</th>
-                                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">Notas</th>
-                                <th className="px-6 py-3 text-right text-sm font-semibold text-gray-300">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-700">
-                            {ordenes.map((orden) => (
-                                <tr key={orden.id} className="hover:bg-slate-700/50">
-                                    <td className="px-6 py-4 text-sm text-gray-300">#{orden.id}</td>
-                                    <td className="px-6 py-4 text-sm text-white">{locales[orden.local_id] || orden.local_id}</td>
-                                    <td className="px-6 py-4 text-sm text-gray-300">
-                                        {new Date(orden.fecha_programada).toLocaleDateString()}
-                                    </td>
-                                    <td className="px-6 py-4 text-sm">
-                                        <span
-                                            className={`px-2 py-1 rounded text-xs font-bold ${orden.estado === 'FINALIZADA' ? 'bg-green-900 text-green-300' :
-                                                orden.estado === 'PLANIFICADA' ? 'bg-blue-900 text-blue-300' :
-                                                    'bg-gray-700 text-gray-300'
-                                                }`}
-                                        >
-                                            {orden.estado}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 text-sm text-gray-300">
-                                        {orden.detalles.map(d => (
-                                            <div key={d.id} className="whitespace-nowrap">
-                                                <span className="text-white">{productosMap[d.producto_id] || `Prod #${d.producto_id}`}</span>
-                                                {': '}{Number(d.cantidad_programada)}
-                                                {d.cantidad_producida != null && (
-                                                    <>
-                                                        {' → '}{Number(d.cantidad_producida)}
-                                                        {d.diferencia != null && Number(d.diferencia) !== 0 && (
-                                                            <span className={`ml-1 font-bold ${Number(d.diferencia) < 0 ? 'text-red-400' : 'text-green-400'}`}>
-                                                                ({Number(d.diferencia) > 0 ? '+' : ''}{Number(d.diferencia)})
-                                                            </span>
-                                                        )}
-                                                    </>
-                                                )}
-                                                {d.motivo_diferencia && (
-                                                    <div className="text-xs text-gray-400 italic">Motivo: {d.motivo_diferencia}</div>
-                                                )}
-                                            </div>
-                                        ))}
-                                        <div className="text-xs text-gray-500 mt-1">
-                                            Pidió: {nombreUsuario(orden.solicitado_por)}
-                                            {orden.producido_por && <> · Produjo: {nombreUsuario(orden.producido_por)}</>}
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 text-sm text-gray-400 italic">
-                                        {orden.notas || '-'}
-                                    </td>
-                                    <td className="px-6 py-4 text-sm text-right space-x-2 flex justify-end">
-                                        <Link
-                                            href={`/admin/produccion/${orden.id}/imprimir`}
-                                            target="_blank"
-                                            className="bg-slate-700 hover:bg-slate-600 text-gray-200 px-3 py-1 rounded text-xs flex items-center gap-1"
-                                            title="Imprimir Hoja de Producción"
-                                        >
-                                            🖨️
-                                        </Link>
-
-                                        {orden.estado === 'PLANIFICADA' && (
-                                            <>
-                                                <button
-                                                    onClick={() => openFinalizarModal(orden)}
-                                                    className="bg-green-600 hover:bg-green-500 text-white px-3 py-1 rounded text-xs"
-                                                >
-                                                    ✓ Finalizar
-                                                </button>
-                                                {esAdmin && (
-                                                    <button
-                                                        onClick={() => setOrdenEditar(orden)}
-                                                        className="bg-blue-700 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs"
-                                                        title="Editar cantidades"
-                                                    >
-                                                        ✎ Editar
-                                                    </button>
-                                                )}
-                                                {esAdmin && (
-                                                    <button
-                                                        onClick={() => handleDelete(orden.id)}
-                                                        className="bg-red-900/40 hover:bg-red-900/60 text-red-400 border border-red-900 px-3 py-1 rounded text-xs"
-                                                    >
-                                                        🗑️
-                                                    </button>
-                                                )}
-                                            </>
-                                        )}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
+            <DataList
+                items={ordenes}
+                getKey={(o) => o.id}
+                columns={columnas}
+                empty="No hay órdenes de producción activas."
+                card={(o) => (
+                    <div className="space-y-2">
+                        <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                                <div className="text-white font-semibold">OP #{o.id} · <span className="font-normal">{locales[o.local_id] || o.local_id}</span></div>
+                                <div className="text-xs text-gray-400">Programada {new Date(o.fecha_programada).toLocaleDateString()}</div>
+                            </div>
+                            <div className="shrink-0">{estadoBadge(o)}</div>
+                        </div>
+                        {pedidoProducido(o)}
+                        {o.notas && <div className="text-xs text-gray-400 italic break-words">{o.notas}</div>}
+                        <div className="pt-2 border-t border-slate-700">{acciones(o)}</div>
+                    </div>
+                )}
+            />
 
             {ordenEditar && (
                 <EditarCantidadesOPModal
@@ -284,7 +290,7 @@ export default function ProduccionPage() {
                                     : null;
                                 return (
                                     <div key={det.id} className="bg-slate-700 p-3 rounded space-y-2">
-                                        <div className="flex justify-between items-center">
+                                        <div className="flex flex-wrap justify-between items-center gap-2">
                                             <span className="text-white text-sm font-medium">
                                                 {productosMap[det.producto_id] || `Prod #${det.producto_id}`}
                                             </span>

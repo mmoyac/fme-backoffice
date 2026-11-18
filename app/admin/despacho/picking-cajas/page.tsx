@@ -142,7 +142,7 @@ export default function PickingPage() {
         <label className="block text-slate-300 text-sm font-medium mb-2">
           Escanear caja (QR / código de barra)
         </label>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           <input
             ref={inputRef}
             type="text"

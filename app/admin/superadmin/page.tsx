@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { AuthService } from '@/lib/auth';
+import DataList from '@/components/ui/DataList';
 import ModulosTenantModal from '@/components/superadmin/ModulosTenantModal';
 
 interface TenantStats {
@@ -103,16 +104,45 @@ export default function SuperAdminPage() {
         );
     }
 
+    const estadoTenant = (t: TenantStats) =>
+        t.activo
+            ? <span className="text-green-400 font-medium">Activo</span>
+            : <span className="text-red-400 font-medium">Inactivo</span>;
+
+    const accionesTenant = (t: TenantStats) => (
+        <div className="flex flex-wrap gap-2">
+            <button
+                onClick={() => handleEnterTenant(t.id)}
+                disabled={switching === t.id}
+                className="bg-primary hover:bg-amber-600 disabled:opacity-50 text-slate-900 px-3 py-1 rounded text-xs font-semibold"
+            >
+                {switching === t.id ? '...' : 'Entrar'}
+            </button>
+            <button
+                onClick={() => setModulosDe(t)}
+                className="bg-slate-600 hover:bg-slate-500 text-white px-3 py-1 rounded text-xs font-semibold"
+            >
+                Módulos
+            </button>
+            <button
+                onClick={() => handleToggleActivo(t)}
+                className={`px-3 py-1 rounded text-xs font-semibold ${t.activo ? 'bg-red-700 hover:bg-red-800 text-white' : 'bg-green-700 hover:bg-green-800 text-white'}`}
+            >
+                {t.activo ? 'Desactivar' : 'Activar'}
+            </button>
+        </div>
+    );
+
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-3xl font-bold text-white">👑 Super Admin — Panel de Plataforma</h1>
+                <h1 className="text-2xl md:text-3xl font-bold text-white break-words">👑 Super Admin — Panel de Plataforma</h1>
                 <p className="text-slate-400 mt-1">Gestión global de todos los tenants del sistema</p>
             </div>
 
             {/* Estadísticas globales */}
             {stats && (
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
                     {[
                         { label: 'Tenants Total', value: stats.total_tenants },
                         { label: 'Tenants Activos', value: stats.tenants_activos },
@@ -129,68 +159,50 @@ export default function SuperAdminPage() {
             )}
 
             {/* Lista de tenants */}
-            <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
-                <div className="px-6 py-4 border-b border-slate-700">
-                    <h2 className="text-lg font-semibold text-white">Tenants</h2>
-                </div>
-                <table className="w-full text-left text-slate-300 text-sm">
-                    <thead className="bg-slate-900 text-slate-400 uppercase text-xs">
-                        <tr>
-                            <th className="px-6 py-3">Tenant</th>
-                            <th className="px-6 py-3">Dominio</th>
-                            <th className="px-6 py-3 text-center">Usuarios</th>
-                            <th className="px-6 py-3 text-center">Productos</th>
-                            <th className="px-6 py-3 text-center">Clientes</th>
-                            <th className="px-6 py-3 text-center">Pedidos</th>
-                            <th className="px-6 py-3 text-center">Estado</th>
-                            <th className="px-6 py-3 text-center">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-700">
-                        {tenants.map(t => (
-                            <tr key={t.id} className="hover:bg-slate-700/40">
-                                <td className="px-6 py-4">
-                                    <div className="font-medium text-white">{t.nombre}</div>
+            <div>
+                <h2 className="text-lg font-semibold text-white mb-3">Tenants</h2>
+                <DataList
+                    items={tenants}
+                    getKey={(t) => t.id}
+                    columns={[
+                        {
+                            header: 'Tenant',
+                            className: 'w-[20%]',
+                            cell: (t) => (
+                                <>
+                                    <div className="font-medium text-white truncate" title={t.nombre}>{t.nombre}</div>
                                     <div className="text-xs text-slate-500">{t.codigo}</div>
-                                </td>
-                                <td className="px-6 py-4 text-slate-400">{t.dominio_principal || '—'}</td>
-                                <td className="px-6 py-4 text-center">{t.total_usuarios}</td>
-                                <td className="px-6 py-4 text-center">{t.total_productos}</td>
-                                <td className="px-6 py-4 text-center">{t.total_clientes}</td>
-                                <td className="px-6 py-4 text-center">{t.total_pedidos}</td>
-                                <td className="px-6 py-4 text-center">
-                                    {t.activo
-                                        ? <span className="text-green-400 font-medium">Activo</span>
-                                        : <span className="text-red-400 font-medium">Inactivo</span>
-                                    }
-                                </td>
-                                <td className="px-6 py-4">
-                                    <div className="flex gap-2 justify-center">
-                                        <button
-                                            onClick={() => handleEnterTenant(t.id)}
-                                            disabled={switching === t.id}
-                                            className="bg-primary hover:bg-amber-600 disabled:opacity-50 text-slate-900 px-3 py-1 rounded text-xs font-semibold"
-                                        >
-                                            {switching === t.id ? '...' : 'Entrar'}
-                                        </button>
-                                        <button
-                                            onClick={() => setModulosDe(t)}
-                                            className="bg-slate-600 hover:bg-slate-500 text-white px-3 py-1 rounded text-xs font-semibold"
-                                        >
-                                            Módulos
-                                        </button>
-                                        <button
-                                            onClick={() => handleToggleActivo(t)}
-                                            className={`px-3 py-1 rounded text-xs font-semibold ${t.activo ? 'bg-red-700 hover:bg-red-800 text-white' : 'bg-green-700 hover:bg-green-800 text-white'}`}
-                                        >
-                                            {t.activo ? 'Desactivar' : 'Activar'}
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+                                </>
+                            ),
+                        },
+                        { header: 'Dominio', className: 'w-[18%]', cell: (t) => <span className="text-slate-400" title={t.dominio_principal || undefined}>{t.dominio_principal || '—'}</span> },
+                        { header: 'Usuarios', className: 'w-[8%] text-center', sinTruncar: true, cell: (t) => t.total_usuarios },
+                        { header: 'Productos', className: 'w-[9%] text-center', sinTruncar: true, cell: (t) => t.total_productos },
+                        { header: 'Clientes', className: 'w-[8%] text-center', sinTruncar: true, cell: (t) => t.total_clientes },
+                        { header: 'Pedidos', className: 'w-[8%] text-center', sinTruncar: true, cell: (t) => t.total_pedidos },
+                        { header: 'Estado', className: 'w-[8%] text-center', sinTruncar: true, cell: estadoTenant },
+                        { header: 'Acciones', className: 'w-[21%] text-center', sinTruncar: true, cell: (t) => <div className="flex justify-center">{accionesTenant(t)}</div> },
+                    ]}
+                    card={(t) => (
+                        <div className="space-y-2 text-slate-300 text-sm">
+                            <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                    <div className="font-medium text-white break-words">{t.nombre}</div>
+                                    <div className="text-xs text-slate-500">{t.codigo}</div>
+                                    <div className="text-xs text-slate-400 break-all">{t.dominio_principal || '—'}</div>
+                                </div>
+                                <div className="shrink-0">{estadoTenant(t)}</div>
+                            </div>
+                            <div className="grid grid-cols-4 gap-2 text-center">
+                                <div><div className="text-white font-semibold">{t.total_usuarios}</div><div className="text-[11px] text-slate-400">Usuarios</div></div>
+                                <div><div className="text-white font-semibold">{t.total_productos}</div><div className="text-[11px] text-slate-400">Productos</div></div>
+                                <div><div className="text-white font-semibold">{t.total_clientes}</div><div className="text-[11px] text-slate-400">Clientes</div></div>
+                                <div><div className="text-white font-semibold">{t.total_pedidos}</div><div className="text-[11px] text-slate-400">Pedidos</div></div>
+                            </div>
+                            <div className="pt-2 border-t border-slate-700">{accionesTenant(t)}</div>
+                        </div>
+                    )}
+                />
             </div>
 
             {modulosDe && (

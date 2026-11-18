@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { getLocales, deleteLocal, type Local } from '@/lib/api/locales';
 import Link from 'next/link';
+import DataList from '@/components/ui/DataList';
+import PageHeader from '@/components/ui/PageHeader';
 
 export default function LocalesPage() {
   const [locales, setLocales] = useState<Local[]>([]);
@@ -39,59 +41,60 @@ export default function LocalesPage() {
     return <div className="text-gray-400">Cargando...</div>;
   }
 
+  const estado = (local: Local) => (
+    <span className={local.activo ? 'text-green-400' : 'text-red-400'}>{local.activo ? 'Activo' : 'Inactivo'}</span>
+  );
+
+  const acciones = (local: Local) => (
+    <div className="flex flex-wrap gap-x-3 gap-y-1 sm:justify-end">
+      <Link href={`/admin/locales/${local.id}`} className="text-primary hover:text-primary-dark">
+        Editar
+      </Link>
+      <button onClick={() => handleDelete(local.id)} className="text-red-400 hover:text-red-300">
+        Eliminar
+      </button>
+    </div>
+  );
+
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-white">Locales</h1>
-        <Link
-          href="/admin/locales/nuevo"
-          className="bg-primary hover:bg-primary-dark text-slate-900 font-semibold px-6 py-2 rounded-lg"
-        >
-          + Nuevo Local
-        </Link>
-      </div>
+      <PageHeader
+        title="Locales"
+        actions={
+          <Link
+            href="/admin/locales/nuevo"
+            className="bg-primary hover:bg-primary-dark text-slate-900 font-semibold px-6 py-2 rounded-lg text-center"
+          >
+            + Nuevo Local
+          </Link>
+        }
+      />
 
-      {locales.length === 0 ? (
-        <div className="bg-slate-800 rounded-lg p-8 text-center text-gray-400">
-          No hay locales. Crea uno nuevo para comenzar.
-        </div>
-      ) : (
-        <div className="bg-slate-800 rounded-lg overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-slate-700">
-              <tr>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">Código</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">Nombre</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">Dirección</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">Estado</th>
-                <th className="px-6 py-3 text-right text-sm font-semibold text-gray-300">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-700">
-              {locales.map((local) => (
-                <tr key={local.id} className="hover:bg-slate-700/50">
-                  <td className="px-6 py-4 text-sm text-gray-300 font-mono">{local.codigo}</td>
-                  <td className="px-6 py-4 text-sm text-white font-medium">{local.nombre}</td>
-                  <td className="px-6 py-4 text-sm text-gray-400">{local.direccion || '-'}</td>
-                  <td className="px-6 py-4 text-sm">
-                    <span className={local.activo ? 'text-green-400' : 'text-red-400'}>
-                      {local.activo ? 'Activo' : 'Inactivo'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-right space-x-2">
-                    <Link href={`/admin/locales/${local.id}`} className="text-primary hover:text-primary-dark">
-                      Editar
-                    </Link>
-                    <button onClick={() => handleDelete(local.id)} className="text-red-400 hover:text-red-300">
-                      Eliminar
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <DataList
+        items={locales}
+        getKey={(l) => l.id}
+        empty="No hay locales. Crea uno nuevo para comenzar."
+        columns={[
+          { header: 'Código', className: 'w-[14%]', cell: (l) => <span className="text-gray-300 font-mono">{l.codigo}</span> },
+          { header: 'Nombre', className: 'w-[24%]', cell: (l) => <span className="text-white font-medium" title={l.nombre}>{l.nombre}</span> },
+          { header: 'Dirección', className: 'w-[32%]', cell: (l) => <span className="text-gray-400" title={l.direccion || undefined}>{l.direccion || '-'}</span> },
+          { header: 'Estado', className: 'w-[12%]', sinTruncar: true, cell: estado },
+          { header: 'Acciones', className: 'w-[18%] text-right', sinTruncar: true, cell: acciones },
+        ]}
+        card={(l) => (
+          <div className="space-y-2">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-white font-medium break-words">{l.nombre}</div>
+                <div className="text-xs text-gray-400 font-mono">{l.codigo}</div>
+              </div>
+              <div className="shrink-0 text-sm">{estado(l)}</div>
+            </div>
+            <div className="text-sm text-gray-400 break-words">{l.direccion || '-'}</div>
+            <div className="pt-2 border-t border-slate-700 text-sm">{acciones(l)}</div>
+          </div>
+        )}
+      />
     </div>
   );
 }

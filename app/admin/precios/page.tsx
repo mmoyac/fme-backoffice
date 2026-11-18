@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { getProductos, type Producto } from '@/lib/api/productos';
 import { getLocales, type Local } from '@/lib/api/locales';
 import { getPrecios, crearPrecio, updatePrecio, eliminarPrecio, descargarPreciosExcel, type Precio } from '@/lib/api/precios';
@@ -165,19 +166,19 @@ export default function PreciosPage() {
   return (
     <div>
       {/* Header */}
-      <div className="flex justify-between items-start mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Gestión de Precios por Unidad</h1>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-6">
+        <div className="min-w-0">
+          <h1 className="text-2xl md:text-3xl font-bold text-white">Gestión de Precios por Unidad</h1>
           <p className="text-gray-400">Configure precios según unidad de medida (unidad, media docena, docena, etc.)</p>
         </div>
-        <div className="space-x-3">
-          <a
+        <div className="shrink-0">
+          <Link
             href="/admin/precios/proveedores"
             className="inline-flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors"
           >
             <span className="mr-2">🏷️</span>
             Precios por Proveedor
-          </a>
+          </Link>
         </div>
       </div>
 
@@ -219,7 +220,7 @@ export default function PreciosPage() {
             <option key={id} value={id}>{nombre}</option>
           ))}
         </select>
-        <span className="text-sm text-gray-400 ml-auto">{productosFiltrados.length} producto(s)</span>
+        <span className="text-sm text-gray-400 sm:ml-auto">{productosFiltrados.length} producto(s)</span>
         <button
           onClick={exportarExcel}
           disabled={exportando || productosFiltrados.length === 0}
@@ -238,10 +239,10 @@ export default function PreciosPage() {
           const preciosProducto = getPreciosPorProducto(producto.id);
           
           return (
-            <div key={producto.id} className="bg-slate-800 rounded-lg p-6">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="text-xl font-bold text-white">{producto.nombre}</h3>
+            <div key={producto.id} className="bg-slate-800 rounded-lg p-4 sm:p-6">
+              <div className="flex flex-wrap justify-between items-start gap-3 mb-4">
+                <div className="min-w-0">
+                  <h3 className="text-lg sm:text-xl font-bold text-white break-words">{producto.nombre}</h3>
                   <p className="text-sm text-gray-400">SKU: {producto.sku}</p>
                 </div>
                 <button
@@ -255,20 +256,21 @@ export default function PreciosPage() {
               {preciosProducto.length === 0 ? (
                 <p className="text-gray-500 italic">No hay precios configurados</p>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
+                <>
+                <div className="hidden lg:block">
+                  <table className="w-full table-fixed">
                     <thead className="bg-slate-700">
                       <tr>
-                        <th className="px-4 py-2 text-left text-sm font-semibold text-gray-300">Local</th>
-                        <th className="px-4 py-2 text-left text-sm font-semibold text-gray-300">Unidad de Medida</th>
-                        <th className="px-4 py-2 text-right text-sm font-semibold text-gray-300">Precio</th>
-                        <th className="px-4 py-2 text-center text-sm font-semibold text-gray-300">Acciones</th>
+                        <th className="w-[30%] px-4 py-2 text-left text-sm font-semibold text-gray-300">Local</th>
+                        <th className="w-[28%] px-4 py-2 text-left text-sm font-semibold text-gray-300">Unidad de Medida</th>
+                        <th className="w-[18%] px-4 py-2 text-right text-sm font-semibold text-gray-300">Precio</th>
+                        <th className="w-[24%] px-4 py-2 text-center text-sm font-semibold text-gray-300">Acciones</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-700">
                       {preciosProducto.map(precio => (
                         <tr key={precio.id} className="hover:bg-slate-700/50">
-                          <td className="px-4 py-3 text-sm text-white">
+                          <td className="px-4 py-3 text-sm text-white truncate" title={getLocalNombre(precio.local_id)}>
                             {getLocalNombre(precio.local_id)}
                           </td>
                           <td className="px-4 py-3 text-sm text-white">
@@ -300,6 +302,38 @@ export default function PreciosPage() {
                     </tbody>
                   </table>
                 </div>
+                <ul className="lg:hidden divide-y divide-slate-700">
+                  {preciosProducto.map(precio => (
+                    <li key={precio.id} className="py-3 space-y-2">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-sm text-white break-words">{getLocalNombre(precio.local_id)}</div>
+                          <span className="inline-flex items-center mt-1 px-3 py-1 bg-blue-600/20 text-blue-400 rounded-full text-xs font-medium">
+                            {getUnidadNombre(precio.unidad_medida_id)}
+                          </span>
+                        </div>
+                        <div className="shrink-0 text-right text-base font-bold text-emerald-400">
+                          ${precio.monto_precio.toLocaleString('es-CL')}
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleEditPrecio(precio)}
+                          className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs transition-colors"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => handleEliminar(precio.id)}
+                          className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs transition-colors"
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+                </>
               )}
             </div>
           );
@@ -309,7 +343,7 @@ export default function PreciosPage() {
       {/* Modal para crear/editar precio */}
       {modalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-lg p-6 max-w-md w-full">
+          <div className="bg-slate-800 rounded-lg p-4 sm:p-6 max-w-md w-full max-h-[calc(100dvh-2rem)] overflow-y-auto">
             <h3 className="text-xl font-bold text-white mb-4">
               {editingPrecio ? 'Editar Precio' : 'Nuevo Precio'}
             </h3>

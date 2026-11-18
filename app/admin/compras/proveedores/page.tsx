@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { getProveedores, createProveedor, updateProveedor, Proveedor, ProveedorCreate, getTiposProveedor, TipoProveedor } from '@/lib/api/compras';
+import DataList, { type Columna } from '@/components/ui/DataList';
+import PageHeader from '@/components/ui/PageHeader';
 
 export default function ProveedoresPage() {
     const [proveedores, setProveedores] = useState<Proveedor[]>([]);
@@ -105,63 +107,68 @@ export default function ProveedoresPage() {
         );
     }
 
+    const estadoBadge = (p: Proveedor) => (
+        <span className={`px-2 py-1 rounded text-xs font-bold ${p.activo ? 'bg-green-900 text-green-300' : 'bg-gray-700 text-gray-400'}`}>
+            {p.activo ? 'Activo' : 'Inactivo'}
+        </span>
+    );
+
+    const botonEditar = (p: Proveedor) => (
+        <button
+            onClick={(e) => { e.stopPropagation(); openEditModal(p); }}
+            className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded text-xs"
+        >
+            Editar
+        </button>
+    );
+
+    const columnas: Columna<Proveedor>[] = [
+        { header: 'Nombre', className: 'w-[22%]', cell: (p) => <span className="text-white font-medium" title={p.nombre}>{p.nombre}</span> },
+        { header: 'RUT', className: 'w-[12%]', cell: (p) => <span className="text-gray-300">{p.rut || '-'}</span> },
+        { header: 'Contacto', className: 'w-[15%]', cell: (p) => <span className="text-gray-300" title={p.contacto || undefined}>{p.contacto || '-'}</span> },
+        { header: 'Email', className: 'w-[20%]', cell: (p) => <span className="text-gray-300" title={p.email || undefined}>{p.email || '-'}</span> },
+        { header: 'Teléfono', className: 'w-[12%]', cell: (p) => <span className="text-gray-300">{p.telefono || '-'}</span> },
+        { header: 'Estado', className: 'w-[10%] text-center', sinTruncar: true, cell: estadoBadge },
+        { header: 'Acciones', className: 'w-[9%] text-right', sinTruncar: true, cell: botonEditar },
+    ];
+
     return (
         <div>
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-3xl font-bold text-white">Proveedores</h1>
-                <button
-                    onClick={openCreateModal}
-                    className="bg-primary hover:bg-primary-dark text-slate-900 font-semibold px-6 py-2 rounded-lg transition-colors"
-                >
-                    + Nuevo Proveedor
-                </button>
-            </div>
+            <PageHeader
+                title="Proveedores"
+                actions={
+                    <button
+                        onClick={openCreateModal}
+                        className="bg-primary hover:bg-primary-dark text-slate-900 font-semibold px-6 py-2 rounded-lg transition-colors"
+                    >
+                        + Nuevo Proveedor
+                    </button>
+                }
+            />
 
-            {proveedores.length === 0 ? (
-                <div className="bg-slate-800 rounded-lg p-8 text-center text-gray-400">
-                    No hay proveedores registrados.
-                </div>
-            ) : (
-                <div className="bg-slate-800 rounded-lg overflow-hidden">
-                    <table className="w-full">
-                        <thead className="bg-slate-700">
-                            <tr>
-                                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">Nombre</th>
-                                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">RUT</th>
-                                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">Contacto</th>
-                                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">Email</th>
-                                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">Teléfono</th>
-                                <th className="px-6 py-3 text-center text-sm font-semibold text-gray-300">Estado</th>
-                                <th className="px-6 py-3 text-right text-sm font-semibold text-gray-300">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-700">
-                            {proveedores.map((proveedor) => (
-                                <tr key={proveedor.id} className="hover:bg-slate-700/50">
-                                    <td className="px-6 py-4 text-sm text-white font-medium">{proveedor.nombre}</td>
-                                    <td className="px-6 py-4 text-sm text-gray-300">{proveedor.rut || '-'}</td>
-                                    <td className="px-6 py-4 text-sm text-gray-300">{proveedor.contacto || '-'}</td>
-                                    <td className="px-6 py-4 text-sm text-gray-300">{proveedor.email || '-'}</td>
-                                    <td className="px-6 py-4 text-sm text-gray-300">{proveedor.telefono || '-'}</td>
-                                    <td className="px-6 py-4 text-center">
-                                        <span className={`px-2 py-1 rounded text-xs font-bold ${proveedor.activo ? 'bg-green-900 text-green-300' : 'bg-gray-700 text-gray-400'}`}>
-                                            {proveedor.activo ? 'Activo' : 'Inactivo'}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                        <button
-                                            onClick={() => openEditModal(proveedor)}
-                                            className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded text-xs"
-                                        >
-                                            Editar
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
+            <DataList
+                items={proveedores}
+                getKey={(p) => p.id}
+                columns={columnas}
+                empty="No hay proveedores registrados."
+                card={(p) => (
+                    <div className="space-y-2">
+                        <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                                <div className="text-white font-medium break-words">{p.nombre}</div>
+                                <div className="text-xs text-gray-400">RUT: {p.rut || '-'}</div>
+                            </div>
+                            <div className="shrink-0">{estadoBadge(p)}</div>
+                        </div>
+                        <div className="text-sm text-gray-300 space-y-0.5 min-w-0">
+                            <div className="break-words">Contacto: {p.contacto || '-'}</div>
+                            <div className="break-all">Email: {p.email || '-'}</div>
+                            <div>Teléfono: {p.telefono || '-'}</div>
+                        </div>
+                        <div className="pt-2 border-t border-slate-700">{botonEditar(p)}</div>
+                    </div>
+                )}
+            />
 
             {/* Modal */}
             {modalOpen && (

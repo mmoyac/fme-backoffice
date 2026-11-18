@@ -3,6 +3,8 @@
 
 import { useState, useEffect } from 'react';
 import { AuthService } from '@/lib/auth';
+import DataList from '@/components/ui/DataList';
+import PageHeader from '@/components/ui/PageHeader';
 
 interface Role {
     id: number;
@@ -182,85 +184,88 @@ export default function UsuariosPage() {
         } catch (e) { alert('Error de red'); }
     };
 
+    const rolBadge = (u: User) => (
+        <span className="inline-block bg-slate-700 px-2 py-1 rounded text-xs font-bold uppercase text-primary break-all">
+            {u.role?.nombre}
+        </span>
+    );
+
+    const localDe = (u: User) =>
+        u.local_defecto_id
+            ? <span>{locales.find(l => l.id === u.local_defecto_id)?.nombre || `Local ID: ${u.local_defecto_id}`}</span>
+            : <span className="text-slate-500">Sin asignar</span>;
+
+    const estadoDe = (u: User) =>
+        u.is_active
+            ? <span className="text-green-400">Activo</span>
+            : <span className="text-red-400">Inactivo</span>;
+
+    const accionesDe = (u: User) => (
+        <div className="flex flex-wrap gap-2">
+            <button
+                onClick={() => handleEditUser(u)}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm"
+            >
+                Editar
+            </button>
+            <button
+                onClick={() => handleDeleteUser(u)}
+                className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm"
+            >
+                Eliminar
+            </button>
+        </div>
+    );
+
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center">
-                <h1 className="text-3xl font-bold text-white">Gestión de Usuarios</h1>
-            </div>
+            <PageHeader
+                title="Gestión de Usuarios"
+                actions={
+                    <button
+                        onClick={() => setShowCreateUser(true)}
+                        className="bg-primary hover:bg-amber-600 text-slate-900 px-4 py-2 rounded-lg font-semibold"
+                    >
+                        + Nuevo Usuario
+                    </button>
+                }
+            />
 
             <div className="min-h-[400px]">
-                <div>
-                        <div className="flex justify-end mb-4">
-                            <button
-                                onClick={() => setShowCreateUser(true)}
-                                className="bg-primary hover:bg-amber-600 text-slate-900 px-4 py-2 rounded-lg font-semibold"
-                            >
-                                + Nuevo Usuario
-                            </button>
+                <DataList
+                    items={users}
+                    getKey={(u) => u.id}
+                    columns={[
+                        { header: 'Nombre', className: 'w-[22%]', cell: (u) => <span className="text-slate-200" title={u.nombre_completo}>{u.nombre_completo}</span> },
+                        { header: 'Email', className: 'w-[24%]', cell: (u) => <span className="text-slate-300" title={u.email}>{u.email}</span> },
+                        { header: 'Rol', className: 'w-[13%]', sinTruncar: true, cell: rolBadge },
+                        { header: 'Local', className: 'w-[13%]', cell: localDe },
+                        { header: 'Estado', className: 'w-[9%]', sinTruncar: true, cell: estadoDe },
+                        { header: 'Acciones', className: 'w-[19%]', sinTruncar: true, cell: accionesDe },
+                    ]}
+                    card={(u) => (
+                        <div className="space-y-2 text-slate-300">
+                            <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                    <div className="text-white font-medium break-words">{u.nombre_completo}</div>
+                                    <div className="text-xs text-slate-400 break-all">{u.email}</div>
+                                </div>
+                                <div className="shrink-0 text-right space-y-1">
+                                    {rolBadge(u)}
+                                    <div className="text-xs">{estadoDe(u)}</div>
+                                </div>
+                            </div>
+                            <div className="text-sm">Local: {localDe(u)}</div>
+                            <div className="pt-2 border-t border-slate-700">{accionesDe(u)}</div>
                         </div>
-
-                        <div className="bg-slate-800 rounded-lg overflow-x-auto">
-                            <table className="w-full text-left text-slate-300">
-                                <thead className="bg-slate-900 text-slate-400 uppercase text-xs">
-                                    <tr>
-                                        <th className="px-6 py-3">Nombre</th>
-                                        <th className="px-6 py-3">Email</th>
-                                        <th className="px-6 py-3">Rol</th>
-                                        <th className="px-6 py-3">Local</th>
-                                        <th className="px-6 py-3">Estado</th>
-                                        <th className="px-6 py-3">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-700">
-                                    {users.map(u => (
-                                        <tr key={u.id} className="hover:bg-slate-700/50">
-                                            <td className="px-6 py-4">{u.nombre_completo}</td>
-                                            <td className="px-6 py-4">{u.email}</td>
-                                            <td className="px-6 py-4">
-                                                <span className="bg-slate-700 px-2 py-1 rounded text-xs font-bold uppercase text-primary">
-                                                    {u.role?.nombre}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                {u.local_defecto_id
-                                                    ? locales.find(l => l.id === u.local_defecto_id)?.nombre || `Local ID: ${u.local_defecto_id}`
-                                                    : <span className="text-slate-500">Sin asignar</span>
-                                                }
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                {u.is_active
-                                                    ? <span className="text-green-400">Activo</span>
-                                                    : <span className="text-red-400">Inactivo</span>
-                                                }
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex gap-2">
-                                                    <button
-                                                        onClick={() => handleEditUser(u)}
-                                                        className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm"
-                                                    >
-                                                        Editar
-                                                    </button>
-<button
-                                                        onClick={() => handleDeleteUser(u)}
-                                                        className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm"
-                                                    >
-                                                        Eliminar
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+                    )}
+                />
             </div>
 
             {/* Modal: Nuevo Usuario */}
             {showCreateUser && (
-                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-                    <div className="bg-slate-800 rounded-xl p-8 w-full max-w-lg border border-slate-700 shadow-2xl">
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+                    <div className="bg-slate-800 rounded-xl p-5 sm:p-8 w-full max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto border border-slate-700 shadow-2xl">
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="text-xl font-bold text-white">Nuevo Usuario</h3>
                             <button onClick={() => setShowCreateUser(false)} className="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
@@ -318,8 +323,8 @@ export default function UsuariosPage() {
 
             {/* Modal: Editar Usuario */}
             {showEditUser && editingUser && (
-                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-                    <div className="bg-slate-800 rounded-xl p-8 w-full max-w-lg border border-slate-700 shadow-2xl">
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+                    <div className="bg-slate-800 rounded-xl p-5 sm:p-8 w-full max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto border border-slate-700 shadow-2xl">
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="text-xl font-bold text-white">Editar: {editingUser.email}</h3>
                             <button onClick={() => setShowEditUser(false)} className="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
@@ -384,8 +389,8 @@ export default function UsuariosPage() {
 
             {/* Modal: Permisos de rol desde lista de usuarios */}
             {roleModalUser && (
-                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-                    <div className="bg-slate-800 rounded-xl p-8 w-full max-w-2xl border border-slate-700 shadow-2xl">
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+                    <div className="bg-slate-800 rounded-xl p-5 sm:p-8 w-full max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto border border-slate-700 shadow-2xl">
                         <div className="flex justify-between items-center mb-6">
                             <div>
                                 <h3 className="text-xl font-bold text-white">Permisos del rol</h3>
@@ -398,7 +403,7 @@ export default function UsuariosPage() {
                         {menuItems.length === 0 ? (
                             <p className="text-slate-400">Cargando permisos...</p>
                         ) : (
-                            <div className="grid grid-cols-2 gap-3 mb-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
                                 {menuItems.map(item => (
                                     <label key={item.id} className="flex items-center space-x-3 p-3 bg-slate-900 rounded hover:bg-slate-700 cursor-pointer">
                                         <input

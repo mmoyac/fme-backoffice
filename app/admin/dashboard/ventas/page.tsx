@@ -127,36 +127,36 @@ export default function DashboardPage() {
       )}
 
       {/* KPIs Principales */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
         {/* Ventas del Día */}
-        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg p-6 text-white">
+        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg p-4 md:p-6 text-white">
           <p className="text-sm opacity-90">Ventas del Día</p>
-          <p className="text-3xl font-bold mt-2">{formatCurrency(stats.ventas.hoy)}</p>
+          <p className="text-2xl md:text-3xl font-bold mt-2 break-all">{formatCurrency(stats.ventas.hoy)}</p>
         </div>
 
         {/* Ventas del Mes */}
-        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg p-6 text-white">
+        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg p-4 md:p-6 text-white">
           <p className="text-sm opacity-90">Ventas del Mes</p>
-          <p className="text-3xl font-bold mt-2">{formatCurrency(stats.ventas.mes)}</p>
+          <p className="text-2xl md:text-3xl font-bold mt-2 break-all">{formatCurrency(stats.ventas.mes)}</p>
         </div>
 
         {/* Por Cobrar */}
-        <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-lg p-6 text-white">
+        <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-lg p-4 md:p-6 text-white">
           <p className="text-sm opacity-90">Por Cobrar</p>
-          <p className="text-3xl font-bold mt-2">{formatCurrency(stats.por_cobrar.monto)}</p>
+          <p className="text-2xl md:text-3xl font-bold mt-2 break-all">{formatCurrency(stats.por_cobrar.monto)}</p>
           <p className="text-xs opacity-75 mt-1">{stats.por_cobrar.cantidad} pedidos sin pagar</p>
         </div>
 
         {/* Ticket Promedio */}
-        <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg p-6 text-white">
+        <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg p-4 md:p-6 text-white">
           <p className="text-sm opacity-90">Ticket Promedio</p>
-          <p className="text-3xl font-bold mt-2">{formatCurrency(stats.ticket_promedio)}</p>
+          <p className="text-2xl md:text-3xl font-bold mt-2 break-all">{formatCurrency(stats.ticket_promedio)}</p>
         </div>
 
         {/* Total Pedidos */}
-        <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg p-6 text-white">
+        <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg p-4 md:p-6 text-white">
           <p className="text-sm opacity-90">Total Pedidos</p>
-          <p className="text-3xl font-bold mt-2">{stats.pedidos.total}</p>
+          <p className="text-2xl md:text-3xl font-bold mt-2 break-all">{stats.pedidos.total}</p>
         </div>
       </div>
 
@@ -565,8 +565,8 @@ export default function DashboardPage() {
       </div>
 
       {/* Últimos Pedidos */}
-      <div className="bg-slate-800 rounded-lg p-6">
-        <div className="flex justify-between items-center mb-4">
+      <div className="bg-slate-800 rounded-lg p-4 md:p-6">
+        <div className="flex flex-wrap justify-between items-center gap-2 mb-4">
           <h2 className="text-xl font-bold text-white">Últimos Pedidos</h2>
           <button
             onClick={() => router.push('/admin/pedidos')}
@@ -577,7 +577,7 @@ export default function DashboardPage() {
         </div>
         
         {stats.ultimos_pedidos.length > 0 ? (
-          <div className="overflow-x-auto">
+          <div className="hidden lg:block overflow-x-auto">
             <table className="w-full">
               <thead className="bg-slate-700">
                 <tr>
@@ -609,6 +609,31 @@ export default function DashboardPage() {
               </tbody>
             </table>
           </div>
+        ) : null}
+        {stats.ultimos_pedidos.length > 0 ? (
+          <ul className="lg:hidden space-y-3">
+            {stats.ultimos_pedidos.map((pedido) => (
+              <li
+                key={pedido.id}
+                className="bg-slate-700/60 rounded-lg p-3 cursor-pointer"
+                onClick={() => router.push(`/admin/pedidos/${pedido.id}`)}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-gray-400 text-xs font-mono break-all">#{pedido.numero_pedido}</div>
+                    <div className="text-white break-words">{pedido.cliente}</div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="text-white font-semibold">{formatCurrency(pedido.monto)}</div>
+                    <span className={`${getEstadoColor(pedido.estado)} text-white px-2 py-0.5 rounded text-xs font-semibold`}>
+                      {pedido.estado}
+                    </span>
+                  </div>
+                </div>
+                <div className="text-gray-400 text-xs mt-1">{pedido.fecha}</div>
+              </li>
+            ))}
+          </ul>
         ) : (
           <p className="text-gray-400 text-center py-8">No hay pedidos registrados</p>
         )}

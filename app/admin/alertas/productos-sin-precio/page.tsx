@@ -86,9 +86,9 @@ export default function ProductosSinPrecioPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
         <div>
-          <div className="flex items-center space-x-4 mb-2">
+          <div className="flex flex-wrap items-center gap-4 mb-2">
             <Link
               href="/admin/alertas"
               className="flex items-center space-x-2 text-gray-400 hover:text-white transition-colors"

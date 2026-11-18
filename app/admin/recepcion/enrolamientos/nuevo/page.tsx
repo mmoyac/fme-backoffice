@@ -122,7 +122,7 @@ export default function NuevoEnrolamientoPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-start">
+      <div className="flex flex-wrap justify-between items-start">
         <div>
           <h1 className="text-3xl font-bold text-white">Nuevo Enrolamiento</h1>
           <p className="text-gray-400">Registrar llegada de vehículo con mercancía de proveedor</p>

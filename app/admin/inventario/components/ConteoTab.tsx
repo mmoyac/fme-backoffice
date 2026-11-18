@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { getLocales, Local } from '@/lib/api/locales';
 import { ConteoResumen, iniciarConteo, listarConteos, TipoConteo } from '@/lib/api/conteos';
 import { ConteoDetalleView } from './ConteoDetalleView';
+import DataList from '@/components/ui/DataList';
 
 export const ESTADO_CONTEO: Record<string, { label: string; color: string }> = {
   EN_PROCESO: { label: 'En proceso', color: 'bg-yellow-500' },
@@ -129,55 +130,82 @@ export function ConteoTab({ conteoInicialId, localPropio = null, filtroCompartid
       ) : conteos.length === 0 ? (
         <div className="text-gray-400 py-8 text-center bg-slate-800 rounded-lg">No hay conteos registrados</div>
       ) : (
-        <div className="bg-slate-800 rounded-lg overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-700 text-gray-300">
-              <tr>
-                <th className="px-4 py-3 text-left">#</th>
-                <th className="px-4 py-3 text-left">Local</th>
-                <th className="px-4 py-3 text-left">Tipo</th>
-                <th className="px-4 py-3 text-left">Estado</th>
-                <th className="px-4 py-3 text-left">Iniciado</th>
-                <th className="px-4 py-3 text-left">Cerrado</th>
-                <th className="px-4 py-3 text-right">Contados</th>
-                <th className="px-4 py-3 text-right">Con diferencia</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-700">
-              {conteos.map((c) => (
-                <tr
-                  key={c.id}
-                  onClick={() => setSeleccionado(c.id)}
-                  className="hover:bg-slate-700/50 cursor-pointer text-gray-200"
-                >
-                  <td className="px-4 py-3 font-semibold">{c.id}</td>
-                  <td className="px-4 py-3">{c.local_nombre}</td>
-                  <td className="px-4 py-3">{c.tipo === 'COMPLETO' ? 'Completo' : 'Parcial'}</td>
-                  <td className="px-4 py-3">
-                    <span className={`${ESTADO_CONTEO[c.estado]?.color} text-white px-2 py-1 rounded text-xs font-semibold`}>
-                      {ESTADO_CONTEO[c.estado]?.label}
-                    </span>
-                    {c.estado === 'EN_PROCESO' && (
-                      <span className="ml-2 text-xs text-yellow-300">{antiguedad(c.fecha_inicio)}</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div>{formatFechaConteo(c.fecha_inicio)}</div>
-                    <div className="text-xs text-gray-400">{c.usuario_creador}</div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div>{formatFechaConteo(c.fecha_cierre)}</div>
-                    <div className="text-xs text-gray-400">{c.usuario_cierre || ''}</div>
-                  </td>
-                  <td className="px-4 py-3 text-right">{c.items_contados} / {c.total_items}</td>
-                  <td className={`px-4 py-3 text-right font-semibold ${c.items_con_diferencia ? 'text-orange-300' : ''}`}>
-                    {c.items_con_diferencia}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataList
+          items={conteos}
+          getKey={(c) => c.id}
+          onItemClick={(c) => setSeleccionado(c.id)}
+          columns={[
+            { header: '#', className: 'w-[6%]', cell: (c) => <span className="font-semibold">{c.id}</span> },
+            { header: 'Local', className: 'w-[15%]', cell: (c) => c.local_nombre },
+            { header: 'Tipo', className: 'w-[9%]', cell: (c) => (c.tipo === 'COMPLETO' ? 'Completo' : 'Parcial') },
+            {
+              header: 'Estado',
+              className: 'w-[17%]',
+              sinTruncar: true,
+              cell: (c) => (
+                <>
+                  <span className={`${ESTADO_CONTEO[c.estado]?.color} text-white px-2 py-1 rounded text-xs font-semibold`}>
+                    {ESTADO_CONTEO[c.estado]?.label}
+                  </span>
+                  {c.estado === 'EN_PROCESO' && <span className="ml-2 text-xs text-yellow-300">{antiguedad(c.fecha_inicio)}</span>}
+                </>
+              ),
+            },
+            {
+              header: 'Iniciado',
+              className: 'w-[17%]',
+              cell: (c) => (
+                <>
+                  <div>{formatFechaConteo(c.fecha_inicio)}</div>
+                  <div className="text-xs text-gray-400 truncate">{c.usuario_creador}</div>
+                </>
+              ),
+            },
+            {
+              header: 'Cerrado',
+              className: 'w-[17%]',
+              cell: (c) => (
+                <>
+                  <div>{formatFechaConteo(c.fecha_cierre)}</div>
+                  <div className="text-xs text-gray-400 truncate">{c.usuario_cierre || ''}</div>
+                </>
+              ),
+            },
+            { header: 'Contados', className: 'w-[9%] text-right', sinTruncar: true, cell: (c) => `${c.items_contados} / ${c.total_items}` },
+            {
+              header: 'Con dif.',
+              className: 'w-[10%] text-right',
+              sinTruncar: true,
+              cell: (c) => <span className={`font-semibold ${c.items_con_diferencia ? 'text-orange-300' : ''}`}>{c.items_con_diferencia}</span>,
+            },
+          ]}
+          card={(c) => (
+            <div className="space-y-2 text-gray-200">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-white font-semibold">
+                    Conteo #{c.id} · <span className="font-normal">{c.tipo === 'COMPLETO' ? 'Completo' : 'Parcial'}</span>
+                  </div>
+                  <div className="text-sm text-gray-300 break-words">{c.local_nombre}</div>
+                </div>
+                <div className="text-right shrink-0">
+                  <span className={`${ESTADO_CONTEO[c.estado]?.color} text-white px-2 py-1 rounded text-xs font-semibold`}>
+                    {ESTADO_CONTEO[c.estado]?.label}
+                  </span>
+                  {c.estado === 'EN_PROCESO' && <div className="text-xs text-yellow-300 mt-1">{antiguedad(c.fecha_inicio)}</div>}
+                </div>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span>Contados: {c.items_contados} / {c.total_items}</span>
+                <span className={c.items_con_diferencia ? 'text-orange-300 font-semibold' : ''}>Con diferencia: {c.items_con_diferencia}</span>
+              </div>
+              <div className="text-xs text-gray-400 pt-2 border-t border-slate-700">
+                Iniciado {formatFechaConteo(c.fecha_inicio)} · {c.usuario_creador}
+                {c.fecha_cierre && <> · Cerrado {formatFechaConteo(c.fecha_cierre)} · {c.usuario_cierre || ''}</>}
+              </div>
+            </div>
+          )}
+        />
       )}
 
       {modal && (

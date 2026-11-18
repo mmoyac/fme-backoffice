@@ -159,7 +159,7 @@ export default function ImageUpload({
       )}
 
       {/* Upload Button */}
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <label className={`
           px-4 py-2 rounded-lg cursor-pointer transition-all
           ${uploading 

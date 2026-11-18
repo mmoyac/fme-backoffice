@@ -2,8 +2,9 @@
 
 /**
  * Lista de registros con dos presentaciones (change improve-backoffice-responsive-performance, D6):
- * - Escritorio (≥768 px, `md`): tabla de columnas con ancho fijo y texto truncado. No se ensancha.
- * - Móvil (<768 px): tarjetas apiladas, definidas por `card`.
+ * - Escritorio (≥1024 px, `lg`): tabla de columnas con ancho fijo y texto truncado. No se ensancha.
+ * - Móvil y tablet (<1024 px): tarjetas apiladas, definidas por `card`.
+ *   Breakpoint `lg` obligatorio (AGENTS.md §7.3): con `md` los Android de ≥768 px verían la tabla.
  * Basado en el DataList de EffiCoop. Para reportes con muchas columnas numéricas, usar una tabla
  * propia dentro de un contenedor `overflow-x-auto` en vez de este componente.
  */
@@ -28,12 +29,14 @@ interface DataListProps<T> {
   getKey: (item: T) => string | number;
   /** Acción al tocar una fila o tarjeta (opcional). */
   onItemClick?: (item: T) => void;
+  /** Clases extra por registro, aplicadas a la fila y a la tarjeta (p. ej. atenuar anulados). */
+  itemClassName?: (item: T) => string;
   loading?: boolean;
   /** Contenido cuando no hay registros. */
   empty?: ReactNode;
 }
 
-export default function DataList<T>({ items, columns, card, getKey, onItemClick, loading, empty }: DataListProps<T>) {
+export default function DataList<T>({ items, columns, card, getKey, onItemClick, itemClassName, loading, empty }: DataListProps<T>) {
   if (loading && items.length === 0) return <ListSkeleton />;
   if (items.length === 0) {
     return (
@@ -48,7 +51,7 @@ export default function DataList<T>({ items, columns, card, getKey, onItemClick,
   return (
     <>
       {/* Escritorio: tabla */}
-      <div className="hidden md:block bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+      <div className="hidden lg:block bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
         <table className="w-full table-fixed text-sm">
           <thead className="bg-slate-700/60">
             <tr>
@@ -63,7 +66,7 @@ export default function DataList<T>({ items, columns, card, getKey, onItemClick,
             {items.map((item) => (
               <tr
                 key={getKey(item)}
-                className={`hover:bg-slate-700/40 ${clickable}`}
+                className={`hover:bg-slate-700/40 ${clickable} ${itemClassName?.(item) ?? ''}`}
                 onClick={onItemClick ? () => onItemClick(item) : undefined}
               >
                 {columns.map((c, i) => (
@@ -78,11 +81,11 @@ export default function DataList<T>({ items, columns, card, getKey, onItemClick,
       </div>
 
       {/* Móvil: tarjetas */}
-      <ul className="md:hidden space-y-3">
+      <ul className="lg:hidden space-y-3">
         {items.map((item) => (
           <li
             key={getKey(item)}
-            className={`bg-slate-800 rounded-xl border border-slate-700 p-4 min-w-0 ${clickable}`}
+            className={`bg-slate-800 rounded-xl border border-slate-700 p-4 min-w-0 ${clickable} ${itemClassName?.(item) ?? ''}`}
             onClick={onItemClick ? () => onItemClick(item) : undefined}
           >
             {card(item)}

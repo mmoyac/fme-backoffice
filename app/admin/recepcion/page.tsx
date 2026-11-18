@@ -13,7 +13,7 @@ export default function RecepcionPage() {
       </div>
 
       {/* Cards de navegación */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         
         {/* Enrolamientos */}
         <Link href="/admin/recepcion/enrolamientos" 
@@ -63,7 +63,7 @@ export default function RecepcionPage() {
       </div>
 
       {/* Estadísticas rápidas */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         <div className="bg-slate-800 p-4 rounded-lg border border-slate-700">
           <div className="text-2xl font-bold text-primary">-</div>
           <div className="text-sm text-gray-400">Enrolamientos Activos</div>

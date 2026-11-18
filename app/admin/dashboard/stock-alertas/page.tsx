@@ -268,34 +268,34 @@ export default function StockAlertasPage() {
         <button onClick={() => router.back()} className="text-gray-400 hover:text-white text-sm">
           ← Volver
         </button>
-        <div>
-          <h1 className="text-3xl font-bold text-white">Alertas de Stock</h1>
+        <div className="min-w-0">
+          <h1 className="text-2xl md:text-3xl font-bold text-white">Alertas de Stock</h1>
           <p className="text-gray-400">Productos bajo niveles minimos y criticos en todos los locales</p>
         </div>
         <button
           onClick={exportarPDF}
-          className="ml-auto flex items-center gap-2 bg-emerald-700 hover:bg-emerald-600 text-white font-semibold px-5 py-2 rounded-lg text-sm transition-colors"
+          className="w-full sm:w-auto sm:ml-auto flex items-center justify-center gap-2 bg-emerald-700 hover:bg-emerald-600 text-white font-semibold px-5 py-2 rounded-lg text-sm transition-colors"
         >
           Exportar PDF (lista de compras)
         </button>
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="bg-slate-800 border border-red-900 rounded-xl p-5">
-          <div className="text-2xl mb-2">🔴</div>
-          <div className="text-3xl font-bold text-red-400">{loading ? '—' : criticos.length}</div>
-          <div className="text-gray-400 text-sm mt-1">En nivel critico</div>
+      <div className="grid grid-cols-3 gap-2 md:gap-4 mb-6">
+        <div className="bg-slate-800 border border-red-900 rounded-xl p-3 md:p-5">
+          <div className="text-xl md:text-2xl mb-2">🔴</div>
+          <div className="text-2xl md:text-3xl font-bold text-red-400">{loading ? '—' : criticos.length}</div>
+          <div className="text-gray-400 text-xs md:text-sm mt-1">En nivel critico</div>
         </div>
-        <div className="bg-slate-800 border border-yellow-900 rounded-xl p-5">
-          <div className="text-2xl mb-2">🟡</div>
-          <div className="text-3xl font-bold text-yellow-400">{loading ? '—' : minimos.length}</div>
-          <div className="text-gray-400 text-sm mt-1">En nivel minimo</div>
+        <div className="bg-slate-800 border border-yellow-900 rounded-xl p-3 md:p-5">
+          <div className="text-xl md:text-2xl mb-2">🟡</div>
+          <div className="text-2xl md:text-3xl font-bold text-yellow-400">{loading ? '—' : minimos.length}</div>
+          <div className="text-gray-400 text-xs md:text-sm mt-1">En nivel minimo</div>
         </div>
-        <div className="bg-slate-800 border border-green-900 rounded-xl p-5">
-          <div className="text-2xl mb-2">🟢</div>
-          <div className="text-3xl font-bold text-green-400">{loading ? '—' : okCount}</div>
-          <div className="text-gray-400 text-sm mt-1">Sin alerta</div>
+        <div className="bg-slate-800 border border-green-900 rounded-xl p-3 md:p-5">
+          <div className="text-xl md:text-2xl mb-2">🟢</div>
+          <div className="text-2xl md:text-3xl font-bold text-green-400">{loading ? '—' : okCount}</div>
+          <div className="text-gray-400 text-xs md:text-sm mt-1">Sin alerta</div>
         </div>
       </div>
 

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/AuthProvider';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { 
   Package, 
   User, 
@@ -52,6 +52,7 @@ interface Despacho {
 }
 
 export default function DetalleDespacho() {
+  const router = useRouter();
   const { user } = useAuth();
   const params = useParams();
   const despachoId = params.id as string;
@@ -211,7 +212,7 @@ export default function DetalleDespacho() {
     return (
       <div className="space-y-4">
         <button
-          onClick={() => window.location.href = '/admin/despacho/lista'}
+          onClick={() => router.push('/admin/despacho/lista')}
           className="flex items-center space-x-2 text-blue-600 hover:text-blue-800"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -232,16 +233,16 @@ export default function DetalleDespacho() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div className="flex items-center space-x-4">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 min-w-0">
           <button
-            onClick={() => window.location.href = '/admin/despacho/lista'}
+            onClick={() => router.push('/admin/despacho/lista')}
             className="flex items-center space-x-2 text-blue-600 hover:text-blue-800"
           >
             <ArrowLeft className="h-4 w-4" />
             <span>Volver a lista</span>
           </button>
-          <div>
+          <div className="min-w-0">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
               Despacho #{despacho.id}
             </h1>
@@ -250,7 +251,7 @@ export default function DetalleDespacho() {
             </p>
           </div>
         </div>
-        <div className="flex space-x-2">
+        <div className="flex flex-wrap gap-2">
           {!editando ? (
             <button
               onClick={() => setEditando(true)}
@@ -438,7 +439,7 @@ export default function DetalleDespacho() {
                 Items del Despacho
               </h3>
             </div>
-            <div className="overflow-x-auto">
+            <div className="hidden lg:block overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-700">
                   <tr>
@@ -493,6 +494,34 @@ export default function DetalleDespacho() {
                 </tbody>
               </table>
             </div>
+            {/* Móvil: una tarjeta por ítem */}
+            <ul className="lg:hidden divide-y divide-gray-200 dark:divide-gray-700">
+              {despacho.picking_items.map((item) => (
+                <li key={item.id} className="p-4 space-y-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium text-gray-900 dark:text-white break-words">{item.producto_nombre}</div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">SKU: {item.producto_sku}</div>
+                    </div>
+                    {item.completado ? (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 shrink-0">
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        Completado
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 shrink-0">
+                        <Clock className="h-3 w-3 mr-1" />
+                        Pendiente
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex gap-6 text-sm text-gray-900 dark:text-white">
+                    <span><span className="text-gray-500 dark:text-gray-400">Solicitado:</span> {item.cantidad_solicitada}</span>
+                    <span><span className="text-gray-500 dark:text-gray-400">Recogido:</span> {item.cantidad_recogida}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
 

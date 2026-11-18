@@ -58,6 +58,53 @@ export default function ReportesCreditoPage() {
     );
   }
 
+  type ClienteCredito = ReporteCredito['clientes_con_credito'][number];
+
+  // Tarjeta móvil: mismos datos y acción que las filas de las tablas
+  const tarjetaCredito = (cliente: ClienteCredito, conId: boolean) => {
+    const alert = getAlertLevel(cliente.porcentaje_uso);
+    return (
+      <div className="space-y-2">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-white font-semibold break-words">
+              {cliente.nombre} {cliente.apellido}
+            </div>
+            {cliente.email && <div className="text-xs text-gray-400 break-all">{cliente.email}</div>}
+            {conId && <div className="text-xs text-gray-500">#{cliente.id}</div>}
+          </div>
+          <div className="shrink-0 text-right">
+            <div className="flex items-center justify-end gap-1.5">
+              <div className={`w-3 h-3 rounded-full ${alert.color}`}></div>
+              <span className="text-white font-medium">{cliente.porcentaje_uso.toFixed(1)}%</span>
+            </div>
+            <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded-full ${
+              alert.color.replace('bg-', 'bg-') + '/20 ' + alert.color.replace('bg-', 'text-')
+            }`}>
+              {alert.text}
+            </span>
+          </div>
+        </div>
+        <div className="w-full bg-gray-600 rounded-full h-2">
+          <div className={`h-2 rounded-full ${alert.color}`} style={{ width: `${Math.min(100, cliente.porcentaje_uso)}%` }}></div>
+        </div>
+        <div className="grid grid-cols-3 gap-2 text-sm">
+          <div><div className="text-xs text-gray-400">Límite</div><div className="text-gray-300">{formatCurrency(cliente.limite_credito || 0)}</div></div>
+          <div><div className="text-xs text-gray-400">Usado</div><div className="text-orange-300">{formatCurrency(cliente.credito_usado || 0)}</div></div>
+          <div><div className="text-xs text-gray-400">Disponible</div><div className="text-green-300">{formatCurrency(cliente.credito_disponible)}</div></div>
+        </div>
+        <div className="pt-2 border-t border-slate-600">
+          <button
+            onClick={() => router.push(`/admin/clientes/${cliente.id}`)}
+            className="text-blue-400 hover:text-blue-300 font-medium text-sm"
+          >
+            Editar
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -70,26 +117,26 @@ export default function ReportesCreditoPage() {
           </svg>
           Volver a Clientes
         </button>
-        <h1 className="text-3xl font-bold text-white">Reportes de Crédito</h1>
+        <h1 className="text-2xl md:text-3xl font-bold text-white">Reportes de Crédito</h1>
       </div>
 
       {/* Resumen General */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-slate-800 rounded-lg p-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+        <div className="bg-slate-800 rounded-lg p-4 min-w-0">
           <p className="text-sm text-gray-400">Total Límites Otorgados</p>
-          <p className="text-2xl font-bold text-primary">
+          <p className="text-xl md:text-2xl font-bold text-primary break-all">
             {formatCurrency(reporte.total_limite_otorgado)}
           </p>
         </div>
         <div className="bg-slate-800 rounded-lg p-4">
           <p className="text-sm text-gray-400">Crédito Usado</p>
-          <p className="text-2xl font-bold text-orange-500">
+          <p className="text-xl md:text-2xl font-bold text-orange-500 break-all">
             {formatCurrency(reporte.total_credito_usado)}
           </p>
         </div>
         <div className="bg-slate-800 rounded-lg p-4">
           <p className="text-sm text-gray-400">Crédito Disponible</p>
-          <p className="text-2xl font-bold text-green-500">
+          <p className="text-xl md:text-2xl font-bold text-green-500 break-all">
             {formatCurrency(reporte.total_credito_disponible)}
           </p>
         </div>
@@ -103,11 +150,11 @@ export default function ReportesCreditoPage() {
 
       {/* Alertas Críticas */}
       {reporte.clientes_cerca_limite.length > 0 && (
-        <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-6">
+        <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-4 md:p-6">
           <h2 className="text-xl font-bold text-red-400 mb-4">
             ⚠️ Clientes Cerca del Límite (Uso &gt; 80%)
           </h2>
-          <div className="overflow-x-auto">
+          <div className="hidden lg:block overflow-x-auto">
             <table className="w-full">
               <thead className="bg-slate-700">
                 <tr>
@@ -166,15 +213,22 @@ export default function ReportesCreditoPage() {
               </tbody>
             </table>
           </div>
+          <ul className="lg:hidden space-y-3">
+            {reporte.clientes_cerca_limite.map((cliente) => (
+              <li key={cliente.id} className="bg-slate-800 rounded-xl border border-slate-700 p-4">
+                {tarjetaCredito(cliente, false)}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 
       {/* Todos los Clientes con Crédito */}
-      <div className="bg-slate-800 rounded-lg p-6">
+      <div className="bg-slate-800 rounded-lg p-4 md:p-6">
         <h2 className="text-xl font-bold text-white mb-4">
           Todos los Clientes con Crédito ({reporte.clientes_con_credito.length})
         </h2>
-        <div className="overflow-x-auto">
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full">
             <thead className="bg-slate-700">
               <tr>
@@ -241,11 +295,23 @@ export default function ReportesCreditoPage() {
             </tbody>
           </table>
         </div>
+        <ul className="lg:hidden space-y-3">
+          {[...reporte.clientes_con_credito]
+            .sort((a, b) => b.porcentaje_uso - a.porcentaje_uso)
+            .map((cliente) => (
+              <li
+                key={cliente.id}
+                className={`rounded-xl border p-4 ${cliente.porcentaje_uso > 80 ? 'bg-red-900/10 border-red-500/40' : 'bg-slate-700/40 border-slate-600'}`}
+              >
+                {tarjetaCredito(cliente, true)}
+              </li>
+            ))}
+        </ul>
       </div>
 
       {/* Clientes sin Crédito */}
       {reporte.clientes_sin_limite.length > 0 && (
-        <div className="bg-slate-800 rounded-lg p-6">
+        <div className="bg-slate-800 rounded-lg p-4 md:p-6">
           <h2 className="text-xl font-bold text-white mb-4">
             Clientes sin Límite de Crédito ({reporte.clientes_sin_limite.length})
           </h2>

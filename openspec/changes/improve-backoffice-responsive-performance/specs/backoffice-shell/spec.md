@@ -14,14 +14,14 @@ El backoffice SHALL mostrar cada pantalla sin desplazamiento horizontal del docu
 - **THEN** el ancho del documento no supera el de la pantalla
 
 ### Requirement: Listas distintas en escritorio y móvil
-Las listas de registros SHALL mostrarse como tabla en pantallas de 768 px o más y como tarjetas en pantallas más angostas, con la misma información principal y las mismas acciones.
+Las listas de registros SHALL mostrarse como tabla en pantallas de 1024 px o más y como tarjetas en pantallas más angostas, con la misma información principal y las mismas acciones.
 
 #### Scenario: Escritorio
 - **WHEN** se ve una lista en una pantalla de 1280 px
 - **THEN** se muestra como tabla con columnas de ancho fijo y textos truncados
 
 #### Scenario: Móvil
-- **WHEN** se ve la misma lista en una pantalla de 390 px
+- **WHEN** se ve la misma lista en una pantalla de 390 px o de una tablet de 768 px
 - **THEN** se muestra como tarjetas apiladas, sin tabla
 
 ### Requirement: Sesión y menú cargados una vez

@@ -332,7 +332,7 @@ export default function RecetaPage({ params }: { params: { id: string } }) {
     return (
         <div className="max-w-6xl">
             <div className="mb-6">
-                <h1 className="text-3xl font-bold text-white mb-2">
+                <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">
                     📋 Receta: {producto.nombre}
                 </h1>
                 <button
@@ -346,15 +346,15 @@ export default function RecetaPage({ params }: { params: { id: string } }) {
             {receta ? (
                 // Mostrar receta existente
                 <div className="space-y-6">
-                    <div className="bg-slate-800 rounded-lg p-6">
-                        <div className="flex justify-between items-start mb-4">
-                            <div>
+                    <div className="bg-slate-800 rounded-lg p-4 md:p-6">
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4">
+                            <div className="min-w-0">
                                 <h2 className="text-2xl font-semibold text-white">{receta.nombre}</h2>
                                 <p className="text-gray-400 mt-1">
                                     Rendimiento: {receta.rendimiento} {getUnidadSimbolo(receta.unidad_rendimiento_id)}
                                 </p>
                             </div>
-                            <div className="space-x-2">
+                            <div className="flex flex-wrap gap-2">
                                 <button
                                     onClick={handleRecalcular}
                                     className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
@@ -398,7 +398,7 @@ export default function RecetaPage({ params }: { params: { id: string } }) {
                         {/* Ingredientes */}
                         <div>
                             <h3 className="text-lg font-semibold text-white mb-3">Ingredientes</h3>
-                            <div className="overflow-x-auto">
+                            <div className="hidden lg:block overflow-x-auto">
                                 <table className="w-full">
                                     <thead className="bg-slate-700">
                                         <tr>
@@ -454,6 +454,52 @@ export default function RecetaPage({ params }: { params: { id: string } }) {
                                     </tbody>
                                 </table>
                             </div>
+                            {/* Móvil: una tarjeta por ingrediente */}
+                            <ul className="lg:hidden space-y-3">
+                                {receta.ingredientes.map((ing) => (
+                                    <li key={ing.id} className="bg-slate-700/60 rounded-lg p-3 space-y-2">
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div className="min-w-0">
+                                                <div className="text-sm text-white break-words">{getProductoNombre(ing.producto_ingrediente_id)}</div>
+                                                <div className="text-xs text-gray-400">SKU: {getProductoSku(ing.producto_ingrediente_id)}</div>
+                                            </div>
+                                            <TipoIngredienteBadge productoId={ing.producto_ingrediente_id} />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-sm">
+                                            <span className="text-gray-400">Cantidad</span>
+                                            <span className="text-gray-300 text-right">{ing.cantidad} {getUnidadSimbolo(ing.unidad_medida_id)}</span>
+                                            <span className="text-gray-400">Val. Compra</span>
+                                            <span className="text-gray-300 text-right">
+                                                {(() => {
+                                                    const prod = productos.find(p => p.id === ing.producto_ingrediente_id) ?? null;
+                                                    const precioCompra = prod?.precio_compra ?? null;
+                                                    const factor = prod?.factor_conversion_compra ?? 1;
+                                                    if (!precioCompra || factor <= 1) return <span className="text-gray-500">—</span>;
+                                                    const desc = prod?.unidad_compra_descripcion || `x${factor}`;
+                                                    return <span title={desc}>${Number(precioCompra).toLocaleString('es-CL')}<span className="text-gray-500 text-xs ml-1">{desc}</span></span>;
+                                                })()}
+                                            </span>
+                                            <span className="text-gray-400">Val. unitario</span>
+                                            <span className="text-gray-300 text-right">
+                                                ${ing.costo_unitario_referencia ? Number(ing.costo_unitario_referencia).toFixed(2) : '0.00'}
+                                                <span className="text-gray-500 text-xs ml-1">/{getUnidadSimbolo(ing.unidad_medida_id)}</span>
+                                            </span>
+                                            <span className="text-gray-400">Costo Total</span>
+                                            <span className="text-white font-medium text-right">
+                                                ${ing.costo_total_calculado ? Number(ing.costo_total_calculado).toFixed(2) : '0.00'}
+                                            </span>
+                                        </div>
+                                        <div className="text-right">
+                                            <button
+                                                onClick={() => eliminarIngredienteDeReceta(ing.id!)}
+                                                className="text-red-400 hover:text-red-300 text-sm"
+                                            >
+                                                Eliminar
+                                            </button>
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
                         </div>
 
                         {/* Agregar más ingredientes */}
@@ -530,7 +576,7 @@ export default function RecetaPage({ params }: { params: { id: string } }) {
                 </div>
             ) : (
                 // Formulario para crear nueva receta
-                <form onSubmit={handleSubmit} className="bg-slate-800 rounded-lg p-6 space-y-6">
+                <form onSubmit={handleSubmit} className="bg-slate-800 rounded-lg p-4 md:p-6 space-y-6">
                     <div>
                         <h2 className="text-xl font-semibold text-white mb-4">Crear Nueva Receta</h2>
 
@@ -667,7 +713,8 @@ export default function RecetaPage({ params }: { params: { id: string } }) {
 
                         {/* Lista de ingredientes */}
                         {formData.ingredientes.length > 0 && (
-                            <div className="overflow-x-auto">
+                            <div>
+                            <div className="hidden lg:block overflow-x-auto">
                                 <table className="w-full">
                                     <thead className="bg-slate-700">
                                         <tr>
@@ -704,6 +751,31 @@ export default function RecetaPage({ params }: { params: { id: string } }) {
                                     </tbody>
                                 </table>
                             </div>
+                            {/* Móvil: una tarjeta por ingrediente */}
+                            <ul className="lg:hidden space-y-3">
+                                {formData.ingredientes.map((ing, index) => (
+                                    <li key={index} className="bg-slate-700/60 rounded-lg p-3 space-y-1">
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div className="min-w-0">
+                                                <div className="text-sm text-white break-words">{getProductoNombre(ing.producto_ingrediente_id)}</div>
+                                                <div className="text-xs text-gray-400">SKU: {getProductoSku(ing.producto_ingrediente_id)}</div>
+                                            </div>
+                                            <TipoIngredienteBadge productoId={ing.producto_ingrediente_id} />
+                                        </div>
+                                        <div className="flex justify-between items-center text-sm">
+                                            <span className="text-gray-300">{ing.cantidad} {getUnidadSimbolo(ing.unidad_medida_id)}</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => eliminarIngrediente(index)}
+                                                className="text-red-400 hover:text-red-300"
+                                            >
+                                                Eliminar
+                                            </button>
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+                            </div>
                         )}
 
                         {formData.ingredientes.length === 0 && (
@@ -713,7 +785,7 @@ export default function RecetaPage({ params }: { params: { id: string } }) {
                         )}
                     </div>
 
-                    <div className="flex gap-3 pt-4">
+                    <div className="flex flex-wrap gap-3 pt-4">
                         <button
                             type="submit"
                             disabled={saving || formData.ingredientes.length === 0}

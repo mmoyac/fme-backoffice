@@ -4,6 +4,7 @@ import { FiltroCompartido, FILTRO_VACIO } from './filtroCompartido';
 import { useState, useEffect } from 'react';
 import { listarMovimientos, MovimientoInventario } from '@/lib/api/movimientos';
 import { getLocales, Local } from '@/lib/api/locales';
+import DataList from '@/components/ui/DataList';
 
 export function HistorialTab({ onVerConteo, localPropio = null, filtroCompartido = FILTRO_VACIO }: { onVerConteo?: (conteoId: number) => void; localPropio?: number | null; filtroCompartido?: FiltroCompartido } = {}) {
   const [movimientos, setMovimientos] = useState<MovimientoInventario[]>([]);
@@ -79,6 +80,16 @@ export function HistorialTab({ onVerConteo, localPropio = null, filtroCompartido
       minute: '2-digit'
     });
   };
+
+  const verConteo = (m: MovimientoInventario) =>
+    m.tipo_movimiento === 'AJUSTE_CONTEO' && m.referencia_id && onVerConteo ? (
+      <button
+        onClick={(e) => { e.stopPropagation(); onVerConteo(m.referencia_id!); }}
+        className="text-teal-300 hover:underline mr-2"
+      >
+        Ver conteo #{m.referencia_id}
+      </button>
+    ) : null;
 
   return (
     <div className="space-y-6">
@@ -180,68 +191,82 @@ export function HistorialTab({ onVerConteo, localPropio = null, filtroCompartido
           <p className="text-gray-400 text-lg">No hay movimientos para mostrar</p>
         </div>
       ) : (
-        <div className="bg-slate-800 rounded-lg overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-slate-700">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 uppercase">Fecha</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 uppercase">Tipo</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 uppercase">Producto</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 uppercase">Origen</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 uppercase">Destino</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 uppercase">Cantidad</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 uppercase">Usuario</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 uppercase">Notas</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-700">
-                {movimientos.map((mov) => {
-                  const tipoInfo = getTipoLabel(mov.tipo_movimiento);
-                  return (
-                    <tr key={mov.id} className="hover:bg-slate-700/50 transition-colors">
-                      <td className="px-4 py-4 text-gray-300 text-sm">
-                        {formatFecha(mov.fecha_movimiento)}
-                      </td>
-                      <td className="px-4 py-4">
-                        <span className={`${tipoInfo.color} text-white px-2 py-1 rounded text-xs font-semibold`}>
-                          {tipoInfo.label}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4">
-                        <div className="text-white font-medium">{mov.producto?.nombre}</div>
-                        <div className="text-xs text-gray-400">SKU: {mov.producto?.sku}</div>
-                      </td>
-                      <td className="px-4 py-4 text-gray-300">
-                        {mov.local_origen?.nombre || '-'}
-                      </td>
-                      <td className="px-4 py-4 text-gray-300">
-                        {mov.local_destino?.nombre || '-'}
-                      </td>
-                      <td className="px-4 py-4">
-                        <span className="text-white font-semibold">{mov.cantidad}</span>
-                      </td>
-                      <td className="px-4 py-4 text-gray-300 text-sm">
-                        {mov.usuario}
-                      </td>
-                      <td className="px-4 py-4 text-gray-400 text-sm max-w-xs truncate">
-                        {mov.tipo_movimiento === 'AJUSTE_CONTEO' && mov.referencia_id && onVerConteo ? (
-                          <button
-                            onClick={() => onVerConteo(mov.referencia_id!)}
-                            className="text-teal-300 hover:underline mr-2"
-                          >
-                            Ver conteo #{mov.referencia_id}
-                          </button>
-                        ) : null}
-                        {mov.notas || '-'}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <DataList
+          items={movimientos}
+          getKey={(m) => m.id}
+          columns={[
+            { header: 'Fecha', className: 'w-[13%]', sinTruncar: true, cell: (m) => <span className="text-gray-300">{formatFecha(m.fecha_movimiento)}</span> },
+            {
+              header: 'Tipo',
+              className: 'w-[13%]',
+              sinTruncar: true,
+              cell: (m) => {
+                const t = getTipoLabel(m.tipo_movimiento);
+                return <span className={`${t.color} text-white px-2 py-1 rounded text-xs font-semibold inline-block break-all`}>{t.label}</span>;
+              },
+            },
+            {
+              header: 'Producto',
+              className: 'w-[19%]',
+              cell: (m) => (
+                <>
+                  <div className="text-white font-medium truncate" title={m.producto?.nombre}>{m.producto?.nombre}</div>
+                  <div className="text-xs text-gray-400">SKU: {m.producto?.sku}</div>
+                </>
+              ),
+            },
+            {
+              header: 'Origen → Destino',
+              className: 'w-[15%]',
+              cell: (m) => (
+                <span className="text-gray-300" title={`${m.local_origen?.nombre || '-'} → ${m.local_destino?.nombre || '-'}`}>
+                  {m.local_origen?.nombre || '-'} → {m.local_destino?.nombre || '-'}
+                </span>
+              ),
+            },
+            { header: 'Cant.', className: 'w-[8%] text-right', sinTruncar: true, cell: (m) => <span className="text-white font-semibold">{m.cantidad}</span> },
+            { header: 'Usuario', className: 'w-[10%]', cell: (m) => <span className="text-gray-300" title={m.usuario}>{m.usuario}</span> },
+            {
+              header: 'Notas',
+              className: 'w-[22%]',
+              cell: (m) => (
+                <span className="text-gray-400" title={m.notas || undefined}>
+                  {verConteo(m)}
+                  {m.notas || '-'}
+                </span>
+              ),
+            },
+          ]}
+          card={(m) => {
+            const t = getTipoLabel(m.tipo_movimiento);
+            return (
+              <div className="space-y-2">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-white font-medium break-words">{m.producto?.nombre}</div>
+                    <div className="text-xs text-gray-400">SKU: {m.producto?.sku}</div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="text-lg font-bold text-white">{m.cantidad}</div>
+                    <span className={`${t.color} text-white px-2 py-0.5 rounded text-xs font-semibold`}>{t.label}</span>
+                  </div>
+                </div>
+                <div className="text-sm text-gray-300">
+                  {m.local_origen?.nombre || '-'} → {m.local_destino?.nombre || '-'}
+                </div>
+                <div className="text-xs text-gray-400">
+                  {formatFecha(m.fecha_movimiento)} · {m.usuario}
+                </div>
+                {(m.notas || (m.tipo_movimiento === 'AJUSTE_CONTEO' && m.referencia_id)) && (
+                  <div className="text-xs text-gray-400 break-words pt-2 border-t border-slate-700">
+                    {verConteo(m)}
+                    {m.notas}
+                  </div>
+                )}
+              </div>
+            );
+          }}
+        />
       )}
     </div>
   );

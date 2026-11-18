@@ -34,13 +34,13 @@ Skeleton liviano dentro del shell. Next lo muestra al instante y puede precargar
 `await import('jspdf')` y `import('html2canvas')` dentro de las funciones que generan PDF; `next/dynamic` con `ssr: false` para `CapturaEtiquetaGemini`, `EtiquetaPreview` y los gráficos. Es el patrón que ya usa `dashboard/stock-alertas`.
 
 ### D6. `DataList`: tabla en escritorio, tarjetas en móvil (fase 2)
-Props: `items`, `columns` (`header`, `cell`, `className` con el ancho), `card(item)`, `getKey`, `onRowClick?` y `empty`. Desde `md` (≥768 px) renderiza `<table class="w-full table-fixed">` con celdas truncadas; debajo, una lista de tarjetas. Las tablas que de verdad necesitan muchas columnas (reportes) usan un contenedor propio con `overflow-x-auto`.
+Props: `items`, `columns` (`header`, `cell`, `className` con el ancho), `card(item)`, `getKey`, `onRowClick?` y `empty`. Desde `lg` (≥1024 px) renderiza `<table class="w-full table-fixed">` con celdas truncadas; debajo, una lista de tarjetas. Se usa `lg` y no `md` por la regla del repo (`AGENTS.md` §7.3): los Android de ≥768 px verían la tabla, y entre 768 y 1023 px el menú lateral deja ~500 px. Las tablas que de verdad necesitan muchas columnas (reportes) usan un contenedor propio con `overflow-x-auto`.
 
 ### D7. Caché de catálogos con SWR (fase 2)
 SWR, más liviano que React Query para este caso y sin provider obligatorio, para productos, locales e inventario, con `dedupingInterval` y revalidación con `mutate` después de cada mutación.
 
 ### D8. Prueba de ancho (fase 3)
-Playwright con viewports de 320, 390, 768 y 1280 px. Para cada pantalla migrada: `document.documentElement.scrollWidth <= window.innerWidth`.
+Playwright con viewports de 320, 390, 768, 1024 y 1280 px. Para cada pantalla migrada: `document.documentElement.scrollWidth <= window.innerWidth`.
 
 ## Risks / Trade-offs
 

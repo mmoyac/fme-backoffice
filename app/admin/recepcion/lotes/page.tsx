@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import DataList from '@/components/ui/DataList';
 import { useSearchParams } from 'next/navigation';
 import { 
   getLotes,
@@ -199,15 +200,60 @@ export default function LotesPage() {
   };
 
 
+  const seleccion = (l: LoteList) => (
+    <input
+      type="checkbox"
+      checked={lotesSeleccionados.includes(l.id)}
+      onChange={() => toggleSeleccionLote(l.id)}
+      className="rounded border-gray-300 text-primary focus:ring-primary"
+    />
+  );
+
+  const peso = (l: LoteList) => (
+    <div className="text-sm text-gray-300">
+      <div className="font-semibold text-white">{l.peso_actual} kg <span className="text-xs text-gray-400 font-normal">neto</span></div>
+      {l.peso_bruto_kg && <div className="text-cyan-400 text-xs">{l.peso_bruto_kg} kg bruto</div>}
+    </div>
+  );
+
+  const estado = (l: LoteList) => (
+    <div className="flex flex-wrap gap-1">
+      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getColorEstadoLote(l.disponible_venta, l.vendido)}`}>
+        {getTextoEstadoLote(l.disponible_venta, l.vendido)}
+      </span>
+      {l.reservado && (
+        <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30">
+          🔒 Reservado
+        </span>
+      )}
+    </div>
+  );
+
+  const acciones = (l: LoteList) => (
+    <>
+      <button onClick={() => verDetalles(l)} className="text-blue-400 hover:text-blue-300 text-sm" title="Ver detalles">
+        👁️
+      </button>
+      <button onClick={() => handleImprimirEtiqueta(l.id, l.codigo_lote)} className="text-green-400 hover:text-green-300 text-sm" title="Imprimir etiqueta">
+        🖨️
+      </button>
+      {!l.vendido && (
+        <button onClick={() => handleEliminarLote(l.id, l.codigo_lote)} className="text-red-400 hover:text-red-300 text-sm" title="Eliminar lote">
+          🗑️
+        </button>
+      )}
+    </>
+  );
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-start">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Lotes / Cajas</h1>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+        <div className="min-w-0">
+          <h1 className="text-2xl md:text-3xl font-bold text-white">Lotes / Cajas</h1>
           <p className="text-gray-400">Gestión de cajas individuales con trazabilidad completa</p>
         </div>
-        <div className="flex space-x-3">
+        <div className="flex flex-wrap gap-3">
           <Link
             href="/admin/recepcion"
             className="px-4 py-2 text-gray-300 border border-gray-600 rounded-lg hover:bg-slate-700 transition-colors"
@@ -234,12 +280,12 @@ export default function LotesPage() {
 
       {/* Filtros */}
       <div className="bg-slate-800 p-4 rounded-lg border border-slate-700">
-        <div className="flex flex-wrap items-center gap-4">          <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap items-center gap-4">          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 w-full sm:w-auto min-w-0">
             <label className="text-sm font-medium text-gray-300">Enrolamiento:</label>
             <select
               value={filtroEnrolamiento}
               onChange={(e) => setFiltroEnrolamiento(e.target.value as any)}
-              className="bg-slate-700 border border-slate-600 text-white rounded px-3 py-1 text-sm focus:ring-2 focus:ring-primary"
+              className="bg-slate-700 border border-slate-600 text-white rounded px-3 py-1 text-sm focus:ring-2 focus:ring-primary w-full sm:w-auto max-w-full min-w-0"
             >
               <option value="">Todos</option>
               {enrolamientos.map(enr => (
@@ -250,12 +296,12 @@ export default function LotesPage() {
             </select>
           </div>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 w-full sm:w-auto min-w-0">
             <label className="text-sm font-medium text-gray-300">Producto:</label>
             <select
               value={filtroProducto}
               onChange={(e) => setFiltroProducto(e.target.value as any)}
-              className="bg-slate-700 border border-slate-600 text-white rounded px-3 py-1 text-sm focus:ring-2 focus:ring-primary"
+              className="bg-slate-700 border border-slate-600 text-white rounded px-3 py-1 text-sm focus:ring-2 focus:ring-primary w-full sm:w-auto max-w-full min-w-0"
             >
               <option value="">Todos</option>
               {productos.map(prod => (
@@ -266,12 +312,12 @@ export default function LotesPage() {
             </select>
           </div>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 w-full sm:w-auto min-w-0">
             <label className="text-sm font-medium text-gray-300">Disponible:</label>
             <select
               value={filtroDisponible}
               onChange={(e) => setFiltroDisponible(e.target.value)}
-              className="bg-slate-700 border border-slate-600 text-white rounded px-3 py-1 text-sm focus:ring-2 focus:ring-primary"
+              className="bg-slate-700 border border-slate-600 text-white rounded px-3 py-1 text-sm focus:ring-2 focus:ring-primary w-full sm:w-auto max-w-full min-w-0"
             >
               <option value="">Todos</option>
               <option value="true">Sí</option>
@@ -279,12 +325,12 @@ export default function LotesPage() {
             </select>
           </div>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 w-full sm:w-auto min-w-0">
             <label className="text-sm font-medium text-gray-300">Vendido:</label>
             <select
               value={filtroVendido}
               onChange={(e) => setFiltroVendido(e.target.value)}
-              className="bg-slate-700 border border-slate-600 text-white rounded px-3 py-1 text-sm focus:ring-2 focus:ring-primary"
+              className="bg-slate-700 border border-slate-600 text-white rounded px-3 py-1 text-sm focus:ring-2 focus:ring-primary w-full sm:w-auto max-w-full min-w-0"
             >
               <option value="">Todos</option>
               <option value="true">Sí</option>
@@ -292,12 +338,12 @@ export default function LotesPage() {
             </select>
           </div>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 w-full sm:w-auto min-w-0">
             <label className="text-sm font-medium text-gray-300">Reservado:</label>
             <select
               value={filtroReservado}
               onChange={(e) => setFiltroReservado(e.target.value)}
-              className="bg-slate-700 border border-slate-600 text-white rounded px-3 py-1 text-sm focus:ring-2 focus:ring-primary"
+              className="bg-slate-700 border border-slate-600 text-white rounded px-3 py-1 text-sm focus:ring-2 focus:ring-primary w-full sm:w-auto max-w-full min-w-0"
             >
               <option value="">Todos</option>
               <option value="true">Sí</option>
@@ -355,8 +401,8 @@ export default function LotesPage() {
 
       {/* Card de Sumatorias */}
       {lotes.length > 0 && (
-        <div className="bg-gradient-to-r from-blue-900/50 to-indigo-900/50 rounded-lg border border-blue-500/30 p-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-gradient-to-r from-blue-900/50 to-indigo-900/50 rounded-lg border border-blue-500/30 p-4 md:p-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="text-center">
               <div className="text-3xl font-bold text-blue-400">
                 {lotes.length}
@@ -423,135 +469,76 @@ export default function LotesPage() {
           </Link>
         </div>
       ) : (
-        <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-700">
-              <thead className="bg-slate-700">
-                <tr>
-                  {modoSeleccion && (
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-300">
-                      <input
-                        type="checkbox"
-                        checked={lotesSeleccionados.length === lotes.length && lotes.length > 0}
-                        onChange={seleccionarTodos}
-                        className="rounded border-gray-300 text-primary focus:ring-primary"
-                      />
-                    </th>
-                  )}
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">
-                    Código Lote
-                  </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">
-                    Producto
-                  </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">
-                    Peso Neto / Bruto
-                  </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">
-                    Vencimiento
-                  </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">
-                    Ubicación
-                  </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">
-                    Enrolamiento
-                  </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">
-                    Estado
-                  </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">
-                    QR
-                  </th>
-                  <th className="px-6 py-3 text-center text-sm font-semibold text-gray-300">
-                    Acciones
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-slate-800 divide-y divide-slate-700">
-                {lotes.map((lote, index) => (
-                  <tr key={lote.id} className={`${index % 2 === 0 ? 'bg-slate-800' : 'bg-slate-750'} hover:bg-slate-700 transition-colors`}>
-                    {modoSeleccion && (
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <input
-                          type="checkbox"
-                          checked={lotesSeleccionados.includes(lote.id)}
-                          onChange={() => toggleSeleccionLote(lote.id)}
-                          className="rounded border-gray-300 text-primary focus:ring-primary"
-                        />
-                      </td>
-                    )}
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-white">{lote.codigo_lote}</div>
-                      <div className="text-xs text-gray-400">{formatearFecha(lote.fecha_registro)}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-white">{lote.producto_nombre}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-300">
-                        <div className="font-semibold text-white">{lote.peso_actual} kg <span className="text-xs text-gray-400 font-normal">neto</span></div>
-                        {lote.peso_bruto_kg && <div className="text-cyan-400 text-xs">{lote.peso_bruto_kg} kg bruto</div>}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-300">
-                        {formatearFechaSolo(lote.fecha_vencimiento)}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-white">{lote.ubicacion_codigo}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-300">{lote.enrolamiento_patente}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex flex-col gap-1">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getColorEstadoLote(lote.disponible_venta, lote.vendido)}`}>
-                          {getTextoEstadoLote(lote.disponible_venta, lote.vendido)}
-                        </span>
-                        {lote.reservado && (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30">
-                            🔒 Reservado
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-xs text-gray-400 font-mono">{lote.qr_propio}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center justify-center space-x-2">
-                        <button
-                          onClick={() => verDetalles(lote)}
-                          className="text-blue-400 hover:text-blue-300 text-sm"
-                          title="Ver detalles"
-                        >
-                          👁️
-                        </button>
-                        <button
-                          onClick={() => handleImprimirEtiqueta(lote.id, lote.codigo_lote)}
-                          className="text-green-400 hover:text-green-300 text-sm"
-                          title="Imprimir etiqueta"
-                        >
-                          🖨️
-                        </button>
-                        {!lote.vendido && (
-                          <button
-                            onClick={() => handleEliminarLote(lote.id, lote.codigo_lote)}
-                            className="text-red-400 hover:text-red-300 text-sm"
-                            title="Eliminar lote"
-                          >
-                            🗑️
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <DataList
+          items={lotes}
+          getKey={(l) => l.id}
+          columns={[
+            ...(modoSeleccion
+              ? [{
+                  header: (
+                    <input
+                      type="checkbox"
+                      checked={lotesSeleccionados.length === lotes.length && lotes.length > 0}
+                      onChange={seleccionarTodos}
+                      className="rounded border-gray-300 text-primary focus:ring-primary"
+                    />
+                  ),
+                  className: 'w-[4%]',
+                  sinTruncar: true,
+                  cell: (l: LoteList) => seleccion(l),
+                }]
+              : []),
+            {
+              header: 'Código Lote',
+              className: 'w-[20%]',
+              sinTruncar: true,
+              cell: (l: LoteList) => (
+                <>
+                  <div className="font-medium text-white break-all">{l.codigo_lote}</div>
+                  <div className="text-xs text-gray-400">{formatearFecha(l.fecha_registro)}</div>
+                  <div className="text-xs text-gray-500 font-mono break-all" title="QR">{l.qr_propio}</div>
+                </>
+              ),
+            },
+            { header: 'Producto', className: modoSeleccion ? 'w-[14%]' : 'w-[18%]', cell: (l: LoteList) => <span className="text-white" title={l.producto_nombre}>{l.producto_nombre}</span> },
+            { header: 'Peso Neto / Bruto', className: 'w-[12%]', sinTruncar: true, cell: (l: LoteList) => peso(l) },
+            { header: 'Vencimiento', className: 'w-[10%]', sinTruncar: true, cell: (l: LoteList) => <span className="text-gray-300">{formatearFechaSolo(l.fecha_vencimiento)}</span> },
+            {
+              header: 'Ubicación / Enrol.',
+              className: 'w-[14%]',
+              cell: (l: LoteList) => (
+                <>
+                  <div className="font-medium text-white">{l.ubicacion_codigo}</div>
+                  <div className="text-xs text-gray-300">{l.enrolamiento_patente}</div>
+                </>
+              ),
+            },
+            { header: 'Estado', className: 'w-[13%]', sinTruncar: true, cell: (l: LoteList) => estado(l) },
+            { header: 'Acciones', className: 'w-[13%] text-center', sinTruncar: true, cell: (l: LoteList) => <div className="flex items-center justify-center gap-2">{acciones(l)}</div> },
+          ]}
+          card={(l) => (
+            <div className="space-y-2">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-2 min-w-0">
+                  {modoSeleccion && <div className="pt-1">{seleccion(l)}</div>}
+                  <div className="min-w-0">
+                    <div className="font-medium text-white break-all">{l.codigo_lote}</div>
+                    <div className="text-sm text-gray-300 break-words">{l.producto_nombre}</div>
+                  </div>
+                </div>
+                <div className="shrink-0 text-right">{peso(l)}</div>
+              </div>
+              <div>{estado(l)}</div>
+              <div className="text-xs text-gray-400">
+                Vence: {formatearFechaSolo(l.fecha_vencimiento)} · Ubicación: {l.ubicacion_codigo} · Enrol.: {l.enrolamiento_patente}
+              </div>
+              <div className="text-xs text-gray-500">
+                Registro: {formatearFecha(l.fecha_registro)} · <span className="font-mono break-all">{l.qr_propio}</span>
+              </div>
+              <div className="flex items-center gap-4 pt-2 border-t border-slate-700">{acciones(l)}</div>
+            </div>
+          )}
+        />
       )}
 
       {/* Modal de Detalles del Lote */}

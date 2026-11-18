@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { getCompras, Compra, deleteCompra, recibirCompra } from '@/lib/api/compras';
 import { getProveedores, Proveedor } from '@/lib/api/compras';
 import { getLocales, Local } from '@/lib/api/locales';
+import DataList, { type Columna } from '@/components/ui/DataList';
+import PageHeader from '@/components/ui/PageHeader';
 
 export default function ComprasPage() {
     const [compras, setCompras] = useState<Compra[]>([]);
@@ -81,112 +83,113 @@ export default function ComprasPage() {
         );
     }
 
+    const estadoBadge = (estado: string) => (
+        <span className={`px-2 py-1 rounded text-xs font-bold ${estado === 'RECIBIDA' ? 'bg-green-900 text-green-300' :
+            estado === 'PENDIENTE' ? 'bg-yellow-900 text-yellow-300' :
+                'bg-gray-700 text-gray-400'
+            }`}>
+            {estado}
+        </span>
+    );
+
+    const acciones = (compra: Compra) => (
+        <div className="flex flex-wrap gap-x-3 gap-y-1 md:justify-end" onClick={(e) => e.stopPropagation()}>
+            <Link
+                href={`/admin/compras/${compra.id}/detalle`}
+                className="text-gray-300 hover:text-white font-medium text-sm transition-colors whitespace-nowrap"
+                title="Ver Detalle"
+            >
+                👁️ Ver
+            </Link>
+            {compra.estado === 'PENDIENTE' && (
+                <>
+                    <button
+                        onClick={() => handleRecibir(compra.id)}
+                        className="text-blue-400 hover:text-blue-300 font-medium text-sm transition-colors whitespace-nowrap"
+                        title="Recibir Mercadería"
+                    >
+                        📥 Recibir
+                    </button>
+                    <Link
+                        href={`/admin/compras/${compra.id}`}
+                        className="text-yellow-400 hover:text-yellow-300 font-medium text-sm transition-colors whitespace-nowrap"
+                        title="Editar"
+                    >
+                        ✏️ Editar
+                    </Link>
+                    <button
+                        onClick={() => handleDelete(compra.id)}
+                        className="text-red-400 hover:text-red-300 font-medium text-sm transition-colors whitespace-nowrap"
+                        title="Eliminar"
+                    >
+                        🗑️ Borrar
+                    </button>
+                </>
+            )}
+        </div>
+    );
+
+    const nombreProveedor = (c: Compra) => proveedores[c.proveedor_id] || `Prov #${c.proveedor_id}`;
+    const nombreLocal = (c: Compra) => locales[c.local_id] || `Local #${c.local_id}`;
+    const documento = (c: Compra) => `${c.tipo_documento_nombre || '-'} ${c.numero_documento || '-'}`;
+
+    const columnas: Columna<Compra>[] = [
+        { header: 'ID', className: 'w-[7%]', cell: (c) => <span className="text-gray-300">#{c.id}</span> },
+        { header: 'Fecha', className: 'w-[10%]', cell: (c) => <span className="text-gray-300">{new Date(c.fecha_compra).toLocaleDateString()}</span> },
+        { header: 'Proveedor', className: 'w-[18%]', cell: (c) => <span className="text-white font-medium" title={nombreProveedor(c)}>{nombreProveedor(c)}</span> },
+        { header: 'Local', className: 'w-[11%]', cell: (c) => <span className="text-gray-300">{nombreLocal(c)}</span> },
+        { header: 'Documento', className: 'w-[14%]', cell: (c) => <span className="text-gray-300" title={documento(c)}>{documento(c)}</span> },
+        { header: 'Monto Total', className: 'w-[11%] text-right', sinTruncar: true, cell: (c) => <span className="text-white font-mono">${c.monto_total.toLocaleString('es-CL')}</span> },
+        { header: 'Estado', className: 'w-[10%] text-center', sinTruncar: true, cell: (c) => estadoBadge(c.estado) },
+        { header: 'Acciones', className: 'w-[19%] text-right', sinTruncar: true, cell: acciones },
+    ];
+
     return (
         <div>
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-3xl font-bold text-white">Compras</h1>
-                <div className="flex gap-3">
-                    <Link
-                        href="/admin/compras/proveedores"
-                        className="bg-slate-700 hover:bg-slate-600 text-white font-semibold px-6 py-2 rounded-lg transition-colors"
-                    >
-                        Proveedores
-                    </Link>
-                    <Link
-                        href="/admin/compras/nuevo"
-                        className="bg-primary hover:bg-primary-dark text-slate-900 font-semibold px-6 py-2 rounded-lg transition-colors"
-                    >
-                        + Nueva Compra
-                    </Link>
-                </div>
-            </div>
+            <PageHeader
+                title="Compras"
+                actions={
+                    <>
+                        <Link
+                            href="/admin/compras/proveedores"
+                            className="bg-slate-700 hover:bg-slate-600 text-white font-semibold px-6 py-2 rounded-lg transition-colors text-center"
+                        >
+                            Proveedores
+                        </Link>
+                        <Link
+                            href="/admin/compras/nuevo"
+                            className="bg-primary hover:bg-primary-dark text-slate-900 font-semibold px-6 py-2 rounded-lg transition-colors text-center"
+                        >
+                            + Nueva Compra
+                        </Link>
+                    </>
+                }
+            />
 
-            {compras.length === 0 ? (
-                <div className="bg-slate-800 rounded-lg p-8 text-center text-gray-400">
-                    No hay compras registradas.
-                </div>
-            ) : (
-                <div className="bg-slate-800 rounded-lg overflow-hidden overflow-x-auto">
-                    <table className="w-full">
-                        <thead className="bg-slate-700">
-                            <tr>
-                                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">ID</th>
-                                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">Fecha</th>
-                                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">Proveedor</th>
-                                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">Local</th>
-                                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">Documento</th>
-                                <th className="px-6 py-3 text-right text-sm font-semibold text-gray-300">Monto Total</th>
-                                <th className="px-6 py-3 text-center text-sm font-semibold text-gray-300">Estado</th>
-                                <th className="px-6 py-3 text-right text-sm font-semibold text-gray-300">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-700">
-                            {compras.map((compra) => (
-                                <tr key={compra.id} className="hover:bg-slate-700/50">
-                                    <td className="px-6 py-4 text-sm text-gray-300">#{compra.id}</td>
-                                    <td className="px-6 py-4 text-sm text-gray-300">
-                                        {new Date(compra.fecha_compra).toLocaleDateString()}
-                                    </td>
-                                    <td className="px-6 py-4 text-sm text-white font-medium">
-                                        {proveedores[compra.proveedor_id] || `Prov #${compra.proveedor_id}`}
-                                    </td>
-                                    <td className="px-6 py-4 text-sm text-gray-300">
-                                        {locales[compra.local_id] || `Local #${compra.local_id}`}
-                                    </td>
-                                    <td className="px-6 py-4 text-sm text-gray-300">
-                                        {compra.tipo_documento_nombre || '-'} {compra.numero_documento || '-'}
-                                    </td>
-                                    <td className="px-6 py-4 text-sm text-white text-right font-mono">
-                                        ${compra.monto_total.toLocaleString('es-CL')}
-                                    </td>
-                                    <td className="px-6 py-4 text-center">
-                                        <span className={`px-2 py-1 rounded text-xs font-bold ${compra.estado === 'RECIBIDA' ? 'bg-green-900 text-green-300' :
-                                            compra.estado === 'PENDIENTE' ? 'bg-yellow-900 text-yellow-300' :
-                                                'bg-gray-700 text-gray-400'
-                                            }`}>
-                                            {compra.estado}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 text-right space-x-3">
-                                        <Link
-                                            href={`/admin/compras/${compra.id}/detalle`}
-                                            className="text-gray-300 hover:text-white font-medium text-sm transition-colors"
-                                            title="Ver Detalle"
-                                        >
-                                            👁️ Ver
-                                        </Link>
-                                        {compra.estado === 'PENDIENTE' && (
-                                            <>
-                                                <button
-                                                    onClick={() => handleRecibir(compra.id)}
-                                                    className="text-blue-400 hover:text-blue-300 font-medium text-sm transition-colors"
-                                                    title="Recibir Mercadería"
-                                                >
-                                                    📥 Recibir
-                                                </button>
-                                                <Link
-                                                    href={`/admin/compras/${compra.id}`}
-                                                    className="text-yellow-400 hover:text-yellow-300 font-medium text-sm transition-colors"
-                                                    title="Editar"
-                                                >
-                                                    ✏️ Editar
-                                                </Link>
-                                                <button
-                                                    onClick={() => handleDelete(compra.id)}
-                                                    className="text-red-400 hover:text-red-300 font-medium text-sm transition-colors"
-                                                    title="Eliminar"
-                                                >
-                                                    🗑️ Borrar
-                                                </button>
-                                            </>
-                                        )}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
+            <DataList
+                items={compras}
+                getKey={(c) => c.id}
+                columns={columnas}
+                empty="No hay compras registradas."
+                card={(c) => (
+                    <div className="space-y-2">
+                        <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                                <div className="text-white font-medium break-words">{nombreProveedor(c)}</div>
+                                <div className="text-xs text-gray-400">
+                                    #{c.id} · {new Date(c.fecha_compra).toLocaleDateString()} · {nombreLocal(c)}
+                                </div>
+                                <div className="text-xs text-gray-400 break-words">{documento(c)}</div>
+                            </div>
+                            <div className="text-right shrink-0 space-y-1">
+                                <div className="text-lg font-bold text-white font-mono">${c.monto_total.toLocaleString('es-CL')}</div>
+                                {estadoBadge(c.estado)}
+                            </div>
+                        </div>
+                        <div className="pt-2 border-t border-slate-700">{acciones(c)}</div>
+                    </div>
+                )}
+            />
         </div>
     );
 }

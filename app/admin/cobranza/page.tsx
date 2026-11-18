@@ -332,9 +332,9 @@ export default function CobranzaPage() {
     return (
         <div className="space-y-6">
             {/* Cabecera */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold text-white">Cobranza</h1>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                    <h1 className="text-2xl md:text-3xl font-bold text-white">Cobranza</h1>
                     <p className="text-gray-400 text-sm mt-1">Gestion de cobros pendientes — cheques y transferencias diferidas</p>
                 </div>
                 <button
@@ -347,7 +347,7 @@ export default function CobranzaPage() {
 
             {/* Totales rapidos */}
             {!loading && items.length > 0 && (
-                <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
                     <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
                         <p className="text-xs text-gray-400 uppercase tracking-wide">Total por cobrar</p>
                         <p className="text-2xl font-bold text-white mt-1">{formatMonto(totalPendiente)}</p>
@@ -377,7 +377,7 @@ export default function CobranzaPage() {
                     onChange={e => setBusqueda(e.target.value)}
                     className="flex-1 bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white text-sm placeholder-gray-400 focus:outline-none focus:border-primary"
                 />
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                     {FILTROS_TIPO.map(f => (
                         <button
                             key={f.value}
@@ -619,7 +619,7 @@ export default function CobranzaPage() {
             {/* MODAL CONFIRMAR TRANSFERENCIA */}
             {modalConfirmar && itemSeleccionado && (
                 <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
-                    <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 max-w-md w-full shadow-xl">
+                    <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 sm:p-6 max-w-md w-full shadow-xl max-h-[calc(100dvh-2rem)] overflow-y-auto">
                         <h2 className="text-lg font-bold text-white mb-1">Registrar pago recibido</h2>
                         <p className="text-gray-400 text-sm mb-4">
                             {itemSeleccionado.cliente_nombre} · Pedido #{itemSeleccionado.numero_pedido}
@@ -672,7 +672,7 @@ export default function CobranzaPage() {
             {/* MODAL ANULAR */}
             {modalAnular && itemSeleccionado && (
                 <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
-                    <div className="bg-slate-800 border border-red-800 rounded-xl p-6 max-w-md w-full shadow-xl">
+                    <div className="bg-slate-800 border border-red-800 rounded-xl p-4 sm:p-6 max-w-md w-full shadow-xl max-h-[calc(100dvh-2rem)] overflow-y-auto">
                         <h2 className="text-lg font-bold text-white mb-1">Anular cobro pendiente</h2>
                         <p className="text-gray-400 text-sm mb-4">
                             {itemSeleccionado.cliente_nombre} · Pedido #{itemSeleccionado.numero_pedido}
@@ -717,7 +717,7 @@ export default function CobranzaPage() {
             {/* MODAL CAMBIAR MEDIO DE PAGO */}
             {modalCambiarPago && itemCambiarPago && (
                 <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
-                    <div className="bg-slate-800 border border-slate-700 rounded-xl w-full max-w-md shadow-xl">
+                    <div className="bg-slate-800 border border-slate-700 rounded-xl w-full max-w-md shadow-xl max-h-[calc(100dvh-2rem)] overflow-y-auto">
                         <div className="flex items-center justify-between p-5 border-b border-slate-700">
                             <div>
                                 <h2 className="text-white font-bold text-lg">Registrar cobro con otro medio</h2>
@@ -808,7 +808,7 @@ export default function CobranzaPage() {
                 const cheques = pedidoConCheques?.cheques ?? [];
                 return (
                     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-                        <div className="bg-slate-800 rounded-xl border border-slate-600 w-full max-w-2xl shadow-xl max-h-[90vh] flex flex-col">
+                        <div className="bg-slate-800 rounded-xl border border-slate-600 w-full max-w-2xl shadow-xl max-h-[calc(100dvh-2rem)] flex flex-col">
                             <div className="flex items-center justify-between p-5 border-b border-slate-700 flex-shrink-0">
                                 <div>
                                     <h2 className="text-white font-bold text-lg">Gestion de Cheques</h2>
@@ -819,9 +819,9 @@ export default function CobranzaPage() {
                                 <button onClick={cerrarModalCheques} className="text-slate-400 hover:text-white text-xl">X</button>
                             </div>
 
-                            <div className="overflow-y-auto flex-1 p-5 space-y-5">
+                            <div className="overflow-y-auto flex-1 p-4 sm:p-5 space-y-5">
                                 {resumen && (
-                                    <div className="grid grid-cols-4 gap-3">
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                         {[
                                             { label: 'Total cheques', value: resumen.total_cheques, cls: 'text-white' },
                                             { label: 'Monto total', value: '$' + Math.round(resumen.monto_total_cheques).toLocaleString('es-CL'), cls: 'text-white' },

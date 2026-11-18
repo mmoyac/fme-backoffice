@@ -242,9 +242,9 @@ export default function CargaMasivaPage() {
   if (esFinalizado) {
     return (
       <div className="space-y-6">
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-3xl font-bold text-white">📦 Carga Masiva de Cajas</h1>
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+          <div className="min-w-0">
+            <h1 className="text-2xl md:text-3xl font-bold text-white">📦 Carga Masiva de Cajas</h1>
             <p className="text-gray-400 mt-1">
               Enrolamiento #{enrolamientoId}
               {enrolamiento && ` · ${enrolamiento.proveedor?.nombre || ''} · ${enrolamiento.patente || ''}`}
@@ -276,9 +276,9 @@ export default function CargaMasivaPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-start">
-        <div>
-          <h1 className="text-3xl font-bold text-white">📦 Carga Masiva de Cajas</h1>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+        <div className="min-w-0">
+          <h1 className="text-2xl md:text-3xl font-bold text-white">📦 Carga Masiva de Cajas</h1>
           <p className="text-gray-400 mt-1">
             Enrolamiento #{enrolamientoId}
             {enrolamiento && ` · ${enrolamiento.proveedor?.nombre || ''} · ${enrolamiento.patente || ''}`}
@@ -483,7 +483,7 @@ export default function CargaMasivaPage() {
             </table>
           </div>
 
-          <div className="flex justify-between items-center mt-4">
+          <div className="flex flex-wrap justify-between items-center gap-3 mt-4">
             <button
               onClick={agregarFila}
               className="text-primary hover:text-primary/80 text-sm transition-colors"

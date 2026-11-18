@@ -330,14 +330,14 @@ export default function HojasRutaPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
+    <div className="max-w-5xl mx-auto md:px-4 py-4 md:py-8">
       {/* Header */}
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-white">Hojas de Ruta</h1>
           <p className="text-slate-400 text-sm">Asignación de pedidos a camión y control de entregas</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {rutasPendientePago.length > 0 && (
             <button
               onClick={abrirModalPago}
@@ -373,7 +373,7 @@ export default function HojasRutaPage() {
             const badge = ESTADO_BADGE[hoja.estado] ?? ESTADO_BADGE.PENDIENTE;
             return (
               <div key={hoja.id} className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
-                <div className="px-5 py-4 flex items-start gap-4 flex-wrap">
+                <div className="px-4 sm:px-5 py-4 flex items-start gap-4 flex-wrap">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 flex-wrap mb-1">
                       <span className="text-white font-semibold text-lg">
@@ -452,9 +452,9 @@ export default function HojasRutaPage() {
 
       {/* ── Modal Pago Masivo ── */}
       {modalPago && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-start justify-center overflow-y-auto py-8 px-4">
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-start justify-center overflow-y-auto py-4 sm:py-8 px-3 sm:px-4">
           <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl shadow-2xl">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700">
+            <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-slate-700">
               <h2 className="text-white font-bold text-lg">💸 Pago Masivo a Chofer</h2>
               <button onClick={() => setModalPago(false)} className="text-slate-400 hover:text-white text-2xl leading-none">×</button>
             </div>
@@ -587,9 +587,9 @@ export default function HojasRutaPage() {
 
       {/* ── Modal Crear Hoja de Ruta ── */}
       {modalCrear && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-start justify-center overflow-y-auto py-8 px-4">
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-start justify-center overflow-y-auto py-4 sm:py-8 px-3 sm:px-4">
           <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl shadow-2xl">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700">
+            <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-slate-700">
               <h2 className="text-white font-bold text-lg">Nueva Hoja de Ruta</h2>
               <button onClick={() => setModalCrear(false)} className="text-slate-400 hover:text-white text-2xl leading-none">×</button>
             </div>
@@ -619,7 +619,7 @@ export default function HojasRutaPage() {
                   {vehiculos.length === 0 && (
                     <p className="text-amber-400 text-xs mt-1">
                       No hay vehículos registrados.{' '}
-                      <a href="/admin/vehiculos" className="underline">Agregar</a>
+                      <Link href="/admin/vehiculos" className="underline">Agregar</Link>
                     </p>
                   )}
                 </div>
@@ -641,7 +641,7 @@ export default function HojasRutaPage() {
                   {usuarios.length === 0 && (
                     <p className="text-amber-400 text-xs mt-1.5">
                       No hay choferes disponibles. Asegúrate de que los usuarios tengan el rol <strong>Despachador</strong> en{' '}
-                      <a href="/admin/usuarios" className="underline hover:text-amber-300">Gestión de Usuarios</a>.
+                      <Link href="/admin/usuarios" className="underline hover:text-amber-300">Gestión de Usuarios</Link>.
                     </p>
                   )}
                 </div>

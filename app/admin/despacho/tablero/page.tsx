@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import DataList from '@/components/ui/DataList';
 import { AuthService } from '@/lib/auth';
 import {
   listarHojasRuta,
@@ -111,8 +112,35 @@ export default function TableroDespachoPage() {
     (s, h) => s + (h.monto_cobro_chofer ?? 0), 0
   );
 
+
+  const pagoPedido = (pagado: boolean) =>
+    pagado ? <span className="text-emerald-400 text-xs">✅ Pagado</span> : <span className="text-amber-400 text-xs">⚠️ Pendiente</span>;
+
+  const tarifaChofer = (h: (typeof cobrosPendientes)[number]) => (
+    <span className="text-cyan-400">
+      ${Math.round(h.tarifa_chofer ?? 0).toLocaleString('es-CL')}
+      {h.tipo_cobro_chofer === 'POR_KG' && <span className="text-slate-500">/kg</span>}
+    </span>
+  );
+
+  const montoChofer = (h: (typeof cobrosPendientes)[number]) =>
+    h.monto_cobro_chofer !== null ? (
+      <span className="text-amber-400 font-bold">${Math.round(h.monto_cobro_chofer).toLocaleString('es-CL')}</span>
+    ) : (
+      <span className="text-slate-500 text-xs">Sin calcular</span>
+    );
+
+  const estadoRuta = (estado: string) =>
+    estado === 'COMPLETADA' ? (
+      <span className="text-xs bg-emerald-900/50 text-emerald-400 border border-emerald-800 px-1.5 py-0.5 rounded-full">Completada</span>
+    ) : estado === 'EN_RUTA' ? (
+      <span className="text-xs bg-blue-900/50 text-blue-400 border border-blue-800 px-1.5 py-0.5 rounded-full">En ruta</span>
+    ) : (
+      <span className="text-xs bg-yellow-900/50 text-yellow-400 border border-yellow-800 px-1.5 py-0.5 rounded-full">Pendiente</span>
+    );
+
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
+    <div className="max-w-6xl mx-auto md:px-4 py-4 md:py-8 space-y-8">
 
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -202,7 +230,7 @@ export default function TableroDespachoPage() {
 
           {/* ── Pedidos CONFIRMADOS sin ruta ── */}
           <section>
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
               <h2 className="text-lg font-bold text-white">
                 📋 Pedidos Confirmados sin Ruta
                 <span className="ml-2 text-base font-normal text-slate-400">({pedidosSinRuta.length})</span>
@@ -223,44 +251,32 @@ export default function TableroDespachoPage() {
                 <p>Todos los pedidos confirmados tienen ruta asignada</p>
               </div>
             ) : (
-              <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-slate-700 text-slate-400 text-xs">
-                      <th className="text-left px-4 py-2">Pedido</th>
-                      <th className="text-left px-4 py-2">Cliente</th>
-                      <th className="text-left px-4 py-2 hidden sm:table-cell">Dirección</th>
-                      <th className="text-right px-4 py-2">Total</th>
-                      <th className="text-right px-4 py-2">Kg</th>
-                      <th className="text-center px-4 py-2">Pago</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pedidosSinRuta.map((p, i) => (
-                      <tr
-                        key={p.id}
-                        className={`border-b border-slate-700/50 ${i % 2 === 0 ? '' : 'bg-slate-700/20'}`}
-                      >
-                        <td className="px-4 py-2.5 font-mono text-white font-semibold">{p.numero_pedido}</td>
-                        <td className="px-4 py-2.5 text-slate-300">{p.cliente_nombre ?? '—'}</td>
-                        <td className="px-4 py-2.5 text-slate-500 hidden sm:table-cell truncate max-w-xs">{p.direccion ?? '—'}</td>
-                        <td className="px-4 py-2.5 text-right text-slate-300">
-                          ${p.monto_total.toLocaleString('es-CL', { maximumFractionDigits: 0 })}
-                        </td>
-                        <td className={`px-4 py-2.5 text-right font-semibold ${p.kg_brutos > 0 ? 'text-cyan-400' : 'text-slate-500'}`}>
-                          {p.kg_brutos > 0 ? `${p.kg_brutos.toFixed(1)} kg` : '—'}
-                        </td>
-                        <td className="px-4 py-2.5 text-center">
-                          {p.es_pagado
-                            ? <span className="text-emerald-400 text-xs">✅ Pagado</span>
-                            : <span className="text-amber-400 text-xs">⚠️ Pendiente</span>
-                          }
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataList
+                items={pedidosSinRuta}
+                getKey={(p) => p.id}
+                columns={[
+                  { header: 'Pedido', className: 'w-[22%]', sinTruncar: true, cell: (p) => <span className="font-mono text-white font-semibold text-xs break-all">{p.numero_pedido}</span> },
+                  { header: 'Cliente', className: 'w-[20%]', cell: (p) => <span className="text-slate-300" title={p.cliente_nombre ?? undefined}>{p.cliente_nombre ?? '—'}</span> },
+                  { header: 'Dirección', className: 'w-[24%]', cell: (p) => <span className="text-slate-500" title={p.direccion ?? undefined}>{p.direccion ?? '—'}</span> },
+                  { header: 'Total', className: 'w-[12%] text-right', sinTruncar: true, cell: (p) => <span className="text-slate-300">${p.monto_total.toLocaleString('es-CL', { maximumFractionDigits: 0 })}</span> },
+                  { header: 'Kg', className: 'w-[10%] text-right', sinTruncar: true, cell: (p) => <span className={`font-semibold ${p.kg_brutos > 0 ? 'text-cyan-400' : 'text-slate-500'}`}>{p.kg_brutos > 0 ? `${p.kg_brutos.toFixed(1)} kg` : '—'}</span> },
+                  { header: 'Pago', className: 'w-[12%] text-center', sinTruncar: true, cell: (p) => pagoPedido(p.es_pagado) },
+                ]}
+                card={(p) => (
+                  <div className="space-y-1">
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="font-mono text-white font-semibold text-sm break-all">{p.numero_pedido}</span>
+                      <span className="shrink-0">{pagoPedido(p.es_pagado)}</span>
+                    </div>
+                    <div className="text-slate-300 break-words">{p.cliente_nombre ?? '—'}</div>
+                    <div className="text-xs text-slate-500 break-words">{p.direccion ?? '—'}</div>
+                    <div className="flex justify-between pt-1 text-sm">
+                      <span className="text-slate-300">${p.monto_total.toLocaleString('es-CL', { maximumFractionDigits: 0 })}</span>
+                      <span className={`font-semibold ${p.kg_brutos > 0 ? 'text-cyan-400' : 'text-slate-500'}`}>{p.kg_brutos > 0 ? `${p.kg_brutos.toFixed(1)} kg` : '—'}</span>
+                    </div>
+                  </div>
+                )}
+              />
             )}
           </section>
 
@@ -279,7 +295,7 @@ export default function TableroDespachoPage() {
           {/* ── Pagos pendientes a choferes ── */}
           {cobrosPendientes.length > 0 && (
             <section>
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                 <h2 className="text-lg font-bold text-white">
                   💸 Pagos Pendientes a Choferes
                   <span className="ml-2 text-base font-normal text-slate-400">({cobrosPendientes.length})</span>
@@ -288,65 +304,48 @@ export default function TableroDespachoPage() {
                   Total: ${Math.round(totalCobros).toLocaleString('es-CL')}
                 </span>
               </div>
-              <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-slate-700 text-slate-400 text-xs">
-                      <th className="text-left px-4 py-2">Chofer</th>
-                      <th className="text-left px-4 py-2 hidden sm:table-cell">Vehículo</th>
-                      <th className="text-left px-4 py-2">Tipo</th>
-                      <th className="text-right px-4 py-2">Tarifa</th>
-                      <th className="text-right px-4 py-2">Monto</th>
-                      <th className="text-center px-4 py-2">Estado ruta</th>
-                      <th className="text-center px-4 py-2"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {cobrosPendientes.map((h, i) => (
-                      <tr
-                        key={h.id}
-                        className={`border-b border-slate-700/50 ${i % 2 === 0 ? '' : 'bg-slate-700/20'}`}
-                      >
-                        <td className="px-4 py-2.5 text-white font-medium">
-                          {h.chofer?.nombre ?? h.chofer_nombre ?? '—'}
-                        </td>
-                        <td className="px-4 py-2.5 text-slate-400 font-mono text-xs hidden sm:table-cell">
-                          {h.vehiculo?.label ?? '—'}
-                        </td>
-                        <td className="px-4 py-2.5 text-slate-300">
-                          {h.tipo_cobro_chofer === 'FIJO' ? 'Precio fijo' : 'Por kg'}
-                        </td>
-                        <td className="px-4 py-2.5 text-right text-cyan-400">
-                          ${Math.round(h.tarifa_chofer ?? 0).toLocaleString('es-CL')}
-                          {h.tipo_cobro_chofer === 'POR_KG' && <span className="text-slate-500">/kg</span>}
-                        </td>
-                        <td className="px-4 py-2.5 text-right font-bold">
-                          {h.monto_cobro_chofer !== null
-                            ? <span className="text-amber-400">${Math.round(h.monto_cobro_chofer).toLocaleString('es-CL')}</span>
-                            : <span className="text-slate-500 text-xs">Sin calcular</span>
-                          }
-                        </td>
-                        <td className="px-4 py-2.5 text-center">
-                          {h.estado === 'COMPLETADA'
-                            ? <span className="text-xs bg-emerald-900/50 text-emerald-400 border border-emerald-800 px-1.5 py-0.5 rounded-full">Completada</span>
-                            : h.estado === 'EN_RUTA'
-                            ? <span className="text-xs bg-blue-900/50 text-blue-400 border border-blue-800 px-1.5 py-0.5 rounded-full">En ruta</span>
-                            : <span className="text-xs bg-yellow-900/50 text-yellow-400 border border-yellow-800 px-1.5 py-0.5 rounded-full">Pendiente</span>
-                          }
-                        </td>
-                        <td className="px-4 py-2.5 text-center">
-                          <a
-                            href={`/admin/despacho/rutas/${h.id}`}
-                            className="text-cyan-400 hover:text-cyan-300 text-xs underline"
-                          >
-                            Ver →
-                          </a>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataList
+                items={cobrosPendientes}
+                getKey={(h) => h.id}
+                columns={[
+                  { header: 'Chofer', className: 'w-[20%]', cell: (h) => <span className="text-white font-medium">{h.chofer?.nombre ?? h.chofer_nombre ?? '—'}</span> },
+                  { header: 'Vehículo', className: 'w-[15%]', cell: (h) => <span className="text-slate-400 font-mono text-xs">{h.vehiculo?.label ?? '—'}</span> },
+                  { header: 'Tipo', className: 'w-[13%]', cell: (h) => <span className="text-slate-300">{h.tipo_cobro_chofer === 'FIJO' ? 'Precio fijo' : 'Por kg'}</span> },
+                  { header: 'Tarifa', className: 'w-[13%] text-right', sinTruncar: true, cell: (h) => tarifaChofer(h) },
+                  { header: 'Monto', className: 'w-[14%] text-right', sinTruncar: true, cell: (h) => montoChofer(h) },
+                  { header: 'Estado ruta', className: 'w-[15%] text-center', sinTruncar: true, cell: (h) => estadoRuta(h.estado) },
+                  {
+                    header: '',
+                    className: 'w-[10%] text-center',
+                    sinTruncar: true,
+                    cell: (h) => (
+                      <Link href={`/admin/despacho/rutas/${h.id}`} className="text-cyan-400 hover:text-cyan-300 text-xs underline whitespace-nowrap">
+                        Ver →
+                      </Link>
+                    ),
+                  },
+                ]}
+                card={(h) => (
+                  <div className="space-y-2">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-white font-medium break-words">{h.chofer?.nombre ?? h.chofer_nombre ?? '—'}</div>
+                        <div className="text-xs text-slate-400 font-mono">{h.vehiculo?.label ?? '—'}</div>
+                      </div>
+                      <span className="shrink-0">{estadoRuta(h.estado)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-300">{h.tipo_cobro_chofer === 'FIJO' ? 'Precio fijo' : 'Por kg'} · {tarifaChofer(h)}</span>
+                      <span>{montoChofer(h)}</span>
+                    </div>
+                    <div className="pt-2 border-t border-slate-700">
+                      <Link href={`/admin/despacho/rutas/${h.id}`} className="text-cyan-400 hover:text-cyan-300 text-sm underline">
+                        Ver →
+                      </Link>
+                    </div>
+                  </div>
+                )}
+              />
             </section>
           )}
 

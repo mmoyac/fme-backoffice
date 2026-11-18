@@ -128,8 +128,8 @@ export function ExistenciasTab({ localPropio = null, filtroCompartido = FILTRO_V
   return (
     <div>
       {/* Leyenda de semáforo y filtros */}
-      <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div className="flex items-center gap-6">
+      <div className="mb-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
           <div className="flex items-center gap-2">
             <span className="inline-block w-3 h-3 rounded-full bg-green-500 border border-slate-700"></span>
             <span className="text-sm text-gray-300">Stock OK</span>
@@ -143,7 +143,7 @@ export function ExistenciasTab({ localPropio = null, filtroCompartido = FILTRO_V
             <span className="text-sm text-gray-300">Stock Crítico</span>
           </div>
         </div>
-        <div className="flex gap-3 items-center">
+        <div className="flex flex-wrap gap-3 items-center">
           {mostrarSelector && (
             <select
               value={localSel}

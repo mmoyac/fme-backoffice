@@ -5,7 +5,9 @@
       "dom.iterable",
       "esnext"
     ],
-    "types": ["w3c-web-serial"],
+    "types": [
+      "w3c-web-serial"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -36,6 +38,8 @@
     "out/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "e2e",
+    "playwright.config.ts"
   ]
 }

@@ -348,11 +348,11 @@ export default function DetalleCotizacionPage({ params }: { params: { id: string
     <div className="space-y-6 max-w-5xl">
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-4">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 min-w-0">
           <button onClick={() => router.back()} className="text-gray-400 hover:text-white text-sm">←</button>
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-white font-mono">{cotizacion.numero_cotizacion}</h1>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-xl md:text-2xl font-bold text-white font-mono break-all">{cotizacion.numero_cotizacion}</h1>
               <span className={`px-2 py-1 rounded-full text-xs font-semibold ${ESTADO_COLORS[estado]}`}>
                 {cotizacion.estado_cotizacion.nombre}
               </span>
@@ -400,9 +400,9 @@ export default function DetalleCotizacionPage({ params }: { params: { id: string
         <div className="bg-red-900/50 border border-red-500 text-red-100 px-4 py-3 rounded text-sm">{error}</div>
       )}
 
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Columna izquierda — cliente + versión activa */}
-        <div className="col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-6 min-w-0">
           {/* Cliente */}
           <div className="bg-slate-800 rounded-lg p-5">
             <h2 className="text-sm font-semibold text-gray-400 uppercase mb-3">Cliente</h2>
@@ -422,8 +422,8 @@ export default function DetalleCotizacionPage({ params }: { params: { id: string
 
           {/* Versión activa */}
           {cotizacion.version_activa && (
-            <div className="bg-slate-800 rounded-lg p-5">
-              <div className="flex items-center justify-between mb-3">
+            <div className="bg-slate-800 rounded-lg p-4 md:p-5">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                 <h2 className="text-sm font-semibold text-gray-400 uppercase">
                   Versión activa — v{cotizacion.version_activa.numero_version}
                   {cotizacion.version_activa.es_version_aceptada && (
@@ -432,10 +432,11 @@ export default function DetalleCotizacionPage({ params }: { params: { id: string
                 </h2>
                 <span className="text-sm text-gray-500">{formatFecha(cotizacion.version_activa.created_at)}</span>
               </div>
+              <div className="overflow-x-auto">
               <table className="min-w-full">
                 <thead>
                   <tr className="text-xs text-gray-400 uppercase">
-                    <th className="text-left py-1">Producto</th>
+                    <th className="text-left py-1 pr-2">Producto</th>
                     <th className="text-right py-1">Cant.</th>
                     <th className="text-right py-1">P. Unit.</th>
                     <th className="text-right py-1">Subtotal</th>
@@ -444,7 +445,7 @@ export default function DetalleCotizacionPage({ params }: { params: { id: string
                 <tbody className="divide-y divide-slate-700">
                   {cotizacion.version_activa.items.map((item, i) => (
                     <tr key={i}>
-                      <td className="py-2 text-sm text-white">{item.nombre}</td>
+                      <td className="py-2 pr-2 text-sm text-white break-words">{item.nombre}</td>
                       <td className="py-2 text-sm text-gray-300 text-right">{item.cantidad}</td>
                       <td className="py-2 text-sm text-gray-300 text-right">${item.precio_unitario.toLocaleString('es-CL')}</td>
                       <td className="py-2 text-sm font-semibold text-white text-right">${item.subtotal.toLocaleString('es-CL')}</td>
@@ -460,6 +461,7 @@ export default function DetalleCotizacionPage({ params }: { params: { id: string
                   </tr>
                 </tfoot>
               </table>
+              </div>
             </div>
           )}
 
@@ -490,7 +492,7 @@ export default function DetalleCotizacionPage({ params }: { params: { id: string
         </div>
 
         {/* Columna derecha — log */}
-        <div className="col-span-1">
+        <div className="lg:col-span-1 min-w-0">
           <div className="bg-slate-800 rounded-lg p-5 sticky top-4">
             <h2 className="text-sm font-semibold text-gray-400 uppercase mb-4">Historial de actividad</h2>
             <div className="space-y-3 max-h-[600px] overflow-y-auto">
@@ -514,7 +516,7 @@ export default function DetalleCotizacionPage({ params }: { params: { id: string
       {/* Modal nueva versión */}
       {modalVersion && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 overflow-y-auto">
-          <div className="bg-slate-800 rounded-lg p-6 max-w-2xl w-full shadow-xl border border-slate-700 my-8">
+          <div className="bg-slate-800 rounded-lg p-4 md:p-6 max-w-2xl w-full shadow-xl border border-slate-700 my-8">
             <h2 className="text-xl font-bold text-white mb-4">Nueva Versión</h2>
             {errorVersion && (
               <div className="bg-red-900/50 border border-red-500 text-red-100 px-3 py-2 rounded mb-4 text-sm">{errorVersion}</div>
@@ -541,8 +543,8 @@ export default function DetalleCotizacionPage({ params }: { params: { id: string
                 </div>
                 <div className="space-y-2">
                   {itemsVersion.map((item, idx) => (
-                    <div key={idx} className="grid grid-cols-12 gap-2 items-center">
-                      <div className="col-span-4">
+                    <div key={idx} className="grid grid-cols-12 gap-2 items-center border-b border-slate-700 pb-2 sm:border-0 sm:pb-0">
+                      <div className="col-span-12 sm:col-span-4">
                         <ProductoAutocomplete
                           productos={productos}
                           value={item.producto_id}
@@ -550,11 +552,11 @@ export default function DetalleCotizacionPage({ params }: { params: { id: string
                           onSelect={(id, nombre, precio) => seleccionarProductoVersion(idx, id, nombre, precio)}
                         />
                       </div>
-                      <div className="col-span-2">
+                      <div className="col-span-4 sm:col-span-2">
                         <input type="number" min={0.001} step="any" className="w-full bg-slate-700 border border-slate-600 rounded px-2 py-1.5 text-white text-sm"
                           value={item.cantidad} onChange={e => actualizarItemVersion(idx, 'cantidad', parseFloat(e.target.value) || 0)} />
                       </div>
-                      <div className="col-span-2">
+                      <div className="col-span-4 sm:col-span-2">
                         <input type="number" min={0} className="w-full bg-slate-700 border border-slate-600 rounded px-2 py-1.5 text-white text-sm"
                           value={item.precio_unitario} onChange={e => actualizarItemVersion(idx, 'precio_unitario', parseFloat(e.target.value) || 0)} />
                       </div>
@@ -589,7 +591,7 @@ export default function DetalleCotizacionPage({ params }: { params: { id: string
       {/* Modal: Aceptar cotización */}
       {modalAceptar && cotizacion.version_activa && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-xl p-6 w-full max-w-lg space-y-5">
+          <div className="bg-slate-800 rounded-xl p-4 md:p-6 w-full max-w-lg space-y-5 max-h-[calc(100dvh-2rem)] overflow-y-auto">
             <h3 className="text-lg font-semibold text-white border-b border-slate-700 pb-2">
               Aceptar cotización y generar pedido
             </h3>

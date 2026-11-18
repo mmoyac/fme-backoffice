@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/lib/AuthProvider';
@@ -193,11 +194,11 @@ export default function OTDetallePage() {
   return (
     <div className="space-y-6 max-w-5xl">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-4 min-w-0">
           <button onClick={() => router.back()} className="text-gray-400 hover:text-white text-sm">← Volver</button>
           <div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <h1 className="text-2xl font-bold text-white font-mono">{ot.numero_ot}</h1>
               <span className={`px-3 py-1 rounded-full text-xs font-semibold ${ESTADO_COLORS[ot.estado_ot.codigo] ?? 'bg-gray-700 text-gray-300'}`}>
                 {ot.estado_ot.nombre}
@@ -211,14 +212,14 @@ export default function OTDetallePage() {
         </div>
 
         {!esFinal && ot.tipo_ot.codigo === 'OP' && (
-          <div className="flex items-center gap-3 bg-blue-900/30 border border-blue-700 text-blue-200 px-4 py-2 rounded text-sm">
+          <div className="flex flex-wrap items-center gap-3 bg-blue-900/30 border border-blue-700 text-blue-200 px-4 py-2 rounded text-sm">
             <span>Esta OT se gestiona desde el módulo de Producción</span>
-            <a
+            <Link
               href="/admin/produccion"
               className="bg-blue-700 hover:bg-blue-600 text-white px-3 py-1.5 rounded font-medium text-xs whitespace-nowrap"
             >
               Ir a Producción →
-            </a>
+            </Link>
             {!soloFinaliza && (<button
               onClick={cancelarOT}
               className="ml-2 text-red-400 hover:text-red-300 text-xs underline"

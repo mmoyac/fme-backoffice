@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { AuthService } from '@/lib/auth';
+import DataList from '@/components/ui/DataList';
 import {
   listarVehiculos,
   listarTiposVehiculo,
@@ -123,15 +124,55 @@ export default function VehiculosPage() {
   const setField = (key: keyof typeof EMPTY_FORM, val: string) =>
     setForm((prev) => ({ ...prev, [key]: val }));
 
+  const marcaModelo = (v: Vehiculo) => [v.marca, v.modelo, v.anio].filter(Boolean).join(' ') || '—';
+  const capacidad = (v: Vehiculo) =>
+    v.capacidad_kg
+      ? <span className="text-cyan-400 font-semibold">{v.capacidad_kg.toLocaleString('es-CL')} kg</span>
+      : <span className="text-slate-600">—</span>;
+  const estadoBadge = (v: Vehiculo) => (
+    <span className={`text-xs border px-2 py-0.5 rounded-full ${
+      v.activo
+        ? 'bg-emerald-900/50 text-emerald-400 border-emerald-800'
+        : 'bg-slate-700 text-slate-500 border-slate-600'
+    }`}>
+      {v.activo ? 'Activo' : 'Inactivo'}
+    </span>
+  );
+  const accionesVehiculo = (v: Vehiculo) => (
+    <div className="flex flex-wrap gap-2">
+      <button
+        onClick={() => abrirEditar(v)}
+        className="text-slate-400 hover:text-white text-xs border border-slate-600 px-2 py-1 rounded"
+      >
+        Editar
+      </button>
+      {v.activo ? (
+        <button
+          onClick={() => handleDesactivar(v)}
+          className="text-red-400 hover:text-red-300 text-xs border border-red-900 px-2 py-1 rounded"
+        >
+          Desactivar
+        </button>
+      ) : (
+        <button
+          onClick={() => handleReactivar(v)}
+          className="text-emerald-400 hover:text-emerald-300 text-xs border border-emerald-900 px-2 py-1 rounded"
+        >
+          Reactivar
+        </button>
+      )}
+    </div>
+  );
+
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
+    <div className="max-w-5xl mx-auto md:px-4 py-4 md:py-8">
       {/* Header */}
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-white">Vehículos</h1>
           <p className="text-slate-400 text-sm">Flota disponible para hojas de ruta</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-2 text-slate-400 text-sm cursor-pointer">
             <input
               type="checkbox"
@@ -163,76 +204,41 @@ export default function VehiculosPage() {
           <p className="text-sm mt-1">Agrega la flota para usarla en las hojas de ruta</p>
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-700 text-left text-slate-400">
-                <th className="py-3 px-3">Patente</th>
-                <th className="py-3 px-3">Marca / Modelo</th>
-                <th className="py-3 px-3">Tipo</th>
-                <th className="py-3 px-3">Capacidad</th>
-                <th className="py-3 px-3">Estado</th>
-                <th className="py-3 px-3 text-right">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800">
-              {vehiculos.map((v) => (
-                <tr key={v.id} className={`hover:bg-slate-800/40 ${!v.activo ? 'opacity-50' : ''}`}>
-                  <td className="py-3 px-3 font-mono font-semibold text-white">{v.patente}</td>
-                  <td className="py-3 px-3 text-slate-300">
-                    {[v.marca, v.modelo, v.anio].filter(Boolean).join(' ') || '—'}
-                  </td>
-                  <td className="py-3 px-3 text-slate-400">{v.tipo_vehiculo?.nombre ?? '—'}</td>
-                  <td className="py-3 px-3">
-                    {v.capacidad_kg
-                      ? <span className="text-cyan-400 font-semibold">{v.capacidad_kg.toLocaleString('es-CL')} kg</span>
-                      : <span className="text-slate-600">—</span>}
-                  </td>
-                  <td className="py-3 px-3">
-                    <span className={`text-xs border px-2 py-0.5 rounded-full ${
-                      v.activo
-                        ? 'bg-emerald-900/50 text-emerald-400 border-emerald-800'
-                        : 'bg-slate-700 text-slate-500 border-slate-600'
-                    }`}>
-                      {v.activo ? 'Activo' : 'Inactivo'}
-                    </span>
-                  </td>
-                  <td className="py-3 px-3">
-                    <div className="flex justify-end gap-2">
-                      <button
-                        onClick={() => abrirEditar(v)}
-                        className="text-slate-400 hover:text-white text-xs border border-slate-600 px-2 py-1 rounded"
-                      >
-                        Editar
-                      </button>
-                      {v.activo ? (
-                        <button
-                          onClick={() => handleDesactivar(v)}
-                          className="text-red-400 hover:text-red-300 text-xs border border-red-900 px-2 py-1 rounded"
-                        >
-                          Desactivar
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => handleReactivar(v)}
-                          className="text-emerald-400 hover:text-emerald-300 text-xs border border-emerald-900 px-2 py-1 rounded"
-                        >
-                          Reactivar
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataList
+          items={vehiculos}
+          getKey={(v) => v.id}
+          itemClassName={(v) => (!v.activo ? 'opacity-50' : '')}
+          columns={[
+            { header: 'Patente', className: 'w-[13%]', cell: (v) => <span className="font-mono font-semibold text-white">{v.patente}</span> },
+            { header: 'Marca / Modelo', className: 'w-[24%]', cell: (v) => <span className="text-slate-300">{marcaModelo(v)}</span> },
+            { header: 'Tipo', className: 'w-[16%]', cell: (v) => <span className="text-slate-400">{v.tipo_vehiculo?.nombre ?? '—'}</span> },
+            { header: 'Capacidad', className: 'w-[13%]', sinTruncar: true, cell: capacidad },
+            { header: 'Estado', className: 'w-[12%]', sinTruncar: true, cell: estadoBadge },
+            { header: 'Acciones', className: 'w-[22%] text-right', sinTruncar: true, cell: (v) => <div className="flex justify-end">{accionesVehiculo(v)}</div> },
+          ]}
+          card={(v) => (
+            <div className="space-y-2">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="font-mono font-semibold text-white">{v.patente}</div>
+                  <div className="text-sm text-slate-300 break-words">{marcaModelo(v)}</div>
+                  <div className="text-xs text-slate-400">{v.tipo_vehiculo?.nombre ?? '—'}</div>
+                </div>
+                <div className="text-right shrink-0 space-y-1">
+                  {estadoBadge(v)}
+                  <div>{capacidad(v)}</div>
+                </div>
+              </div>
+              <div className="pt-2 border-t border-slate-700">{accionesVehiculo(v)}</div>
+            </div>
+          )}
+        />
       )}
 
       {/* ── Modal crear / editar ── */}
       {modalAbierto && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center px-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg shadow-2xl">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg shadow-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto">
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700">
               <h2 className="text-white font-bold text-lg">
                 {editando ? `Editar: ${editando.patente}` : 'Nuevo Vehículo'}

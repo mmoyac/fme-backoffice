@@ -190,7 +190,7 @@ export default function ComisionesPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 max-w-full overflow-x-auto whitespace-nowrap">
         {(!esAdmin || true) && (
           <button className={tabClass('comisiones')} onClick={() => setTab('comisiones')}>
             Detalle
@@ -222,7 +222,7 @@ export default function ComisionesPage() {
           ) : (
             <>
               {/* Totales */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 border-b border-slate-700">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 p-4 border-b border-slate-700">
                 <Stat
                   label="Ventas neto"
                   value={fmtCLP(comisiones.reduce((s, c) => s + c.monto_neto, 0))}
@@ -240,7 +240,7 @@ export default function ComisionesPage() {
               </div>
 
               {/* Tabla */}
-              <div className="overflow-x-auto">
+              <div className="hidden lg:block overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="bg-slate-900/50">
                     <tr>
@@ -276,6 +276,27 @@ export default function ComisionesPage() {
                   </tbody>
                 </table>
               </div>
+              <ul className="lg:hidden divide-y divide-slate-700/50">
+                {comisiones.map((c) => (
+                  <li key={c.id} className="p-4 space-y-1.5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="font-mono text-cyan-300 break-all">{c.numero_pedido}</div>
+                        {esAdmin && <div className="text-xs text-slate-300">{c.vendedor_nombre || `#${c.vendedor_id}`}</div>}
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <div className="font-semibold text-emerald-300">{fmtCLP(c.monto_comision)}</div>
+                        {estadoBadge(c.estado)}
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
+                      <span>Bruto {fmtCLP(c.monto_bruto)}</span>
+                      <span>Neto {fmtCLP(c.monto_neto)}</span>
+                      <span>{fmtPct(c.porcentaje)}</span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
             </>
           )}
         </div>
@@ -293,7 +314,8 @@ export default function ComisionesPage() {
               Sin datos para el período seleccionado
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <>
+            <div className="hidden lg:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-slate-900/50">
                   <tr>
@@ -350,6 +372,39 @@ export default function ComisionesPage() {
                 </tbody>
               </table>
             </div>
+            <ul className="lg:hidden divide-y divide-slate-700/50">
+              {resumen.map((r, i) => (
+                <li key={i} className="p-4 space-y-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-slate-200 font-medium break-words">{r.vendedor_nombre || `Vendedor #${r.vendedor_id}`}</div>
+                      <div className="text-xs font-mono text-slate-400">{r.periodo} · {r.porcentaje_comision ? fmtPct(r.porcentaje_comision) : '—'}</div>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <div className="font-bold text-emerald-300">{fmtCLP(r.total_comision)}</div>
+                      {r.tiene_liquidacion ? estadoBadge('LIQUIDADA') : <span className="text-amber-400 text-xs">Sin liquidar</span>}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
+                    <span>Ventas neto {fmtCLP(r.total_ventas_neto)}</span>
+                    <span>{r.cantidad_pedidos} pedidos</span>
+                  </div>
+                  {!r.tiene_liquidacion && (
+                    <button
+                      onClick={() => {
+                        setModalLiq(r);
+                        setNotasLiq('');
+                        setErrorCrearLiq('');
+                      }}
+                      className="bg-cyan-600 hover:bg-cyan-500 text-white text-xs px-3 py-1.5 rounded-lg transition-colors"
+                    >
+                      Liquidar
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+            </>
           )}
         </div>
       )}
@@ -364,7 +419,8 @@ export default function ComisionesPage() {
           ) : liquidaciones.length === 0 ? (
             <div className="p-8 text-center text-slate-500">Sin liquidaciones</div>
           ) : (
-            <div className="overflow-x-auto">
+            <>
+            <div className="hidden lg:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-slate-900/50">
                   <tr>
@@ -409,6 +465,36 @@ export default function ComisionesPage() {
                 </tbody>
               </table>
             </div>
+            <ul className="lg:hidden divide-y divide-slate-700/50">
+              {liquidaciones.map((l) => (
+                <li key={l.id} className="p-4 space-y-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-slate-200 font-medium break-words">{l.vendedor_nombre || `Vendedor #${l.vendedor_id}`}</div>
+                      <div className="text-xs font-mono text-slate-400">{l.periodo}</div>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <div className="font-bold text-emerald-300">{fmtCLP(l.total_comision)}</div>
+                      {estadoBadge(l.estado)}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
+                    <span>Ventas neto {fmtCLP(l.total_ventas_neto)}</span>
+                    <span>{l.cantidad_pedidos} pedidos</span>
+                    <span>Pago previsto {l.fecha_pago_prevista}</span>
+                  </div>
+                  {l.estado === 'PENDIENTE' && (
+                    <button
+                      onClick={() => handlePagar(l.id)}
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 py-1.5 rounded-lg transition-colors"
+                    >
+                      Marcar pagada
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+            </>
           )}
         </div>
       )}
@@ -416,7 +502,7 @@ export default function ComisionesPage() {
       {/* ── Modal: Crear Liquidación ── */}
       {modalLiq && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="bg-slate-800 rounded-xl border border-slate-600 w-full max-w-md p-6 space-y-4">
+          <div className="bg-slate-800 rounded-xl border border-slate-600 w-full max-w-md p-4 sm:p-6 space-y-4 max-h-[calc(100dvh-2rem)] overflow-y-auto">
             <h2 className="text-lg font-bold text-white">Crear Liquidación</h2>
 
             <div className="bg-slate-700/50 rounded-lg p-4 space-y-1 text-sm">

@@ -1,13 +1,14 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { Truck, Package, MapPin, CarFront, BarChart3 } from 'lucide-react';
 
 export default function DespachoPage() {
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
             Gestión de Despachos
           </h1>
@@ -20,7 +21,7 @@ export default function DespachoPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
         {/* Hojas de Ruta */}
-        <a
+        <Link
           href="/admin/despacho/rutas"
           className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700"
         >
@@ -33,10 +34,10 @@ export default function DespachoPage() {
             </div>
             <Truck className="h-8 w-8 text-blue-500" />
           </div>
-        </a>
+        </Link>
 
         {/* Picking de Cajas */}
-        <a
+        <Link
           href="/admin/despacho/picking-cajas"
           className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700"
         >
@@ -49,10 +50,10 @@ export default function DespachoPage() {
             </div>
             <Package className="h-8 w-8 text-orange-500" />
           </div>
-        </a>
+        </Link>
 
         {/* Vehículos */}
-        <a
+        <Link
           href="/admin/vehiculos"
           className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700"
         >
@@ -65,10 +66,10 @@ export default function DespachoPage() {
             </div>
             <CarFront className="h-8 w-8 text-emerald-500" />
           </div>
-        </a>
+        </Link>
 
         {/* Resumen de cajas */}
-        <a
+        <Link
           href="/admin/despacho/resumen-cajas"
           className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700"
         >
@@ -81,10 +82,10 @@ export default function DespachoPage() {
             </div>
             <BarChart3 className="h-8 w-8 text-purple-500" />
           </div>
-        </a>
+        </Link>
 
         {/* Calculadora */}
-        <a
+        <Link
           href="/admin/despacho/calculadora"
           className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow hover:shadow-lg transition-shadow border border-gray-200 dark:border-gray-700"
         >
@@ -97,7 +98,7 @@ export default function DespachoPage() {
             </div>
             <MapPin className="h-8 w-8 text-yellow-500" />
           </div>
-        </a>
+        </Link>
 
       </div>
     </div>

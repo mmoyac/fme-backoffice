@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import DataList from '@/components/ui/DataList';
 import { 
   getEnrolamientos, 
   getTiposVehiculo, 
@@ -118,15 +119,44 @@ export default function EnrolamientosPage() {
     }
   };
 
+  const acciones = (e: EnrolamientoList) => (
+    <>
+      <Link
+        href={`/admin/recepcion/enrolamientos/${e.id}`}
+        className="text-primary hover:text-primary-dark transition-colors"
+      >
+        Ver
+      </Link>
+      {e.estado_nombre !== 'Finalizado' && (
+        <button
+          onClick={() => handleCambiarEstado(e.id, e.estado_nombre)}
+          className={`px-2 py-1 text-xs rounded transition-colors ${
+            e.estado_nombre === 'Pendiente'
+              ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 border border-blue-500/30'
+              : 'bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30'
+          }`}
+        >
+          {e.estado_nombre === 'Pendiente' ? 'Iniciar Proceso' : 'Finalizar'}
+        </button>
+      )}
+      <Link
+        href={`/admin/recepcion/lotes?enrolamiento=${e.id}`}
+        className="text-green-400 hover:text-green-300 transition-colors"
+      >
+        Cajas
+      </Link>
+    </>
+  );
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-start">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Enrolamientos</h1>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+        <div className="min-w-0">
+          <h1 className="text-2xl md:text-3xl font-bold text-white">Enrolamientos</h1>
           <p className="text-gray-400">Registro y control de vehículos que ingresan con mercancía</p>
         </div>
-        <div className="flex space-x-3">
+        <div className="flex flex-wrap gap-3">
           <Link
             href="/admin/recepcion"
             className="px-4 py-2 text-gray-300 border border-gray-600 rounded-lg hover:bg-slate-700 transition-colors"
@@ -225,100 +255,71 @@ export default function EnrolamientosPage() {
           </Link>
         </div>
       ) : (
-        <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-700">
-              <thead className="bg-slate-700">
-                <tr>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">
-                    Vehículo
-                  </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">
-                    Proveedor
-                  </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">
-                    Documento
-                  </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">
-                    Estado
-                  </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">
-                    Fechas
-                  </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">
-                    Registrado por
-                  </th>
-                  <th className="px-6 py-3 text-right text-sm font-semibold text-gray-300">
-                    Acciones
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-slate-800 divide-y divide-slate-700">
-                {enrolamientos.map((enrolamiento, index) => (
-                  <tr key={enrolamiento.id} className={`${index % 2 === 0 ? 'bg-slate-800' : 'bg-slate-750'} hover:bg-slate-700 transition-colors`}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <div className="text-sm font-medium text-white">{enrolamiento.patente}</div>
-                        <div className="text-sm text-gray-300">{enrolamiento.tipo_vehiculo_nombre}</div>
-                        <div className="text-xs text-gray-400">Chofer: {enrolamiento.chofer}</div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
-                      {enrolamiento.proveedor_nombre}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                      {enrolamiento.numero_documento}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${obtenerColorEstado(enrolamiento.estado_nombre)}`}>
-                        {enrolamiento.estado_nombre}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                      <div>Inicio: {formatearFecha(enrolamiento.fecha_inicio)}</div>
-                      {enrolamiento.fecha_termino && (
-                        <div>Fin: {formatearFecha(enrolamiento.fecha_termino)}</div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                      {enrolamiento.usuario_registro_nombre}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex justify-end space-x-2">
-                        <Link
-                          href={`/admin/recepcion/enrolamientos/${enrolamiento.id}`}
-                          className="text-primary hover:text-primary-dark transition-colors"
-                        >
-                          Ver
-                        </Link>
-                        
-                        {enrolamiento.estado_nombre !== 'Finalizado' && (
-                          <button
-                            onClick={() => handleCambiarEstado(enrolamiento.id, enrolamiento.estado_nombre)}
-                            className={`px-2 py-1 text-xs rounded transition-colors ${
-                              enrolamiento.estado_nombre === 'Pendiente' 
-                                ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 border border-blue-500/30'
-                                : 'bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30'
-                            }`}
-                          >
-                            {enrolamiento.estado_nombre === 'Pendiente' ? 'Iniciar Proceso' : 'Finalizar'}
-                          </button>
-                        )}
-                        
-                        <Link
-                          href={`/admin/recepcion/lotes?enrolamiento=${enrolamiento.id}`}
-                          className="text-green-400 hover:text-green-300 transition-colors"
-                        >
-                          Cajas
-                        </Link>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <DataList
+          items={enrolamientos}
+          getKey={(e) => e.id}
+          columns={[
+            {
+              header: 'Vehículo',
+              className: 'w-[18%]',
+              cell: (e) => (
+                <>
+                  <div className="font-medium text-white">{e.patente}</div>
+                  <div className="text-gray-300 truncate">{e.tipo_vehiculo_nombre}</div>
+                  <div className="text-xs text-gray-400 truncate">Chofer: {e.chofer}</div>
+                </>
+              ),
+            },
+            { header: 'Proveedor', className: 'w-[16%]', cell: (e) => <span className="text-white" title={e.proveedor_nombre}>{e.proveedor_nombre}</span> },
+            { header: 'Documento', className: 'w-[12%]', sinTruncar: true, cell: (e) => <span className="text-gray-300 break-all">{e.numero_documento}</span> },
+            {
+              header: 'Estado',
+              className: 'w-[12%]',
+              sinTruncar: true,
+              cell: (e) => (
+                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${obtenerColorEstado(e.estado_nombre)}`}>
+                  {e.estado_nombre}
+                </span>
+              ),
+            },
+            {
+              header: 'Fechas',
+              className: 'w-[17%]',
+              sinTruncar: true,
+              cell: (e) => (
+                <div className="text-gray-300 text-xs">
+                  <div>Inicio: {formatearFecha(e.fecha_inicio)}</div>
+                  {e.fecha_termino && <div>Fin: {formatearFecha(e.fecha_termino)}</div>}
+                </div>
+              ),
+            },
+            { header: 'Registrado por', className: 'w-[11%]', cell: (e) => <span className="text-gray-300">{e.usuario_registro_nombre}</span> },
+            { header: 'Acciones', className: 'w-[14%] text-right', sinTruncar: true, cell: (e) => <div className="flex flex-wrap justify-end gap-2">{acciones(e)}</div> },
+          ]}
+          card={(e) => (
+            <div className="space-y-2">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="font-semibold text-white">{e.patente}</div>
+                  <div className="text-sm text-gray-300">{e.tipo_vehiculo_nombre} · Chofer: {e.chofer}</div>
+                </div>
+                <span className={`shrink-0 inline-flex px-2 py-1 text-xs font-semibold rounded-full ${obtenerColorEstado(e.estado_nombre)}`}>
+                  {e.estado_nombre}
+                </span>
+              </div>
+              <div className="text-sm">
+                <div className="text-white break-words">{e.proveedor_nombre}</div>
+                <div className="text-gray-400 break-all">Doc: {e.numero_documento}</div>
+              </div>
+              <div className="text-xs text-gray-400">
+                Inicio: {formatearFecha(e.fecha_inicio)}
+                {e.fecha_termino && <> · Fin: {formatearFecha(e.fecha_termino)}</>}
+                {e.usuario_registro_nombre && <> · {e.usuario_registro_nombre}</>}
+              </div>
+              <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-slate-700 text-sm">{acciones(e)}</div>
+            </div>
+          )}
+        />
       )}
     </div>
   );

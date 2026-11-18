@@ -75,9 +75,9 @@ export default function ResumenCajasPage() {
   return (
     <div className="min-h-screen bg-slate-900 text-white p-6">
       <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-transparent bg-gradient-to-r from-teal-300 to-cyan-300 bg-clip-text">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-8">
+          <div className="min-w-0">
+            <h1 className="text-2xl md:text-3xl font-bold text-transparent bg-gradient-to-r from-teal-300 to-cyan-300 bg-clip-text">
               Estado de Cajas - Todos los Locales
             </h1>
             <p className="text-slate-400 mt-2">
@@ -122,11 +122,11 @@ export default function ResumenCajasPage() {
 
         {/* Turnos Abiertos */}
         {metricas?.turnos_abiertos && metricas.turnos_abiertos.total > 0 && (
-          <div className="bg-slate-800 rounded-xl p-6 mb-8">
-            <h2 className="text-2xl font-bold mb-6 text-cyan-300">
+          <div className="bg-slate-800 rounded-xl p-4 md:p-6 mb-8">
+            <h2 className="text-xl md:text-2xl font-bold mb-4 md:mb-6 text-cyan-300">
               Turnos Abiertos ({metricas.turnos_abiertos.total})
             </h2>
-            <div className="overflow-x-auto">
+            <div className="hidden lg:block overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-slate-600">
@@ -181,13 +181,41 @@ export default function ResumenCajasPage() {
                 </tbody>
               </table>
             </div>
+            {/* Móvil: una tarjeta por turno abierto */}
+            <ul className="lg:hidden space-y-3">
+              {metricas.turnos_abiertos.detalle.map((turno) => (
+                <li key={turno.turno_id} className="bg-slate-700 rounded-lg p-4 space-y-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="font-semibold text-white break-words">{turno.local_nombre}</div>
+                      <div className="text-sm text-slate-300 break-words">{turno.vendedor_nombre}</div>
+                    </div>
+                    <span className="bg-blue-900 text-blue-200 px-2 py-1 rounded text-xs shrink-0">
+                      {getTurnoDuration(turno.fecha_apertura)}
+                    </span>
+                  </div>
+                  <div className="text-xs text-slate-400">Apertura: {formatDateTime(turno.fecha_apertura)}</div>
+                  <div className="grid grid-cols-3 gap-2 text-sm">
+                    <div><div className="text-slate-400 text-xs">Monto Inicial</div><div className="text-slate-300">{formatCurrency(turno.monto_inicial)}</div></div>
+                    <div><div className="text-slate-400 text-xs">Ventas</div><div className="text-green-400 font-semibold">{formatCurrency(turno.ventas_acumuladas)}</div></div>
+                    <div><div className="text-slate-400 text-xs">Efectivo Esperado</div><div className="text-cyan-400 font-semibold">{formatCurrency(turno.efectivo_esperado)}</div></div>
+                  </div>
+                  <button
+                    onClick={() => router.push(`/admin/caja?turno=${turno.turno_id}`)}
+                    className="w-full bg-teal-600 hover:bg-teal-700 px-3 py-2 rounded text-sm transition-colors"
+                  >
+                    Ver Detalle
+                  </button>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 
         {/* Ventas por Vendedor Hoy */}
         {(metricas?.ventas_por_vendedor_hoy?.total_vendedores_activos || 0) > 0 && (
-          <div className="bg-slate-800 rounded-xl p-6 mb-8">
-            <h2 className="text-2xl font-bold mb-6 text-cyan-300">
+          <div className="bg-slate-800 rounded-xl p-4 md:p-6 mb-8">
+            <h2 className="text-xl md:text-2xl font-bold mb-4 md:mb-6 text-cyan-300">
               Ventas por Vendedor - Hoy ({metricas?.ventas_por_vendedor_hoy?.total_vendedores_activos || 0})
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -214,11 +242,11 @@ export default function ResumenCajasPage() {
 
         {/* Diferencias de Cuadre Recientes */}
         {(metricas?.diferencias_cuadre_recientes?.total_con_diferencia || 0) > 0 && (
-          <div className="bg-slate-800 rounded-xl p-6 mb-8">
-            <h2 className="text-2xl font-bold mb-6 text-red-300">
+          <div className="bg-slate-800 rounded-xl p-4 md:p-6 mb-8">
+            <h2 className="text-xl md:text-2xl font-bold mb-4 md:mb-6 text-red-300">
               Diferencias de Cuadre - Últimos 7 Días ({metricas?.diferencias_cuadre_recientes?.total_con_diferencia || 0})
             </h2>
-            <div className="overflow-x-auto">
+            <div className="hidden lg:block overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-slate-600">
@@ -257,13 +285,35 @@ export default function ResumenCajasPage() {
                 </tbody>
               </table>
             </div>
+            {/* Móvil: una tarjeta por diferencia */}
+            <ul className="lg:hidden space-y-3">
+              {metricas?.diferencias_cuadre_recientes?.detalle?.map((diferencia) => (
+                <li key={diferencia.turno_id} className="bg-slate-700 rounded-lg p-4 space-y-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-white font-semibold break-words">{diferencia.local_nombre}</div>
+                      <div className="text-sm text-slate-300 break-words">{diferencia.vendedor_nombre}</div>
+                    </div>
+                    <span className={`font-semibold text-right shrink-0 ${diferencia.diferencia > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {formatCurrency(diferencia.diferencia)}
+                      <div className="text-xs font-normal">{diferencia.diferencia > 0 ? '(sobrante)' : '(faltante)'}</div>
+                    </span>
+                  </div>
+                  <div className="text-xs text-slate-400">Cierre: {formatDateTime(diferencia.fecha_cierre)}</div>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div><div className="text-slate-400 text-xs">Esperado</div><div className="text-slate-300">{formatCurrency(diferencia.efectivo_esperado)}</div></div>
+                    <div><div className="text-slate-400 text-xs">Real</div><div className="text-slate-300">{formatCurrency(diferencia.efectivo_real)}</div></div>
+                  </div>
+                </li>
+              )) || []}
+            </ul>
           </div>
         )}
 
         {/* Resumen de Operaciones (30 días) */}
         {(metricas?.resumen_operaciones_30d?.por_tipo?.length || 0) > 0 && (
           <div className="bg-slate-800 rounded-xl p-6">
-            <h2 className="text-2xl font-bold mb-6 text-cyan-300">
+            <h2 className="text-xl md:text-2xl font-bold mb-4 md:mb-6 text-cyan-300">
               Resumen de Operaciones - Últimos 30 Días
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">

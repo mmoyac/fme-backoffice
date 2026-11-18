@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { AuthService } from '@/lib/auth';
 import type { User } from '@/lib/auth';
 
@@ -356,18 +357,18 @@ export default function CajaPage() {
         </div>
       )}
 
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Control de Caja</h1>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+        <div className="min-w-0">
+          <h1 className="text-2xl md:text-3xl font-bold text-white">Control de Caja</h1>
           {userLocal && (
             <p className="text-slate-300 mt-1">
               🏪 Local asignado: <span className="text-cyan-400 font-semibold">{userLocal.nombre}</span>
             </p>
           )}
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           {/* Botón para ir al POS */}
-          <a
+          <Link
             href="/admin/pedidos/pos"
             className="inline-flex items-center space-x-2 bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg font-semibold transition-colors"
           >
@@ -375,7 +376,7 @@ export default function CajaPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
             </svg>
             <span>🛒 Ir al POS</span>
-          </a>
+          </Link>
           
           {!estadoCaja?.tiene_caja_abierta ? (
             <button
@@ -490,11 +491,65 @@ export default function CajaPage() {
       </div>
 
       {/* Historial de Turnos */}
-      <div className="bg-slate-800 rounded-lg p-6">
+      <div className="bg-slate-800 rounded-lg p-4 md:p-6">
         <h2 className="text-xl font-bold text-white mb-4">Historial Reciente</h2>
         
         {historialTurnos.length > 0 ? (
-          <div className="overflow-x-auto">
+          <>
+          <ul className="lg:hidden space-y-3">
+            {historialTurnos.map((turno) => (
+              <li key={turno.id} className="bg-slate-900/60 rounded-lg p-3 space-y-2 text-slate-300">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-white font-medium">{formatDateTime(turno.fecha_apertura)}</div>
+                    <div className="text-xs text-slate-400 break-words">{turno.local_nombre}</div>
+                  </div>
+                  <span className={`shrink-0 px-2 py-1 rounded text-xs font-bold ${
+                    turno.estado === 'ABIERTO' ? 'bg-green-600' : 'bg-gray-600'
+                  }`}>
+                    {turno.estado === 'ABIERTO' ? '🔓 ABIERTO' : '🔒 CERRADO'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-sm">
+                  <div>
+                    <div className="text-xs text-slate-400">Monto inicial</div>
+                    {formatCurrency(turno.monto_inicial)}
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-400">Efectivo real</div>
+                    {turno.efectivo_real ? formatCurrency(turno.efectivo_real) : '-'}
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-400">Diferencia</div>
+                    {turno.diferencia !== undefined ? (
+                      <span className={turno.diferencia === 0 ? 'text-green-400' :
+                                     turno.diferencia > 0 ? 'text-blue-400' : 'text-red-400'}>
+                        {formatCurrency(turno.diferencia)}
+                      </span>
+                    ) : '-'}
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-4 pt-2 border-t border-slate-700">
+                  <button
+                    onClick={() => verDetalleTurno(turno.id)}
+                    className="text-primary hover:text-amber-300 text-sm"
+                  >
+                    👁️ Ver Detalle
+                  </button>
+                  {turno.estado === 'CERRADO' && (
+                    <button
+                      onClick={() => descargarPdfCierre(turno.id)}
+                      className="text-blue-400 hover:text-blue-300 text-sm"
+                      title="Descargar PDF del cierre"
+                    >
+                      📝 PDF
+                    </button>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+          <div className="hidden lg:block overflow-x-auto">
             <table className="w-full text-left text-slate-300">
               <thead className="bg-slate-900 text-slate-400 uppercase text-xs">
                 <tr>
@@ -557,6 +612,7 @@ export default function CajaPage() {
               </tbody>
             </table>
           </div>
+          </>
         ) : (
           <p className="text-gray-400 text-center py-8">No hay turnos registrados</p>
         )}
@@ -565,7 +621,7 @@ export default function CajaPage() {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-slate-800 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+          <div className="bg-slate-800 rounded-lg p-4 md:p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-bold text-white">
                 {modalType === 'abrir' && '🔓 Abrir Caja'}
@@ -858,8 +914,8 @@ export default function CajaPage() {
                 <div>
                   <h4 className="text-white font-semibold mb-3">Operaciones ({turnoDetalle.operaciones?.length || 0})</h4>
                   {turnoDetalle.operaciones && turnoDetalle.operaciones.length > 0 ? (
-                    <div className="max-h-64 overflow-y-auto bg-slate-700 rounded-lg">
-                      <table className="w-full text-sm">
+                    <div className="max-h-64 overflow-auto bg-slate-700 rounded-lg">
+                      <table className="w-full min-w-[520px] text-sm">
                         <thead className="sticky top-0 bg-slate-800">
                           <tr className="text-gray-400">
                             <th className="px-3 py-2 text-left">Hora</th>

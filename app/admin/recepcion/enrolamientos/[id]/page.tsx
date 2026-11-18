@@ -87,10 +87,10 @@ export default function EnrolamientoDetallePage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-start">
-        <div>
-          <div className="flex items-center space-x-4 mb-2">
-            <h1 className="text-3xl font-bold text-white">
+      <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-3">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-2">
+            <h1 className="text-2xl md:text-3xl font-bold text-white">
               Enrolamiento #{enrolamiento.id}
             </h1>
             <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${obtenerColorEstado(enrolamiento.estado?.nombre || '')}`}>
@@ -99,7 +99,7 @@ export default function EnrolamientoDetallePage() {
           </div>
           <p className="text-gray-400">Detalles completos del enrolamiento</p>
         </div>
-        <div className="flex space-x-3">
+        <div className="flex flex-wrap gap-3">
           <Link
             href="/admin/recepcion/enrolamientos"
             className="px-4 py-2 text-gray-300 border border-gray-600 rounded-lg hover:bg-slate-700 transition-colors"
@@ -122,7 +122,7 @@ export default function EnrolamientoDetallePage() {
       </div>
 
       {/* Información del Enrolamiento */}
-      <div className="bg-slate-800 rounded-lg border border-slate-700 p-6">
+      <div className="bg-slate-800 rounded-lg border border-slate-700 p-4 md:p-6">
         <h2 className="text-xl font-semibold text-white mb-4">Información del Vehículo</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div>
@@ -145,7 +145,7 @@ export default function EnrolamientoDetallePage() {
       </div>
 
       {/* Información del Proveedor */}
-      <div className="bg-slate-800 rounded-lg border border-slate-700 p-6">
+      <div className="bg-slate-800 rounded-lg border border-slate-700 p-4 md:p-6">
         <h2 className="text-xl font-semibold text-white mb-4">Información del Proveedor</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
@@ -160,7 +160,7 @@ export default function EnrolamientoDetallePage() {
       </div>
 
       {/* Fechas y Estado */}
-      <div className="bg-slate-800 rounded-lg border border-slate-700 p-6">
+      <div className="bg-slate-800 rounded-lg border border-slate-700 p-4 md:p-6">
         <h2 className="text-xl font-semibold text-white mb-4">Control de Proceso</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
@@ -188,7 +188,7 @@ export default function EnrolamientoDetallePage() {
       </div>
 
       {/* Resumen de Cajas */}
-      <div className="bg-slate-800 rounded-lg border border-slate-700 p-6">
+      <div className="bg-slate-800 rounded-lg border border-slate-700 p-4 md:p-6">
         <h2 className="text-xl font-semibold text-white mb-4">Resumen de Cajas</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
           <div className="bg-slate-700 p-4 rounded-lg text-center">
@@ -233,8 +233,8 @@ export default function EnrolamientoDetallePage() {
 
       {/* Lista de Lotes */}
       {totalLotes > 0 && (
-        <div className="bg-slate-800 rounded-lg border border-slate-700 p-6">
-          <div className="flex justify-between items-center mb-4">
+        <div className="bg-slate-800 rounded-lg border border-slate-700 p-4 md:p-6">
+          <div className="flex flex-wrap justify-between items-center gap-2 mb-4">
             <h2 className="text-xl font-semibold text-white">Cajas Individuales</h2>
             <Link
               href={`/admin/recepcion/lotes?enrolamiento=${enrolamiento.id}`}
@@ -244,7 +244,8 @@ export default function EnrolamientoDetallePage() {
             </Link>
           </div>
           
-          <div className="overflow-x-auto">
+          <div>
+            <div className="hidden lg:block overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-700">
               <thead className="bg-slate-700">
                 <tr>
@@ -293,6 +294,29 @@ export default function EnrolamientoDetallePage() {
                 ))}
               </tbody>
             </table>
+            </div>
+            {/* Móvil: una tarjeta por caja */}
+            <ul className="lg:hidden space-y-3">
+              {lotes.slice(0, 10).map((lote) => (
+                <li key={lote.id} className="bg-slate-700/60 rounded-lg p-3 space-y-1">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="text-sm font-mono text-white break-all min-w-0">{lote.codigo_lote}</div>
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full shrink-0 ${
+                      lote.disponible_venta
+                        ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                        : 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
+                    }`}>
+                      {lote.disponible_venta ? 'Disponible' : 'En proceso'}
+                    </span>
+                  </div>
+                  <div className="text-sm text-gray-300 break-words">{lote.producto_nombre || 'Sin producto'}</div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-white">{lote.peso_actual ? `${lote.peso_actual} kg` : 'N/A'}</span>
+                    <span className="text-gray-300">{lote.ubicacion_codigo || 'Sin ubicación'}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
             
             {lotes.length > 10 && (
               <div className="mt-4 text-center">

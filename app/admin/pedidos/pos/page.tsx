@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { getProductos, type Producto } from '@/lib/api/productos';
 import { getClientes, type Cliente } from '@/lib/api/clientes';
 import { getLocales, type Local } from '@/lib/api/locales';
@@ -816,31 +817,31 @@ export default function POSPedidoPage() {
     <div className="min-h-screen bg-slate-900">
       {/* Header del POS */}
       <div className="bg-slate-800 shadow-sm border-b border-slate-700">
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-white">POS - Nuevo Pedido</h1>
+        <div className="px-4 sm:px-6 py-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h1 className="text-xl sm:text-2xl font-bold text-white">POS - Nuevo Pedido</h1>
             
             {/* Indicador de etapas */}
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center gap-3 sm:gap-4">
               <div className={`flex items-center space-x-2 ${etapaActual === 'productos' ? 'text-teal-400' : 'text-slate-500'}`}>
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                   etapaActual === 'productos' ? 'bg-teal-600 text-white' : 'bg-slate-700 text-slate-400'
                 }`}>1</div>
-                <span className="font-medium">Productos</span>
+                <span className="font-medium hidden sm:inline">Productos</span>
               </div>
               
               <div className={`flex items-center space-x-2 ${etapaActual === 'carrito' ? 'text-teal-400' : 'text-slate-500'}`}>
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                   etapaActual === 'carrito' ? 'bg-teal-600 text-white' : 'bg-slate-700 text-slate-400'
                 }`}>2</div>
-                <span className="font-medium">Carrito</span>
+                <span className="font-medium hidden sm:inline">Carrito</span>
               </div>
               
               <div className={`flex items-center space-x-2 ${etapaActual === 'finalizacion' ? 'text-teal-400' : 'text-slate-500'}`}>
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                   etapaActual === 'finalizacion' ? 'bg-teal-600 text-white' : 'bg-slate-700 text-slate-400'
                 }`}>3</div>
-                <span className="font-medium">Finalizar</span>
+                <span className="font-medium hidden sm:inline">Finalizar</span>
               </div>
             </div>
             
@@ -864,8 +865,8 @@ export default function POSPedidoPage() {
 
       {/* Información del Local Asignado */}
       {localId && locales.length > 0 && (
-        <div className="bg-slate-800/50 border-b border-slate-600 px-6 py-3">
-          <div className="flex items-center justify-between">
+        <div className="bg-slate-800/50 border-b border-slate-600 px-4 sm:px-6 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center space-x-3">
               <span className="text-slate-300">🏪 Local de venta:</span>
               <span className="font-medium text-teal-400">
@@ -924,8 +925,8 @@ export default function POSPedidoPage() {
       
       {/* Banner de información - Caja abierta */}
       {cajaAbierta && infoCaja?.turno && (
-        <div className="bg-green-900/30 border-b-4 border-green-500 px-6 py-4">
-          <div className="flex items-center justify-between">
+        <div className="bg-green-900/30 border-b-4 border-green-500 px-4 sm:px-6 py-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center space-x-3">
               <div className="flex-shrink-0">
                 <svg className="h-8 w-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -977,7 +978,7 @@ export default function POSPedidoPage() {
             </div>
 
             {/* Botón para ir a gestión de caja */}
-            <a
+            <Link
               href="/admin/caja"
               className="flex-shrink-0 inline-flex items-center space-x-2 px-4 py-2 bg-green-700 hover:bg-green-800 text-white text-sm font-medium rounded-lg transition-colors"
             >
@@ -986,7 +987,7 @@ export default function POSPedidoPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
               <span>Gestionar Caja</span>
-            </a>
+            </Link>
           </div>
         </div>
       )}

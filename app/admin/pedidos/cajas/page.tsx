@@ -125,7 +125,7 @@ export default function ListadoPreventasPage() {
   const totalCajas = Array.from(cajasMap.values()).reduce((s, v) => s + v.cajas, 0);
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
+    <div className="max-w-6xl mx-auto md:px-4 py-4 md:py-8">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-white">Pre-Ventas de Cajas</h1>
@@ -159,7 +159,7 @@ export default function ListadoPreventasPage() {
 
       {preventas.length > 0 && (
         <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 mb-6">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
             <h2 className="text-white font-semibold">
               {preventas.length} pedidos &mdash; {totalCajas} cajas totales
             </h2>
@@ -202,7 +202,7 @@ export default function ListadoPreventasPage() {
               <div key={p.id} className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
                 <button
                   onClick={() => setExpandido(isExpanded ? null : p.id)}
-                  className="w-full text-left px-5 py-4 flex items-center gap-4 hover:bg-slate-700/40"
+                  className="w-full text-left px-3 sm:px-5 py-4 flex items-center gap-3 sm:gap-4 hover:bg-slate-700/40"
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 flex-wrap">
@@ -240,8 +240,9 @@ export default function ListadoPreventasPage() {
                   <span className="text-slate-500 text-sm ml-2">{isExpanded ? '▲' : '▼'}</span>
                 </button>
                 {isExpanded && (
-                  <div className="border-t border-slate-700 px-5 py-4">
-                    <table className="w-full text-sm mb-3">
+                  <div className="border-t border-slate-700 px-3 sm:px-5 py-4">
+                    <div className="overflow-x-auto mb-3">
+                    <table className="w-full min-w-[420px] text-sm">
                       <thead>
                         <tr className="text-slate-400 text-xs border-b border-slate-700">
                           <th className="text-left py-1">Corte</th>
@@ -283,6 +284,7 @@ export default function ListadoPreventasPage() {
                         })}
                       </tbody>
                     </table>
+                    </div>
                     {p.notas && <div className="text-xs text-slate-400 mb-3">Notas: {p.notas}</div>}
                     <button
                       onClick={() => handleCancelar(p.id)}
@@ -304,7 +306,7 @@ export default function ListadoPreventasPage() {
         const historicoFiltrado = esAdmin ? historico : historico.filter(p => p.usuario_id === currentUserId);
         return historicoFiltrado.length > 0 && (
         <div className="mt-8">
-          <div className="flex items-center gap-3 mb-3">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-3">
             <h2 className="text-white font-semibold text-lg">Historial confirmados</h2>
             <span className="text-xs bg-emerald-900/50 text-emerald-400 border border-emerald-800 px-2 py-0.5 rounded-full">
               {historicoFiltrado.length} pedido{historicoFiltrado.length !== 1 ? 's' : ''}
@@ -320,7 +322,7 @@ export default function ListadoPreventasPage() {
                 <div key={p.id} className="bg-slate-800/60 border border-emerald-900/50 rounded-xl overflow-hidden opacity-90">
                   <button
                     onClick={() => setExpandidoHistorico(isExp ? null : p.id)}
-                    className="w-full text-left px-5 py-3.5 flex items-center gap-4 hover:bg-slate-700/30"
+                    className="w-full text-left px-3 sm:px-5 py-3.5 flex items-center gap-3 sm:gap-4 hover:bg-slate-700/30"
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 flex-wrap">
@@ -362,8 +364,9 @@ export default function ListadoPreventasPage() {
                     <span className="text-slate-600 text-sm ml-2">{isExp ? '▲' : '▼'}</span>
                   </button>
                   {isExp && (
-                    <div className="border-t border-slate-700/50 px-5 py-4">
-                      <table className="w-full text-sm mb-3">
+                    <div className="border-t border-slate-700/50 px-3 sm:px-5 py-4">
+                      <div className="overflow-x-auto mb-3">
+                      <table className="w-full min-w-[420px] text-sm">
                         <thead>
                           <tr className="text-slate-500 text-xs border-b border-slate-700/50">
                             <th className="text-left py-1">Corte</th>
@@ -394,6 +397,7 @@ export default function ListadoPreventasPage() {
                           })}
                         </tbody>
                       </table>
+                      </div>
                       {p.notas && <div className="text-xs text-slate-500">Notas: {p.notas}</div>}
                       <div className="mt-3 text-xs text-slate-600 italic">Pedido confirmado — sin acciones disponibles</div>
                     </div>

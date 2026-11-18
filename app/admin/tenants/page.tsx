@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { AuthService } from '@/lib/auth';
+import Link from 'next/link';
+import DataList from '@/components/ui/DataList';
 
 interface Tenant {
     id: number;
@@ -186,10 +188,71 @@ export default function TenantsPage() {
             setLoading(false);
         }
     };
+    const estadoTenant = (t: Tenant) => (
+        <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
+            t.activo
+                ? 'bg-green-900/30 text-green-400 border border-green-700'
+                : 'bg-red-900/30 text-red-400 border border-red-700'
+        }`}>
+            {t.activo ? '✅ ACTIVO' : '🔒 INACTIVO'}
+        </span>
+    );
+
+    const estadisticasTenant = (t: Tenant) => (
+        <div className="grid grid-cols-2 md:grid-cols-1 gap-x-3 gap-y-1 text-gray-300">
+            <div>📦 Productos: {t.total_productos || 0}</div>
+            <div>👥 Clientes: {t.total_clientes || 0}</div>
+            <div>📋 Pedidos: {t.total_pedidos || 0}</div>
+            <div>🔐 Usuarios: {t.total_usuarios || 0}</div>
+        </div>
+    );
+
+    const accionesTenant = (t: Tenant) => (
+        <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm">
+            <button
+                onClick={() => handleEditClick(t)}
+                className="text-primary hover:text-primary-dark font-medium"
+                disabled={loading}
+            >
+                ✏️ Editar
+            </button>
+            <button
+                onClick={() => handleToggleActive(t)}
+                className={t.activo ? 'text-red-400 hover:text-red-300' : 'text-green-400 hover:text-green-300'}
+                disabled={loading || t.id === 1}
+                title={t.id === 1 ? 'No se puede desactivar el tenant principal' : ''}
+            >
+                {t.activo ? '🔒 Desactivar' : '✅ Activar'}
+            </button>
+            <button
+                onClick={() => handleShowUsers(t.id)}
+                className="text-purple-400 hover:text-purple-300 font-medium"
+                disabled={loading}
+            >
+                👥 Usuarios ({t.total_usuarios || 0})
+            </button>
+            <button
+                onClick={() => handleDeleteTenant(t)}
+                className="text-red-500 hover:text-red-300 font-medium"
+                disabled={loading || t.id === 1}
+                title={t.id === 1 ? 'No se puede eliminar el tenant principal' : 'Eliminar tenant'}
+            >
+                🗑️ Eliminar
+            </button>
+            <Link
+                href={`/admin/configuracion/landing?tenant_id=${t.id}`}
+                className="text-blue-400 hover:text-blue-300 font-medium underline"
+                title="Configurar landing de este tenant"
+            >
+                🎨 Landing
+            </Link>
+        </div>
+    );
+
     return (
-        <div className="p-6">
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-3xl font-bold text-white">🏢 Gestión de Tenants (SaaS)</h1>
+        <div className="md:p-6">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
+                <h1 className="text-2xl md:text-3xl font-bold text-white">🏢 Gestión de Tenants (SaaS)</h1>
                 <button
                     onClick={() => setShowCreateModal(true)}
                     className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg"
@@ -199,8 +262,8 @@ export default function TenantsPage() {
             </div>
             {/* Modal de creación */}
             {showCreateModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
-                    <div className="bg-slate-800 border border-slate-700 rounded-lg p-6 max-w-2xl w-full mx-4">
+                <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+                    <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 sm:p-6 max-w-2xl w-full max-h-[calc(100dvh-2rem)] overflow-y-auto">
                         <h2 className="text-2xl font-bold mb-4 text-white">➕ Nuevo Tenant</h2>
                         <div className="space-y-4">
                             <div>
@@ -279,109 +342,56 @@ export default function TenantsPage() {
                 </p>
             </div>
 
-            {/* Tabla de tenants */}
-            <div className="bg-slate-800 shadow-md rounded-lg overflow-x-auto border border-slate-700">
-                <table className="min-w-full">
-                    <thead className="bg-slate-700">
-                        <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">ID</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Código</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Nombre</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Dominio</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Correlativo</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Estado</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Estadísticas</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody className="bg-slate-800 divide-y divide-slate-700">
-                        {tenants.map((tenant) => (
-                            <tr key={tenant.id} className={!tenant.activo ? 'bg-red-900/20' : ''}>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-white">{tenant.id}</td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    <code className="text-sm bg-slate-700 text-primary px-2 py-1 rounded">{tenant.codigo}</code>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">
-                                    {tenant.nombre}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                                    {tenant.dominio_principal || tenant.subdomain || '-'}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-white font-mono">
-                                    {tenant.correlativo_pedido.toString().padStart(5, '0')}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                                        tenant.activo
-                                            ? 'bg-green-900/30 text-green-400 border border-green-700'
-                                            : 'bg-red-900/30 text-red-400 border border-red-700'
-                                    }`}>
-                                        {tenant.activo ? '✅ ACTIVO' : '🔒 INACTIVO'}
-                                    </span>
-                                </td>
-                                <td className="px-6 py-4 text-sm text-gray-300">
-                                    <div className="space-y-1">
-                                        <div>📦 Productos: {tenant.total_productos || 0}</div>
-                                        <div>👥 Clientes: {tenant.total_clientes || 0}</div>
-                                        <div>📋 Pedidos: {tenant.total_pedidos || 0}</div>
-                                        <div>🔐 Usuarios: {tenant.total_usuarios || 0}</div>
-                                    </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
-                                    <button
-                                        onClick={() => handleEditClick(tenant)}
-                                        className="text-primary hover:text-primary-dark font-medium"
-                                        disabled={loading}
-                                    >
-                                        ✏️ Editar
-                                    </button>
-                                    <button
-                                        onClick={() => handleToggleActive(tenant)}
-                                        className={tenant.activo ? 'text-red-400 hover:text-red-300' : 'text-green-400 hover:text-green-300'}
-                                        disabled={loading || tenant.id === 1}
-                                        title={tenant.id === 1 ? 'No se puede desactivar el tenant principal' : ''}
-                                    >
-                                        {tenant.activo ? '🔒 Desactivar' : '✅ Activar'}
-                                    </button>
-                                    <button
-                                        onClick={() => handleShowUsers(tenant.id)}
-                                        className="text-purple-400 hover:text-purple-300 font-medium"
-                                        disabled={loading}
-                                    >
-                                        👥 Usuarios ({tenant.total_usuarios || 0})
-                                    </button>
-                                    <button
-                                        onClick={() => handleDeleteTenant(tenant)}
-                                        className="text-red-500 hover:text-red-300 font-medium"
-                                        disabled={loading || tenant.id === 1}
-                                        title={tenant.id === 1 ? 'No se puede eliminar el tenant principal' : 'Eliminar tenant'}
-                                    >
-                                        🗑️ Eliminar
-                                    </button>
-                                    <a
-                                        href={`/admin/configuracion/landing?tenant_id=${tenant.id}`}
-                                        className="text-blue-400 hover:text-blue-300 font-medium underline ml-2"
-                                        title="Configurar landing de este tenant"
-                                    >
-                                        🎨 Landing
-                                    </a>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-
-                {tenants.length === 0 && !loading && (
-                    <div className="p-8 text-center text-gray-400">
-                        No hay tenants registrados
+            {/* Lista de tenants: tabla en escritorio, tarjetas en celular */}
+            <DataList
+                items={tenants}
+                loading={loading}
+                getKey={(t) => t.id}
+                empty="No hay tenants registrados"
+                columns={[
+                    {
+                        header: 'ID / Código',
+                        className: 'w-[11%]',
+                        sinTruncar: true,
+                        cell: (t) => (
+                            <>
+                                <div className="text-sm text-white">{t.id}</div>
+                                <code className="text-xs bg-slate-700 text-primary px-2 py-0.5 rounded break-all">{t.codigo}</code>
+                            </>
+                        ),
+                    },
+                    { header: 'Nombre', className: 'w-[17%]', cell: (t) => <span className="text-sm font-medium text-white" title={t.nombre}>{t.nombre}</span> },
+                    { header: 'Dominio', className: 'w-[16%]', cell: (t) => <span className="text-sm text-gray-300" title={t.dominio_principal || t.subdomain || undefined}>{t.dominio_principal || t.subdomain || '-'}</span> },
+                    { header: 'Correl.', className: 'w-[8%]', sinTruncar: true, cell: (t) => <span className="text-sm text-white font-mono">{t.correlativo_pedido.toString().padStart(5, '0')}</span> },
+                    { header: 'Estado', className: 'w-[12%]', sinTruncar: true, cell: estadoTenant },
+                    { header: 'Estadísticas', className: 'w-[15%]', sinTruncar: true, cell: estadisticasTenant },
+                    { header: 'Acciones', className: 'w-[21%]', sinTruncar: true, cell: accionesTenant },
+                ]}
+                card={(t) => (
+                    <div className={`space-y-2 ${!t.activo ? 'border-l-4 border-red-700 -ml-4 pl-3' : ''}`}>
+                        <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                                <div className="text-white font-medium break-words">{t.nombre}</div>
+                                <div className="text-xs text-gray-400">
+                                    #{t.id} · <code className="text-primary break-all">{t.codigo}</code>
+                                </div>
+                                <div className="text-xs text-gray-300 break-all">{t.dominio_principal || t.subdomain || '-'}</div>
+                            </div>
+                            <div className="shrink-0 text-right space-y-1">
+                                {estadoTenant(t)}
+                                <div className="text-xs text-gray-400 font-mono">Correl. {t.correlativo_pedido.toString().padStart(5, '0')}</div>
+                            </div>
+                        </div>
+                        <div className="text-sm">{estadisticasTenant(t)}</div>
+                        <div className="pt-2 border-t border-slate-700">{accionesTenant(t)}</div>
                     </div>
                 )}
-            </div>
+            />
 
             {/* Modal de edición */}
             {showEditModal && editingTenant && (
-                <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
-                    <div className="bg-slate-800 border border-slate-700 rounded-lg p-6 max-w-2xl w-full mx-4">
+                <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+                    <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 sm:p-6 max-w-2xl w-full max-h-[calc(100dvh-2rem)] overflow-y-auto">
                         <h2 className="text-2xl font-bold mb-4 text-white">✏️ Editar Tenant: {editingTenant.nombre}</h2>
 
                         <div className="space-y-4">
@@ -523,8 +533,8 @@ export default function TenantsPage() {
             
             {/* Modal de Gestión de Usuarios */}
             {showUsersModal && selectedTenantId && (
-                <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
-                    <div className="bg-slate-800 border border-slate-700 rounded-lg p-6 max-w-5xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+                <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+                    <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 sm:p-6 max-w-5xl w-full max-h-[calc(100dvh-2rem)] overflow-y-auto">
                         <div className="flex justify-between items-center mb-4">
                             <h2 className="text-2xl font-bold text-white">
                                 👥 Usuarios del Tenant: {tenants.find(t => t.id === selectedTenantId)?.nombre}

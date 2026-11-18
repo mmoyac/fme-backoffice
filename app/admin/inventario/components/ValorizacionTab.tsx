@@ -145,7 +145,9 @@ export function ValorizacionTab({ localPropio = null, filtroCompartido = FILTRO_
       ) : !data || data.items.length === 0 ? (
         <div className="text-gray-400 py-8 text-center bg-slate-800 rounded-lg">No hay stock para valorizar con estos filtros</div>
       ) : (
-        <div className={`overflow-x-auto bg-slate-800 rounded-lg border border-slate-700 ${loading ? 'opacity-60' : ''}`}>
+        <>
+        {/* Escritorio: reporte con muchas columnas numéricas, con scroll dentro de su recuadro */}
+        <div className={`hidden lg:block overflow-x-auto bg-slate-800 rounded-lg border border-slate-700 ${loading ? 'opacity-60' : ''}`}>
           <table className="w-full text-sm">
             <thead className="bg-slate-900 text-gray-300 text-xs uppercase">
               <tr>
@@ -199,6 +201,42 @@ export function ValorizacionTab({ localPropio = null, filtroCompartido = FILTRO_
             {data.items.length} fila(s) · Valores netos (sin IVA) · Costo = promedio ponderado · Precio venta neto = precio con IVA ÷ 1,19
           </div>
         </div>
+
+        {/* Móvil: una tarjeta por producto y local */}
+        <ul className={`lg:hidden space-y-3 ${loading ? 'opacity-60' : ''}`}>
+          {data.items.map((it) => (
+            <li key={`${it.producto_id}-${it.local_id}`} className="bg-slate-800 rounded-xl border border-slate-700 p-4 space-y-2 text-gray-200">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="font-medium text-white break-words">{it.producto_nombre}</div>
+                  <div className="text-xs text-gray-400">
+                    {it.sku}
+                    {it.categoria_nombre ? ` · ${it.categoria_nombre}` : ''}
+                    {!localPropio && it.local_nombre ? ` · ${it.local_nombre}` : ''}
+                  </div>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {it.sin_costo && <Badge color="bg-amber-800 text-amber-100">Sin costo</Badge>}
+                    {it.sin_precio && <Badge color="bg-slate-600 text-slate-100">Sin precio</Badge>}
+                    {it.stock_negativo && <Badge color="bg-red-800 text-red-100">Stock negativo</Badge>}
+                  </div>
+                </div>
+                <div className={`text-right shrink-0 font-semibold ${it.stock_negativo ? 'text-red-400' : 'text-white'}`}>
+                  {num(it.stock)} <span className="text-xs text-gray-400 font-normal">{it.unidad}</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-sm">
+                <span className="text-gray-400">Costo neto</span><span className="text-right">{clp(it.costo_unitario)}</span>
+                <span className="text-gray-400">Precio venta neto</span><span className="text-right">{clp(it.precio_venta_neto)}</span>
+                <span className="text-gray-400">Valor inventario</span><span className="text-right text-sky-300">{clp(it.valor_inventario)}</span>
+                <span className="text-gray-400">Valor venta</span><span className="text-right text-emerald-300">{clp(it.valor_venta)}</span>
+                <span className="text-gray-400">Ganancia</span><span className="text-right text-amber-300">{clp(it.ganancia_potencial)}</span>
+                <span className="text-gray-400">Margen</span><span className="text-right">{pct(it.margen_pct)}</span>
+              </div>
+            </li>
+          ))}
+          <li className="text-xs text-gray-500 text-center">{data.items.length} fila(s) · Valores netos (sin IVA)</li>
+        </ul>
+        </>
       )}
     </div>
   );

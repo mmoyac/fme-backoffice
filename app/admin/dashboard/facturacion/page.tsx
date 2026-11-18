@@ -2,10 +2,12 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  ResponsiveContainer
-} from 'recharts';
+import dynamic from 'next/dynamic';
+// recharts se carga solo al mostrar el gráfico (antes iba en el bundle de la página)
+const GraficoFacturacionMensual = dynamic(() => import('./Graficos'), {
+  ssr: false,
+  loading: () => <div className="h-[280px] rounded-lg bg-slate-700/30 animate-pulse" />,
+});
 import { listarFacturas } from '@/lib/api/facturas';
 import type { Pedido } from '@/lib/api/pedidos';
 
@@ -185,12 +187,12 @@ export default function TableroFacturacionPage() {
 
         {/* ── Gráfico: Facturación por mes ── */}
         <div className="bg-slate-800 border border-slate-700 rounded-xl p-5">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
             <div>
               <h3 className="text-white font-semibold text-lg">📈 Facturación por Mes</h3>
               <p className="text-slate-400 text-sm mt-0.5">Últimos 12 meses — facturado, cobrado y por cobrar</p>
             </div>
-            <div className="flex items-center gap-4 text-xs">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
               <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-cyan-500 inline-block"></span> Facturado</span>
               <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-green-500 inline-block"></span> Cobrado</span>
               <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-yellow-500 inline-block"></span> Por cobrar</span>
@@ -202,36 +204,7 @@ export default function TableroFacturacionPage() {
               Sin datos de facturación aún
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={datosMes} margin={{ top: 4, right: 8, left: 10, bottom: 0 }} barCategoryGap="25%">
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
-                <XAxis
-                  dataKey="mes"
-                  tick={{ fill: '#94a3b8', fontSize: 11 }}
-                  axisLine={{ stroke: '#475569' }}
-                  tickLine={false}
-                />
-                <YAxis
-                  tickFormatter={v => v === 0 ? '0' : `$${(v / 1000000).toFixed(1)}M`}
-                  tick={{ fill: '#94a3b8', fontSize: 11 }}
-                  axisLine={false}
-                  tickLine={false}
-                  width={58}
-                />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569', borderRadius: 8 }}
-                  labelStyle={{ color: '#e2e8f0', fontWeight: 600, marginBottom: 4 }}
-                  itemStyle={{ color: '#cbd5e1' }}
-                  formatter={(value, name) => [
-                    `$${Math.round(Number(value ?? 0)).toLocaleString('es-CL')}`,
-                    name === 'facturado' ? 'Facturado' : name === 'cobrado' ? 'Cobrado' : 'Por cobrar'
-                  ] as [string, string]}
-                />
-                <Bar dataKey="facturado" fill="#06b6d4" radius={[3, 3, 0, 0]} maxBarSize={32} />
-                <Bar dataKey="cobrado"   fill="#22c55e" radius={[3, 3, 0, 0]} maxBarSize={32} />
-                <Bar dataKey="porCobrar" fill="#eab308" radius={[3, 3, 0, 0]} maxBarSize={32} />
-              </BarChart>
-            </ResponsiveContainer>
+            <GraficoFacturacionMensual datos={datosMes} />
           )}
         </div>
 

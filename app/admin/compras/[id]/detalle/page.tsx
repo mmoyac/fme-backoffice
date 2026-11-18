@@ -86,8 +86,8 @@ export default function DetalleCompraPage({ params }: { params: { id: string } }
 
     return (
         <div className="max-w-5xl">
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-3xl font-bold text-white">Compra #{compra.id}</h1>
+            <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
+                <h1 className="text-2xl md:text-3xl font-bold text-white">Compra #{compra.id}</h1>
                 <span
                     className={`px-3 py-1 rounded text-xs font-bold ${compra.estado === 'RECIBIDA'
                         ? 'bg-green-900 text-green-300'
@@ -101,9 +101,9 @@ export default function DetalleCompraPage({ params }: { params: { id: string } }
             </div>
 
             {/* Cabecera */}
-            <div className="bg-slate-800 rounded-lg p-6 mb-6">
+            <div className="bg-slate-800 rounded-lg p-4 md:p-6 mb-6">
                 <h2 className="text-xl font-bold text-white mb-4">Información General</h2>
-                <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                     <div>
                         <span className="block text-gray-400">Proveedor</span>
                         <span className="text-white">
@@ -130,7 +130,7 @@ export default function DetalleCompraPage({ params }: { params: { id: string } }
                         </span>
                     </div>
                     {compra.notas && (
-                        <div className="col-span-2">
+                        <div className="sm:col-span-2">
                             <span className="block text-gray-400">Notas</span>
                             <span className="text-white">{compra.notas}</span>
                         </div>
@@ -139,8 +139,9 @@ export default function DetalleCompraPage({ params }: { params: { id: string } }
             </div>
 
             {/* Detalle */}
-            <div className="bg-slate-800 rounded-lg p-6 mb-6">
+            <div className="bg-slate-800 rounded-lg p-4 md:p-6 mb-6">
                 <h2 className="text-xl font-bold text-white mb-4">Detalle de Compra</h2>
+                <div className="hidden lg:block overflow-x-auto">
                 <table className="w-full">
                     <thead className="bg-slate-700">
                         <tr>
@@ -183,6 +184,32 @@ export default function DetalleCompraPage({ params }: { params: { id: string } }
                         </tr>
                     </tfoot>
                 </table>
+                </div>
+                {/* Móvil: una tarjeta por producto */}
+                <ul className="lg:hidden space-y-3">
+                    {compra.detalles.map((det, idx) => {
+                        const producto = productos[det.producto_id];
+                        const cantidad = Number(det.cantidad);
+                        const precio = Number(det.precio_unitario);
+                        const subtotal = cantidad * precio;
+                        return (
+                            <li key={idx} className="bg-slate-700/60 rounded-lg p-3 space-y-1">
+                                <div className="text-white font-medium break-words">
+                                    {producto?.nombre || det.producto_nombre || `Producto #${det.producto_id}`}
+                                </div>
+                                <div className="text-sm text-gray-300">Cantidad: {cantidad} {producto?.unidad_compra_descripcion || ''}</div>
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-gray-400">Precio unit.: <span className="font-mono text-gray-300">${precio.toLocaleString('es-CL')}</span></span>
+                                    <span className="text-white font-mono">${subtotal.toLocaleString('es-CL')}</span>
+                                </div>
+                            </li>
+                        );
+                    })}
+                    <li className="flex justify-between bg-slate-700 rounded-lg px-3 py-2 text-white font-bold">
+                        <span>TOTAL:</span>
+                        <span className="font-mono">${Number(compra.monto_total).toLocaleString('es-CL')}</span>
+                    </li>
+                </ul>
             </div>
 
             <div className="flex justify-end">

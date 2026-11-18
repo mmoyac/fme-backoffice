@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { obtenerPedido, actualizarPedido, Pedido, descargarBoleta } from '@/lib/api/pedidos';
@@ -549,7 +550,7 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
     <>
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-start">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
         <div>
           <button
             onClick={() => router.push('/admin/pedidos')}
@@ -567,7 +568,7 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
         </div>
 
         {/* Botones de acción */}
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           {pedido.estado === 'ENTREGADO' && (
             <button
               onClick={() => { setMostrarModalDevolucion(true); setErrorDevolucion(''); }}
@@ -1078,9 +1079,9 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
                 </div>
                 <p className="text-sm text-gray-400 text-center">
                   Este pedido tiene factura. El pago debe registrarse desde el módulo de{' '}
-                  <a href="/admin/cobranzas" className="text-blue-400 hover:underline font-medium">
+                  <Link href="/admin/cobranza" className="text-blue-400 hover:underline font-medium">
                     Cobranzas
-                  </a>.
+                  </Link>.
                 </p>
               </div>
             ) : (
@@ -1094,9 +1095,9 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
                 {!pedido.pagado && (
                   <p className="text-sm text-gray-400 text-center">
                     El pago debe registrarse desde el módulo de{' '}
-                    <a href="/admin/cobranzas" className="text-blue-400 hover:underline font-medium">
+                    <Link href="/admin/cobranza" className="text-blue-400 hover:underline font-medium">
                       Cobranzas
-                    </a>.
+                    </Link>.
                   </p>
                 )}
               </div>
@@ -1260,9 +1261,9 @@ export default function DetallePedidoPage({ params }: { params: { id: string } }
               // Factura: el medio de pago se asigna desde el módulo de Cobranzas
               <p className="text-sm text-gray-400 text-center py-2">
                 El medio de pago se registra desde el módulo de{' '}
-                <a href="/admin/cobranzas" className="text-blue-400 hover:underline font-medium">
+                <Link href="/admin/cobranza" className="text-blue-400 hover:underline font-medium">
                   Cobranzas
-                </a>.
+                </Link>.
               </p>
             ) : (
               // Mostrar selector para asignar medio de pago

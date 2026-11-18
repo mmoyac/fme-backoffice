@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { listarNotasCredito, actualizarNotaCredito, NotaCredito } from '@/lib/api/notas_credito';
+import Link from 'next/link';
+import PageHeader from '@/components/ui/PageHeader';
 
 const ESTADOS_SII = [
   { value: '', label: 'Todos los estados' },
@@ -100,17 +102,87 @@ export default function NotasCreditoPage() {
     }
   };
 
+  // Celdas compartidas por la tabla (escritorio) y las tarjetas (celular): misma edición en línea.
+  // `enTarjeta` usa autoFocus en vez de inputRef (solo una de las dos vistas está visible).
+  const celdaPedido = (nota: NotaCredito) => (
+    <Link href={`/admin/pedidos/${nota.pedido_id}`} className="text-blue-400 hover:underline font-medium break-all">
+      {nota.pedido?.numero_pedido ?? `#${nota.pedido_id}`}
+    </Link>
+  );
+
+  const celdaEstado = (nota: NotaCredito) =>
+    editando?.notaId === nota.id && editando.campo === 'estado_sii' ? (
+      <div className="flex items-center gap-1">
+        <select
+          value={editando.valor}
+          onChange={e => setEditando({ ...editando, valor: e.target.value })}
+          className="bg-slate-700 border border-slate-500 text-white rounded px-2 py-0.5 text-sm"
+          disabled={guardando}
+        >
+          {ESTADOS_SII.filter(e => e.value).map(e => (
+            <option key={e.value} value={e.value}>{e.label}</option>
+          ))}
+        </select>
+        <button onClick={guardar} disabled={guardando} className="text-green-400 hover:text-green-300 text-xs px-1">✓</button>
+        <button onClick={cancelar} className="text-gray-400 hover:text-gray-300 text-xs px-1">✕</button>
+      </div>
+    ) : (
+      <button
+        onClick={() => iniciarEdicion(nota.id, 'estado_sii', nota.estado_sii || 'PENDIENTE')}
+        title="Clic para editar estado"
+      >
+        <EstadoSiiBadge estado={nota.estado_sii} />
+      </button>
+    );
+
+  const celdaFolio = (nota: NotaCredito, enTarjeta = false) =>
+    editando?.notaId === nota.id && editando.campo === 'folio_sii' ? (
+      <div className="flex items-center gap-1">
+        <input
+          ref={enTarjeta ? undefined : inputRef}
+          autoFocus={enTarjeta}
+          type="text"
+          value={editando.valor}
+          onChange={e => setEditando({ ...editando, valor: e.target.value })}
+          onKeyDown={e => { if (e.key === 'Enter') guardar(); if (e.key === 'Escape') cancelar(); }}
+          className="bg-slate-700 border border-slate-500 text-white rounded px-2 py-0.5 text-sm w-28 font-mono"
+          placeholder="Ej: 123"
+          disabled={guardando}
+        />
+        <button onClick={guardar} disabled={guardando} className="text-green-400 hover:text-green-300 text-xs px-1">✓</button>
+        <button onClick={cancelar} className="text-gray-400 hover:text-gray-300 text-xs px-1">✕</button>
+      </div>
+    ) : (
+      <button
+        onClick={() => iniciarEdicion(nota.id, 'folio_sii', nota.folio_sii || '')}
+        title="Clic para registrar folio SII"
+        className="text-left"
+      >
+        {nota.folio_sii
+          ? <span className="text-cyan-400 font-mono text-sm">{nota.folio_sii}</span>
+          : <span className="text-slate-500 text-sm italic hover:text-slate-400">+ Agregar folio</span>
+        }
+      </button>
+    );
+
+  const celdaItems = (nota: NotaCredito) =>
+    nota.items_devolucion && nota.items_devolucion.length > 0 ? (
+      <button
+        onClick={() => toggleExpanida(nota.id)}
+        className="text-xs text-amber-400 hover:text-amber-300 font-medium"
+      >
+        {nota.items_devolucion.length} producto{nota.items_devolucion.length > 1 ? 's' : ''} {expandidas.has(nota.id) ? '▲' : '▼'}
+      </button>
+    ) : (
+      <span className="text-slate-600 text-xs">—</span>
+    );
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Notas de Crédito</h1>
-          <p className="text-gray-400 mt-1">{total} registros en total</p>
-        </div>
-      </div>
+      <PageHeader title="Notas de Crédito" subtitle={`${total} registros en total`} />
 
       {/* Filtros */}
-      <div className="bg-slate-800 rounded-lg p-4">
+      <div className="bg-slate-800 rounded-lg p-4 -mt-2">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">Estado SII</label>
@@ -154,7 +226,9 @@ export default function NotasCreditoPage() {
       ) : notas.length === 0 ? (
         <div className="text-center text-gray-400 py-12">No hay notas de crédito registradas.</div>
       ) : (
-        <div className="bg-slate-800 rounded-lg overflow-x-auto">
+        <>
+        {/* Escritorio: tabla con edición en línea y detalle desplegable */}
+        <div className="hidden lg:block bg-slate-800 rounded-lg overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-slate-700 text-left text-gray-400 text-sm">
@@ -173,14 +247,7 @@ export default function NotasCreditoPage() {
                 <React.Fragment key={nota.id}>
                 <tr className="border-b border-slate-700 hover:bg-slate-700/50">
                   <td className="px-4 py-3 text-gray-400 text-sm font-mono">#{nota.id}</td>
-                  <td className="px-4 py-3">
-                    <a
-                      href={`/admin/pedidos/${nota.pedido_id}`}
-                      className="text-blue-400 hover:underline font-medium"
-                    >
-                      {nota.pedido?.numero_pedido ?? `#${nota.pedido_id}`}
-                    </a>
-                  </td>
+                  <td className="px-4 py-3">{celdaPedido(nota)}</td>
                   <td className="px-4 py-3 text-white text-sm">
                     {nota.tipo_documento?.nombre ?? `Tipo ${nota.tipo_documento_id}`}
                   </td>
@@ -188,72 +255,9 @@ export default function NotasCreditoPage() {
                     ${Number(nota.monto).toLocaleString('es-CL')}
                   </td>
                   <td className="px-4 py-3 text-gray-300 text-sm">{formatFecha(nota.fecha_emision)}</td>
-                  <td className="px-4 py-3">
-                    {editando?.notaId === nota.id && editando.campo === 'estado_sii' ? (
-                      <div className="flex items-center gap-1">
-                        <select
-                          value={editando.valor}
-                          onChange={e => setEditando({ ...editando, valor: e.target.value })}
-                          className="bg-slate-700 border border-slate-500 text-white rounded px-2 py-0.5 text-sm"
-                          disabled={guardando}
-                        >
-                          {ESTADOS_SII.filter(e => e.value).map(e => (
-                            <option key={e.value} value={e.value}>{e.label}</option>
-                          ))}
-                        </select>
-                        <button onClick={guardar} disabled={guardando} className="text-green-400 hover:text-green-300 text-xs px-1">✓</button>
-                        <button onClick={cancelar} className="text-gray-400 hover:text-gray-300 text-xs px-1">✕</button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => iniciarEdicion(nota.id, 'estado_sii', nota.estado_sii || 'PENDIENTE')}
-                        title="Clic para editar estado"
-                      >
-                        <EstadoSiiBadge estado={nota.estado_sii} />
-                      </button>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    {editando?.notaId === nota.id && editando.campo === 'folio_sii' ? (
-                      <div className="flex items-center gap-1">
-                        <input
-                          ref={inputRef}
-                          type="text"
-                          value={editando.valor}
-                          onChange={e => setEditando({ ...editando, valor: e.target.value })}
-                          onKeyDown={e => { if (e.key === 'Enter') guardar(); if (e.key === 'Escape') cancelar(); }}
-                          className="bg-slate-700 border border-slate-500 text-white rounded px-2 py-0.5 text-sm w-28 font-mono"
-                          placeholder="Ej: 123"
-                          disabled={guardando}
-                        />
-                        <button onClick={guardar} disabled={guardando} className="text-green-400 hover:text-green-300 text-xs px-1">✓</button>
-                        <button onClick={cancelar} className="text-gray-400 hover:text-gray-300 text-xs px-1">✕</button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => iniciarEdicion(nota.id, 'folio_sii', nota.folio_sii || '')}
-                        title="Clic para registrar folio SII"
-                        className="text-left"
-                      >
-                        {nota.folio_sii
-                          ? <span className="text-cyan-400 font-mono text-sm">{nota.folio_sii}</span>
-                          : <span className="text-slate-500 text-sm italic hover:text-slate-400">+ Agregar folio</span>
-                        }
-                      </button>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    {nota.items_devolucion && nota.items_devolucion.length > 0 ? (
-                      <button
-                        onClick={() => toggleExpanida(nota.id)}
-                        className="text-xs text-amber-400 hover:text-amber-300 font-medium"
-                      >
-                        {nota.items_devolucion.length} producto{nota.items_devolucion.length > 1 ? 's' : ''} {expandidas.has(nota.id) ? '▲' : '▼'}
-                      </button>
-                    ) : (
-                      <span className="text-slate-600 text-xs">—</span>
-                    )}
-                  </td>
+                  <td className="px-4 py-3">{celdaEstado(nota)}</td>
+                  <td className="px-4 py-3">{celdaFolio(nota)}</td>
+                  <td className="px-4 py-3">{celdaItems(nota)}</td>
                 </tr>
                 {expandidas.has(nota.id) && nota.items_devolucion && nota.items_devolucion.length > 0 && (
                   <tr key={`${nota.id}-items`} className="bg-slate-900/50">
@@ -284,6 +288,47 @@ export default function NotasCreditoPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Celular: una tarjeta por nota, con la misma edición y el detalle desplegable */}
+        <ul className="lg:hidden space-y-3">
+          {notas.map(nota => (
+            <li key={nota.id} className="bg-slate-800 rounded-xl border border-slate-700 p-4 space-y-2">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-gray-400 text-xs font-mono">NC #{nota.id} · {formatFecha(nota.fecha_emision)}</div>
+                  <div className="text-sm">Pedido {celdaPedido(nota)}</div>
+                  <div className="text-xs text-gray-300">{nota.tipo_documento?.nombre ?? `Tipo ${nota.tipo_documento_id}`}</div>
+                </div>
+                <div className="text-right shrink-0 text-white font-mono font-semibold">
+                  ${Number(nota.monto).toLocaleString('es-CL')}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-sm pt-2 border-t border-slate-700">
+                <div>
+                  <div className="text-xs text-gray-500 mb-1">Estado SII</div>
+                  {celdaEstado(nota)}
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs text-gray-500 mb-1">Folio SII</div>
+                  {celdaFolio(nota, true)}
+                </div>
+              </div>
+              <div>{celdaItems(nota)}</div>
+              {expandidas.has(nota.id) && nota.items_devolucion && nota.items_devolucion.length > 0 && (
+                <ul className="text-sm space-y-1 bg-slate-900/50 rounded-lg p-3">
+                  {nota.items_devolucion.map((item, i) => (
+                    <li key={i} className="flex justify-between gap-3">
+                      <span className="text-white min-w-0 break-words">{item.producto}</span>
+                      <span className="text-gray-300 font-mono shrink-0">{item.cantidad_devuelta}</span>
+                      <span className="text-gray-400 shrink-0">{item.local_destino ?? '—'}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </li>
+          ))}
+        </ul>
+        </>
       )}
     </div>
   );

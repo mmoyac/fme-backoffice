@@ -4,6 +4,9 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/AuthProvider';
 import { esRolProduccion } from '@/lib/api/produccion';
+import { useRouter } from 'next/navigation';
+import DataList, { type Columna } from '@/components/ui/DataList';
+import PageHeader from '@/components/ui/PageHeader';
 
 interface TipoOT { id: number; codigo: string; nombre: string; }
 interface EstadoOT { id: number; codigo: string; nombre: string; color: string; }
@@ -34,6 +37,7 @@ const ESTADO_COLORS: Record<string, string> = {
 
 export default function OrdenesTrabajoPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [ots, setOts] = useState<OT[]>([]);
   const [tipos, setTipos] = useState<TipoOT[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,27 +85,95 @@ export default function OrdenesTrabajoPage() {
     ? new Date(d).toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' })
     : '—';
 
+  const tipo = (ot: OT) => (
+    <>
+      <span className="text-xs font-mono bg-slate-700 text-gray-300 px-2 py-0.5 rounded">
+        {ot.tipo_ot.codigo}
+      </span>
+      <span className="text-xs text-gray-400">{ot.tipo_ot.nombre}</span>
+    </>
+  );
+
+  const etapa = (ot: OT) =>
+    ot.etapa_actual ? (
+      <span
+        className="text-xs px-2 py-1 rounded-full font-medium"
+        style={{ backgroundColor: ot.etapa_actual.color ? `${ot.etapa_actual.color}33` : undefined, color: ot.etapa_actual.color || undefined }}
+      >
+        {ot.etapa_actual.nombre}
+      </span>
+    ) : (
+      <span className="text-gray-600 italic text-xs">Sin etapa</span>
+    );
+
+  const estado = (ot: OT) => (
+    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${ESTADO_COLORS[ot.estado_ot.codigo] ?? 'bg-gray-700 text-gray-300'}`}>
+      {ot.estado_ot.nombre}
+    </span>
+  );
+
+  const verLink = (ot: OT) => (
+    <Link
+      href={`/admin/produccion/ordenes-trabajo/${ot.id}`}
+      className="text-primary hover:text-primary-dark text-sm font-medium whitespace-nowrap"
+      onClick={(e) => e.stopPropagation()}
+    >
+      Ver →
+    </Link>
+  );
+
+  const columnas: Columna<OT>[] = [
+    {
+      header: 'Número',
+      className: 'w-[18%]',
+      sinTruncar: true,
+      cell: (ot) => (
+        <>
+          <span className="text-sm font-mono font-bold text-primary break-all">{ot.numero_ot}</span>
+          <p className="text-xs text-gray-500 mt-0.5">{fmt(ot.created_at)}</p>
+        </>
+      ),
+    },
+    {
+      header: 'Tipo',
+      className: 'w-[18%]',
+      cell: (ot) => (
+        <>
+          <span className="text-xs font-mono bg-slate-700 text-gray-300 px-2 py-0.5 rounded">{ot.tipo_ot.codigo}</span>
+          <p className="text-xs text-gray-400 mt-0.5 truncate" title={ot.tipo_ot.nombre}>{ot.tipo_ot.nombre}</p>
+        </>
+      ),
+    },
+    { header: 'Local', className: 'w-[14%]', cell: (ot) => <span className="text-sm text-gray-300">{ot.local.nombre}</span> },
+    { header: 'Etapa actual', className: 'w-[16%]', sinTruncar: true, cell: etapa },
+    { header: 'Prog.', className: 'w-[11%]', cell: (ot) => <span className="text-sm text-gray-400">{fmt(ot.fecha_programada)}</span> },
+    { header: 'Estado', className: 'w-[14%]', sinTruncar: true, cell: estado },
+    { header: '', className: 'w-[9%] text-right', sinTruncar: true, cell: verLink },
+  ];
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Órdenes de Trabajo</h1>
-          <p className="text-gray-400 text-sm mt-1">Producción y servicios con seguimiento por etapas</p>
-        </div>
-        {!esRolProduccion(user) && (<Link
-          href="/admin/produccion/ordenes-trabajo/nueva"
-          className="bg-primary hover:bg-primary-dark text-slate-900 px-4 py-2 rounded-lg font-semibold transition-colors text-sm"
-        >
-          + Nueva OT
-        </Link>)}
-      </div>
+      <PageHeader
+        title="Órdenes de Trabajo"
+        subtitle={<span className="text-sm">Producción y servicios con seguimiento por etapas</span>}
+        actions={
+          !esRolProduccion(user) ? (
+            <Link
+              href="/admin/produccion/ordenes-trabajo/nueva"
+              className="bg-primary hover:bg-primary-dark text-slate-900 px-4 py-2 rounded-lg font-semibold transition-colors text-sm text-center"
+            >
+              + Nueva OT
+            </Link>
+          ) : undefined
+        }
+      />
 
       {/* Filtros */}
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 -mt-2">
         <input
           type="text"
           placeholder="Buscar por número..."
-          className="bg-slate-800 border border-slate-600 rounded px-3 py-2 text-white text-sm w-56"
+          className="bg-slate-800 border border-slate-600 rounded px-3 py-2 text-white text-sm w-full sm:w-56"
           value={busqueda}
           onChange={e => setBusqueda(e.target.value)}
         />
@@ -138,68 +210,41 @@ export default function OrdenesTrabajoPage() {
 
       {loading ? (
         <div className="text-center py-12 text-gray-400">Cargando órdenes de trabajo...</div>
-      ) : otsFiltradas.length === 0 ? (
-        <div className="text-center py-12 text-gray-500">
-          <p className="text-lg">No hay órdenes de trabajo</p>
-          <p className="text-sm mt-1">Crea la primera OT con el botón de arriba</p>
-        </div>
       ) : (
-        <div className="bg-slate-800 rounded-lg overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-700">
-            <thead className="bg-slate-700">
-              <tr>
-                {['Número', 'Tipo', 'Local', 'Etapa actual', 'Prog.', 'Estado', ''].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-700">
-              {otsFiltradas.map(ot => (
-                <tr key={ot.id} className="hover:bg-slate-700/50 transition-colors">
-                  <td className="px-4 py-3">
-                    <span className="text-sm font-mono font-bold text-primary">{ot.numero_ot}</span>
-                    <p className="text-xs text-gray-500 mt-0.5">{fmt(ot.created_at)}</p>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="text-xs font-mono bg-slate-700 text-gray-300 px-2 py-0.5 rounded">
-                      {ot.tipo_ot.codigo}
-                    </span>
-                    <p className="text-xs text-gray-400 mt-0.5">{ot.tipo_ot.nombre}</p>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-300">{ot.local.nombre}</td>
-                  <td className="px-4 py-3">
-                    {ot.etapa_actual ? (
-                      <span
-                        className="text-xs px-2 py-1 rounded-full font-medium"
-                        style={{ backgroundColor: ot.etapa_actual.color ? `${ot.etapa_actual.color}33` : undefined, color: ot.etapa_actual.color || undefined }}
-                      >
-                        {ot.etapa_actual.nombre}
-                      </span>
-                    ) : (
-                      <span className="text-gray-600 italic text-xs">Sin etapa</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-400">{fmt(ot.fecha_programada)}</td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${ESTADO_COLORS[ot.estado_ot.codigo] ?? 'bg-gray-700 text-gray-300'}`}>
-                      {ot.estado_ot.nombre}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <Link
-                      href={`/admin/produccion/ordenes-trabajo/${ot.id}`}
-                      className="text-primary hover:text-primary-dark text-sm font-medium"
-                    >
-                      Ver →
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataList
+          items={otsFiltradas}
+          getKey={(ot) => ot.id}
+          columns={columnas}
+          onItemClick={(ot) => router.push(`/admin/produccion/ordenes-trabajo/${ot.id}`)}
+          empty={
+            <>
+              <p className="text-lg">No hay órdenes de trabajo</p>
+              <p className="text-sm mt-1">Crea la primera OT con el botón de arriba</p>
+            </>
+          }
+          card={(ot) => (
+            <div className="space-y-2">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-sm font-mono font-bold text-primary break-all">{ot.numero_ot}</div>
+                  <div className="text-xs text-gray-500">{fmt(ot.created_at)}</div>
+                </div>
+                <div className="shrink-0">{estado(ot)}</div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                {tipo(ot)}
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                <span className="text-gray-300">{ot.local.nombre}</span>
+                {etapa(ot)}
+              </div>
+              <div className="flex items-center justify-between pt-2 border-t border-slate-700 text-sm">
+                <span className="text-gray-400">Prog.: {fmt(ot.fecha_programada)}</span>
+                {verLink(ot)}
+              </div>
+            </div>
+          )}
+        />
       )}
     </div>
   );

@@ -222,7 +222,7 @@ export default function ConfiguracionLandingPage() {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="md:p-6 max-w-7xl mx-auto">
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-white mb-2">Configuración de Landing Page</h1>
         <p className="text-slate-400">Personaliza la apariencia y contenido de tu landing page</p>
@@ -292,11 +292,11 @@ export default function ConfiguracionLandingPage() {
             <label className="block text-sm font-medium text-slate-300 mb-3">
               🎨 Seleccionar Paleta Predefinida (opcional)
             </label>
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-3">
               <select
                 value={paletaSeleccionada || ''}
                 onChange={(e) => aplicarPaleta(e.target.value ? parseInt(e.target.value) : null)}
-                className="flex-1 p-3 bg-slate-600 border border-slate-500 rounded-lg text-white"
+                className="flex-1 min-w-0 p-3 bg-slate-600 border border-slate-500 rounded-lg text-white"
                 disabled={!!paletaSeleccionada}
               >
                 <option value="">Sin paleta (colores personalizados)</option>
@@ -336,7 +336,7 @@ export default function ConfiguracionLandingPage() {
           {/* Vista previa de colores principales */}
           <div className="mb-6 p-4 bg-slate-900 rounded-lg">
             <p className="text-sm text-slate-400 mb-3">Vista Previa:</p>
-            <div className="flex items-center space-x-4">
+            <div className="flex flex-wrap items-center gap-4">
               <div className="text-center">
                 <div 
                   className="w-20 h-20 rounded-lg shadow-lg mb-2" 
@@ -442,7 +442,7 @@ export default function ConfiguracionLandingPage() {
                           type="text"
                           value={value}
                           onChange={(e) => handleColorChange(key, e.target.value)}
-                          className="flex-1 p-2 bg-slate-700 border border-slate-500 rounded text-white text-xs font-mono"
+                          className="flex-1 min-w-0 p-2 bg-slate-700 border border-slate-500 rounded text-white text-xs font-mono"
                           placeholder="#RRGGBB"
                           disabled={isDisabled}
                         />
@@ -520,20 +520,20 @@ export default function ConfiguracionLandingPage() {
                     type="text"
                     value={badge.icono}
                     onChange={(e) => handleBadgeChange(index, 'icono', e.target.value)}
-                    className="w-16 p-2 bg-slate-600 border border-slate-500 rounded text-white text-center"
+                    className="w-16 shrink-0 p-2 bg-slate-600 border border-slate-500 rounded text-white text-center"
                     placeholder="✓"
                   />
                   <input
                     type="text"
                     value={badge.texto}
                     onChange={(e) => handleBadgeChange(index, 'texto', e.target.value)}
-                    className="flex-1 p-2 bg-slate-600 border border-slate-500 rounded text-white"
+                    className="flex-1 min-w-0 p-2 bg-slate-600 border border-slate-500 rounded text-white"
                     placeholder="Texto del badge"
                   />
                   <button
                     type="button"
                     onClick={() => eliminarBadge(index)}
-                    className="p-2 bg-red-600 hover:bg-red-700 text-white rounded"
+                    className="p-2 bg-red-600 hover:bg-red-700 text-white rounded shrink-0"
                   >
                     <TrashIcon className="w-4 h-4" />
                   </button>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { AuthService } from '@/lib/auth';
+import DataList from '@/components/ui/DataList';
 
 // Tipos TypeScript
 interface StockCajas {
@@ -165,21 +166,38 @@ export default function StockCajasPage() {
 
   if (loading) return <div className="p-6 text-white">Cargando stock de cajas...</div>;
 
+  const stockActual = (i: StockCajas) => (
+    <div className={`text-lg font-bold ${i.cajas_disponibles > 0 ? 'text-primary' : 'text-red-400'}`}>{i.cajas_disponibles}</div>
+  );
+  const botonAjustar = (i: StockCajas) => (
+    <button onClick={() => abrirModalAjuste(i)} className="text-blue-400 hover:text-blue-300 text-sm">
+      Ajustar
+    </button>
+  );
+  const tipoMov = (m: MovimientoStock) => (
+    <div className={`text-sm ${getTipoMovimientoColor(m.tipo_movimiento)}`}>{getTipoMovimientoNombre(m.tipo_movimiento)}</div>
+  );
+  const cajasMov = (m: MovimientoStock) => (
+    <div className={`text-sm font-bold ${m.cajas_movimiento > 0 ? 'text-green-400' : 'text-red-400'}`}>
+      {m.cajas_movimiento > 0 ? '+' : ''}{m.cajas_movimiento}
+    </div>
+  );
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-3xl font-bold text-white">Stock de Cajas por Proveedor</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-white">Stock de Cajas por Proveedor</h1>
           <p className="text-gray-400">Gestión de stock de cajas alimentado desde enrolamientos</p>
         </div>
       </div>
 
       {/* Navegación de vistas */}
-      <div className="flex space-x-1 bg-slate-800 rounded-lg p-1">
+      <div className="flex space-x-1 bg-slate-800 rounded-lg p-1 max-w-full overflow-x-auto whitespace-nowrap">
         <button
           onClick={() => setVistaActiva('resumen')}
-          className={`px-6 py-2 rounded-lg transition-colors ${
+          className={`px-4 md:px-6 py-2 rounded-lg transition-colors shrink-0 ${
             vistaActiva === 'resumen' 
               ? 'bg-primary text-slate-900 font-semibold' 
               : 'text-gray-300 hover:text-white'
@@ -189,7 +207,7 @@ export default function StockCajasPage() {
         </button>
         <button
           onClick={() => setVistaActiva('stock')}
-          className={`px-6 py-2 rounded-lg transition-colors ${
+          className={`px-4 md:px-6 py-2 rounded-lg transition-colors shrink-0 ${
             vistaActiva === 'stock' 
               ? 'bg-primary text-slate-900 font-semibold' 
               : 'text-gray-300 hover:text-white'
@@ -199,7 +217,7 @@ export default function StockCajasPage() {
         </button>
         <button
           onClick={() => setVistaActiva('movimientos')}
-          className={`px-6 py-2 rounded-lg transition-colors ${
+          className={`px-4 md:px-6 py-2 rounded-lg transition-colors shrink-0 ${
             vistaActiva === 'movimientos' 
               ? 'bg-primary text-slate-900 font-semibold' 
               : 'text-gray-300 hover:text-white'
@@ -226,7 +244,7 @@ export default function StockCajasPage() {
       {vistaActiva === 'resumen' && resumen && (
         <div className="space-y-6">
           {/* Métricas generales */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
             <div className="bg-slate-800 rounded-lg p-6 text-center">
               <div className="text-3xl font-bold text-primary">{resumen.total_cajas_disponibles}</div>
               <div className="text-sm text-gray-400">Total Cajas Disponibles</div>
@@ -280,7 +298,7 @@ export default function StockCajasPage() {
       {vistaActiva === 'stock' && (
         <div className="space-y-4">
           {/* Filtros */}
-          <div className="bg-slate-800 rounded-lg p-4 flex items-center justify-between">
+          <div className="bg-slate-800 rounded-lg p-4 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center space-x-4">
               <label className="flex items-center text-gray-300">
                 <input
@@ -298,178 +316,112 @@ export default function StockCajasPage() {
           </div>
 
           {/* Tabla de stock */}
-          <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
-            {stockItems.length === 0 ? (
-              <div className="p-8 text-center text-gray-400">
-                No hay stock registrado
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-slate-700">
-                  <thead className="bg-slate-700">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">
-                        Producto
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">
-                        Proveedor
-                      </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase">
-                        Stock Actual
-                      </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase">
-                        Total Recibidas
-                      </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase">
-                        Total Vendidas
-                      </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase">
-                        Última Actualización
-                      </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase">
-                        Acciones
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-slate-800 divide-y divide-slate-700">
-                    {stockItems.map((item) => (
-                      <tr key={item.id} className="hover:bg-slate-700">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div>
-                            <div className="text-sm font-medium text-white">{item.producto_nombre}</div>
-                            <div className="text-sm text-gray-400">{item.producto_sku}</div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div>
-                            <div className="text-sm text-white">{item.proveedor_nombre}</div>
-                            <div className="text-sm text-gray-400">{item.proveedor_rut}</div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-center">
-                          <div className={`text-lg font-bold ${
-                            item.cajas_disponibles > 0 ? 'text-primary' : 'text-red-400'
-                          }`}>
-                            {item.cajas_disponibles}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-center">
-                          <div className="text-sm text-gray-300">{item.cajas_totales_recibidas}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-center">
-                          <div className="text-sm text-gray-300">{item.cajas_totales_vendidas}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-center">
-                          <div className="text-sm text-gray-300">
-                            {new Date(item.fecha_ultima_actualizacion).toLocaleDateString('es-CL')}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-center">
-                          <button
-                            onClick={() => abrirModalAjuste(item)}
-                            className="text-blue-400 hover:text-blue-300 text-sm"
-                          >
-                            Ajustar
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+          <DataList
+            items={stockItems}
+            getKey={(i) => i.id}
+            empty="No hay stock registrado"
+            columns={[
+              {
+                header: 'Producto',
+                className: 'w-[22%]',
+                cell: (i) => (
+                  <>
+                    <div className="font-medium text-white truncate" title={i.producto_nombre}>{i.producto_nombre}</div>
+                    <div className="text-xs text-gray-400">{i.producto_sku}</div>
+                  </>
+                ),
+              },
+              {
+                header: 'Proveedor',
+                className: 'w-[20%]',
+                cell: (i) => (
+                  <>
+                    <div className="text-white truncate" title={i.proveedor_nombre}>{i.proveedor_nombre}</div>
+                    <div className="text-xs text-gray-400">{i.proveedor_rut}</div>
+                  </>
+                ),
+              },
+              { header: 'Stock Actual', className: 'w-[11%] text-center', sinTruncar: true, cell: stockActual },
+              { header: 'Recibidas', className: 'w-[11%] text-center', sinTruncar: true, cell: (i) => <span className="text-gray-300">{i.cajas_totales_recibidas}</span> },
+              { header: 'Vendidas', className: 'w-[11%] text-center', sinTruncar: true, cell: (i) => <span className="text-gray-300">{i.cajas_totales_vendidas}</span> },
+              { header: 'Actualización', className: 'w-[14%] text-center', sinTruncar: true, cell: (i) => <span className="text-gray-300">{new Date(i.fecha_ultima_actualizacion).toLocaleDateString('es-CL')}</span> },
+              { header: 'Acciones', className: 'w-[11%] text-center', sinTruncar: true, cell: botonAjustar },
+            ]}
+            card={(i) => (
+              <div className="space-y-2">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-medium text-white break-words">{i.producto_nombre}</div>
+                    <div className="text-xs text-gray-400">{i.producto_sku}</div>
+                  </div>
+                  <div className="shrink-0 text-right">{stockActual(i)}<div className="text-[11px] text-gray-400">disponibles</div></div>
+                </div>
+                <div className="text-sm text-white">{i.proveedor_nombre} <span className="text-xs text-gray-400">{i.proveedor_rut}</span></div>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-300">
+                  <span>Recibidas: {i.cajas_totales_recibidas}</span>
+                  <span>Vendidas: {i.cajas_totales_vendidas}</span>
+                  <span>Actualizado: {new Date(i.fecha_ultima_actualizacion).toLocaleDateString('es-CL')}</span>
+                </div>
+                <div className="pt-2 border-t border-slate-700">{botonAjustar(i)}</div>
               </div>
             )}
-          </div>
+          />
         </div>
       )}
 
       {/* Vista de Movimientos */}
       {vistaActiva === 'movimientos' && (
-        <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-700">
-            <h3 className="text-lg font-semibold text-white">Historial de Movimientos (Últimos 50)</h3>
-          </div>
-          {movimientos.length === 0 ? (
-            <div className="p-8 text-center text-gray-400">
-              No hay movimientos registrados
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-slate-700">
-                <thead className="bg-slate-700">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">
-                      Fecha
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">
-                      Producto
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">
-                      Proveedor
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">
-                      Tipo
-                    </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase">
-                      Movimiento
-                    </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase">
-                      Antes → Después
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">
-                      Usuario
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-slate-800 divide-y divide-slate-700">
-                  {movimientos.map((mov) => (
-                    <tr key={mov.id} className="hover:bg-slate-700">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-white">
-                          {new Date(mov.fecha_movimiento).toLocaleDateString('es-CL')}
-                        </div>
-                        <div className="text-xs text-gray-400">
-                          {new Date(mov.fecha_movimiento).toLocaleTimeString('es-CL')}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-white">{mov.producto_nombre}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-white">{mov.proveedor_nombre}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className={`text-sm ${getTipoMovimientoColor(mov.tipo_movimiento)}`}>
-                          {getTipoMovimientoNombre(mov.tipo_movimiento)}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <div className={`text-sm font-bold ${
-                          mov.cajas_movimiento > 0 ? 'text-green-400' : 'text-red-400'
-                        }`}>
-                          {mov.cajas_movimiento > 0 ? '+' : ''}{mov.cajas_movimiento}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <div className="text-sm text-gray-300">
-                          {mov.cajas_antes} → {mov.cajas_despues}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-300">{mov.usuario}</div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+        <div>
+          <h3 className="text-lg font-semibold text-white mb-3">Historial de Movimientos (Últimos 50)</h3>
+          <DataList
+            items={movimientos}
+            getKey={(m) => m.id}
+            empty="No hay movimientos registrados"
+            columns={[
+              {
+                header: 'Fecha',
+                className: 'w-[13%]',
+                sinTruncar: true,
+                cell: (m) => (
+                  <>
+                    <div className="text-white">{new Date(m.fecha_movimiento).toLocaleDateString('es-CL')}</div>
+                    <div className="text-xs text-gray-400">{new Date(m.fecha_movimiento).toLocaleTimeString('es-CL')}</div>
+                  </>
+                ),
+              },
+              { header: 'Producto', className: 'w-[20%]', cell: (m) => <span className="text-white" title={m.producto_nombre}>{m.producto_nombre}</span> },
+              { header: 'Proveedor', className: 'w-[17%]', cell: (m) => <span className="text-white" title={m.proveedor_nombre}>{m.proveedor_nombre}</span> },
+              { header: 'Tipo', className: 'w-[14%]', sinTruncar: true, cell: tipoMov },
+              { header: 'Movimiento', className: 'w-[11%] text-center', sinTruncar: true, cell: cajasMov },
+              { header: 'Antes → Después', className: 'w-[13%] text-center', sinTruncar: true, cell: (m) => <span className="text-gray-300">{m.cajas_antes} → {m.cajas_despues}</span> },
+              { header: 'Usuario', className: 'w-[12%]', cell: (m) => <span className="text-gray-300" title={m.usuario}>{m.usuario}</span> },
+            ]}
+            card={(m) => (
+              <div className="space-y-1.5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-white font-medium break-words">{m.producto_nombre}</div>
+                    <div className="text-xs text-gray-400 break-words">{m.proveedor_nombre}</div>
+                  </div>
+                  <div className="shrink-0 text-right">{cajasMov(m)}<div className="text-xs text-gray-300">{m.cajas_antes} → {m.cajas_despues}</div></div>
+                </div>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                  {tipoMov(m)}
+                  <span className="text-gray-400">
+                    {new Date(m.fecha_movimiento).toLocaleDateString('es-CL')} {new Date(m.fecha_movimiento).toLocaleTimeString('es-CL')}
+                  </span>
+                  <span className="text-gray-400">{m.usuario}</span>
+                </div>
+              </div>
+            )}
+          />
         </div>
       )}
 
       {/* Modal de ajuste */}
       {modalAjusteAbierto && itemSeleccionado && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-slate-800 rounded-lg border border-slate-700 p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-lg border border-slate-700 p-4 sm:p-6 w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto">
             <h3 className="text-lg font-semibold text-white mb-4">Ajustar Stock</h3>
             
             <div className="space-y-4">

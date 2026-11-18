@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import React, { useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { getResumenCajas, getFrigorificoPdfUrl, type ResumenCajasPorFecha, type ResumenCajasVendedor, type ResumenCajasCorte } from '@/lib/api/preventa';
@@ -32,18 +33,18 @@ export default function ResumenCajasPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <a href="/admin/despacho" className="text-gray-400 hover:text-white text-sm">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+        <Link href="/admin/despacho" className="text-gray-400 hover:text-white text-sm">
           ← Despachos
-        </a>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+        </Link>
+        <h1 className="text-xl md:text-2xl font-bold text-white">
           Resumen de Cajas por Vendedor
         </h1>
       </div>
 
       {/* Selector de fecha */}
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow border border-gray-200 dark:border-gray-700">
-        <div className="flex gap-3 items-end">
+      <div className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+        <div className="flex flex-wrap gap-3 items-end">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Fecha
@@ -86,11 +87,11 @@ export default function ResumenCajasPage() {
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-5 text-center border border-emerald-200 dark:border-emerald-700">
               <p className="text-sm text-emerald-700 dark:text-emerald-400">Total Cajas del Día</p>
-              <p className="text-4xl font-bold text-emerald-800 dark:text-emerald-300 mt-1">{data.total_cajas}</p>
+              <p className="text-3xl md:text-4xl font-bold text-emerald-800 dark:text-emerald-300 mt-1">{data.total_cajas}</p>
             </div>
             <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-5 text-center border border-blue-200 dark:border-blue-700">
               <p className="text-sm text-blue-700 dark:text-blue-400">Total Pedidos Activos</p>
-              <p className="text-4xl font-bold text-blue-800 dark:text-blue-300 mt-1">{data.total_pedidos}</p>
+              <p className="text-3xl md:text-4xl font-bold text-blue-800 dark:text-blue-300 mt-1">{data.total_pedidos}</p>
             </div>
           </div>
 
@@ -104,7 +105,8 @@ export default function ResumenCajasPage() {
                 No hay cajas vendidas para esta fecha.
               </p>
             ) : (
-              <table className="w-full text-sm">
+              <>
+              <table className="hidden lg:table w-full text-sm">
                 <thead>
                   <tr className="bg-gray-100 dark:bg-gray-700">
                     <th className="text-left px-4 py-3 text-gray-700 dark:text-gray-300 font-semibold">Vendedor</th>
@@ -177,6 +179,51 @@ export default function ResumenCajasPage() {
                   </tr>
                 </tbody>
               </table>
+              <ul className="lg:hidden divide-y divide-gray-200 dark:divide-gray-700">
+                {data.por_vendedor.map((v: ResumenCajasVendedor) => (
+                  <li key={v.vendedor_id} className="px-4 py-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-gray-900 dark:text-white font-medium break-words">{v.vendedor_nombre}</div>
+                        <div className="text-xs text-gray-600 dark:text-gray-400">{v.cantidad_pedidos} pedidos</div>
+                      </div>
+                      <span className="shrink-0 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 font-bold px-3 py-1 rounded">
+                        {v.cantidad_cajas}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setExpandedVendedor(expandedVendedor === v.vendedor_id ? null : v.vendedor_id)}
+                      className="mt-2 text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                    >
+                      {expandedVendedor === v.vendedor_id
+                        ? <ChevronDown className="h-4 w-4" />
+                        : <ChevronRight className="h-4 w-4" />}
+                      Ver pedidos
+                    </button>
+                    {expandedVendedor === v.vendedor_id && (
+                      <ul className="mt-2 space-y-2 text-xs">
+                        {v.pedidos.map(p => (
+                          <li key={p.pedido_id} className="bg-gray-50 dark:bg-gray-900/30 rounded p-2">
+                            <div className="flex justify-between gap-2">
+                              <span className="text-blue-600 dark:text-blue-400 font-mono break-all">{p.numero_pedido}</span>
+                              <span className="shrink-0 font-semibold text-emerald-700 dark:text-emerald-400">{p.cajas} cajas</span>
+                            </div>
+                            <div className="flex justify-between gap-2 mt-0.5">
+                              <span className="text-gray-700 dark:text-gray-300 break-words">{p.cliente}</span>
+                              <span className="shrink-0 text-gray-600 dark:text-gray-400">{formatCLP(p.monto_total)}</span>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
+                ))}
+                <li className="px-4 py-3 flex items-center justify-between bg-gray-100 dark:bg-gray-700 font-bold">
+                  <span className="text-gray-900 dark:text-white">TOTAL · {data.total_pedidos} pedidos</span>
+                  <span className="bg-emerald-600 text-white font-bold px-3 py-1 rounded">{data.total_cajas}</span>
+                </li>
+              </ul>
+              </>
             )}
           </div>
 
