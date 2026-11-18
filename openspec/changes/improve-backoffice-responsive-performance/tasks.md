@@ -13,10 +13,10 @@
 
 ## 2. Fase 2: base responsiva
 
-- [ ] 2.1 `components/ui/DataList.tsx` (tabla `table-fixed` ≥768 px, tarjetas debajo, estados vacío y de carga)
-- [ ] 2.2 `components/ui/PageHeader.tsx` (título, acciones y filtros que se apilan en móvil)
-- [ ] 2.3 SWR para productos, locales e inventario (`lib/hooks/`), con `mutate` después de crear o editar; reemplazar los `?limit=1000/10000` repetidos en las pantallas de la fase 3
-- [ ] 2.4 `useMemo` con un mapa de stock por producto en Productos y Existencias, y búsqueda con `useDeferredValue`
+- [x] 2.1 `components/ui/DataList.tsx` (tabla `table-fixed` ≥768 px, tarjetas debajo, estados vacío y de carga). Hecho; Productos migrada como pantalla de referencia (tabla de columnas fijas en ≥768 px, tarjetas debajo). Verificado a 390 y 1280 px sin scroll horizontal
+- [x] 2.2 `components/ui/PageHeader.tsx` (título, acciones y filtros que se apilan en móvil). Hecho; usado en Productos
+- [x] 2.3 SWR para productos, locales e inventario (`lib/hooks/`), con `mutate` después de crear o editar; reemplazar los `?limit=1000/10000` repetidos en las pantallas de la fase 3. Hecho: `lib/hooks/catalogos.ts` (+ `claves.ts`); Productos y Existencias ya lo usan. Las funciones de `lib/api` que crean/editan productos o mueven stock (merma, transferencia, conteo finalizado, solicitud) invalidan la caché. Verificado: ir de Productos a Inventario y volver no repite ninguna descarga de catálogos. El resto de pantallas se migra en la fase 3
+- [x] 2.4 `useMemo` con un mapa de stock por producto en Productos y Existencias, y búsqueda con `useDeferredValue`. Hecho
 
 ## 3. Fase 3: migración por pantalla
 

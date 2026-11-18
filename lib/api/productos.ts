@@ -1,4 +1,5 @@
 import { AuthService } from '../auth';
+import { CLAVE, revalidar } from '../hooks/claves';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -92,7 +93,9 @@ export async function createProducto(producto: ProductoCreate): Promise<Producto
     const error = await response.json();
     throw new Error(error.detail || 'Error al crear producto');
   }
-  return response.json();
+  const creado = await response.json();
+  revalidar(CLAVE.productos);
+  return creado;
 }
 
 export async function updateProducto(id: number, producto: Partial<ProductoCreate>): Promise<Producto> {
@@ -120,6 +123,7 @@ export async function updateProducto(id: number, producto: Partial<ProductoCreat
   
   const result = await response.json();
   console.log('[API] Producto actualizado exitosamente:', result);
+  revalidar(CLAVE.productos);
   return result;
 }
 
@@ -129,6 +133,7 @@ export async function deleteProducto(id: number): Promise<void> {
     headers: AuthService.getAuthHeaders(),
   });
   if (!response.ok) throw new Error('Error al eliminar producto');
+  revalidar(CLAVE.productos);
 }
 
 export async function uploadImagen(productoId: number, file: File): Promise<Producto> {
@@ -165,6 +170,7 @@ export async function uploadImagen(productoId: number, file: File): Promise<Prod
   
   const result = await response.json();
   console.log('[API] Imagen subida exitosamente:', result);
+  revalidar(CLAVE.productos);
   return result;
 }
 

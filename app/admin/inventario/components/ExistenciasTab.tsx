@@ -1,10 +1,13 @@
 'use client';
 
 import { FiltroCompartido, FILTRO_VACIO } from './filtroCompartido';
-import { useState, useEffect } from 'react';
-import { getProductos, type Producto } from '@/lib/api/productos';
-import { getLocales, type Local } from '@/lib/api/locales';
-import { getInventarios, ajusteMerma, type Inventario } from '@/lib/api/inventario';
+import { useDeferredValue, useMemo, useState } from 'react';
+import { type Producto } from '@/lib/api/productos';
+import { type Local } from '@/lib/api/locales';
+import { ajusteMerma, type Inventario } from '@/lib/api/inventario';
+import { revalidarInventario, useInventarios, useLocales, useProductos } from '@/lib/hooks/catalogos';
+
+const SIN_DATOS: never[] = [];
 
 export function ExistenciasTab({ localPropio = null, filtroCompartido = FILTRO_VACIO }: { localPropio?: number | null; filtroCompartido?: FiltroCompartido } = {}) {
     // Selector de local (solo alcance total). 0 = todos los locales.
@@ -25,8 +28,13 @@ export function ExistenciasTab({ localPropio = null, filtroCompartido = FILTRO_V
       });
     }
 
-  const [productos, setProductos] = useState<Producto[]>([]);
-  const [locales, setLocales] = useState<Local[]>([]);
+  // Catálogos con caché compartida (SWR): al volver a la pestaña se muestran al instante
+  const productosQ = useProductos();
+  const localesQ = useLocales();
+  const inventariosQ = useInventarios();
+  const productos: Producto[] = productosQ.data ?? SIN_DATOS;
+  const locales: Local[] = localesQ.data ?? SIN_DATOS;
+  const inventarios: Inventario[] = inventariosQ.data ?? SIN_DATOS;
   // Solo mostrar locales activos
   const localesActivos = locales.filter(l => l.activo !== false);
   const localesFisicos = localesActivos.filter(l => l.codigo !== 'WEB');
@@ -38,8 +46,7 @@ export function ExistenciasTab({ localPropio = null, filtroCompartido = FILTRO_V
       ? localesActivos.filter(l => l.id === localSel)
       : localesActivos;
   const mostrarSelector = !localPropio && localesFisicos.length > 1;
-  const [inventarios, setInventarios] = useState<Inventario[]>([]);
-  const [loading, setLoading] = useState(true);
+  const loading = (productosQ.isLoading || localesQ.isLoading || inventariosQ.isLoading) && !productosQ.data;
   const { busqueda: filtro, setBusqueda: setFiltro } = filtroCompartido;
 
   // Estado modal de merma
@@ -51,42 +58,34 @@ export function ExistenciasTab({ localPropio = null, filtroCompartido = FILTRO_V
 
   // Filtrar productos por nombre o SKU
   // Ordenar productos alfabéticamente por nombre
-  const productosOrdenados = [...productos].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }));
-  const productosFiltrados = filtro.trim().length === 0
-    ? productosOrdenados
-    : productosOrdenados.filter(p =>
-        p.nombre.toLowerCase().includes(filtro.toLowerCase()) ||
-        (p.sku || '').toLowerCase().includes(filtro.toLowerCase())
-      );
+  const busquedaDiferida = useDeferredValue(filtro.trim().toLowerCase());
+  const productosOrdenados = useMemo(
+    () => [...productos].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' })),
+    [productos],
+  );
+  const productosFiltrados = useMemo(
+    () => !busquedaDiferida
+      ? productosOrdenados
+      : productosOrdenados.filter(p =>
+          p.nombre.toLowerCase().includes(busquedaDiferida) ||
+          (p.sku || '').toLowerCase().includes(busquedaDiferida)
+        ),
+    [productosOrdenados, busquedaDiferida],
+  );
 
   const productosFiltradosFinal = soloNoVerde
     ? productosFiltrados.filter(productoTieneNoVerde)
     : productosFiltrados;
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  async function loadData() {
-    try {
-      const [prodData, locData, invData] = await Promise.all([
-        getProductos(),
-        getLocales(),
-        getInventarios()
-      ]);
-      setProductos(prodData);
-      setLocales(locData);
-      setInventarios(invData);
-    } catch (err) {
-      console.error('Error al cargar datos', err);
-    } finally {
-      setLoading(false);
-    }
-  }
+  // Stock por (producto, local) en un mapa: antes se buscaba con find() en cada celda de cada render
+  const stockMap = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const i of inventarios) m.set(`${i.producto_id}:${i.local_id}`, i.cantidad_stock ?? 0);
+    return m;
+  }, [inventarios]);
 
   function getStock(productoId: number, localId: number): number {
-    const inv = inventarios.find(i => i.producto_id === productoId && i.local_id === localId);
-    return inv?.cantidad_stock ?? 0;
+    return stockMap.get(`${productoId}:${localId}`) ?? 0;
   }
 
   function abrirModalMerma(producto: Producto, local: Local) {
@@ -106,7 +105,7 @@ export function ExistenciasTab({ localPropio = null, filtroCompartido = FILTRO_V
       setErrorMerma('');
       await ajusteMerma(modalMerma.producto.id, modalMerma.local.id, cant, motivoMerma);
       setModalMerma(null);
-      await loadData();
+      await revalidarInventario();
     } catch (err: any) {
       setErrorMerma(err.message || 'Error al registrar la merma');
     } finally {

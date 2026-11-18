@@ -1,4 +1,5 @@
 import { AuthService } from '../auth';
+import { CLAVE, revalidar } from '../hooks/claves';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -35,7 +36,9 @@ export async function updateInventario(
     }
   );
   if (!response.ok) throw new Error('Error al actualizar inventario');
-  return response.json();
+  const actualizado = await response.json();
+  revalidar(CLAVE.inventario);
+  return actualizado;
 }
 
 export async function getStockProductoLocal(productoId: number, localId: number): Promise<number> {
@@ -74,6 +77,8 @@ export async function ajusteMerma(
     const err = await response.json().catch(() => ({}));
     throw new Error(err.detail || 'Error al registrar la merma');
   }
-  return response.json();
+  const resultado = await response.json();
+  revalidar(CLAVE.inventario);
+  return resultado;
 }
 

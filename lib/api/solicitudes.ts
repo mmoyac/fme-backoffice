@@ -1,6 +1,7 @@
 
 import { SolicitudTransferencia, SolicitudTransferenciaCreate, SolicitudTransferenciaUpdate } from "@/types/solicitud";
 import { AuthService } from "../auth";
+import { CLAVE, revalidar } from "../hooks/claves";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -39,7 +40,9 @@ export async function updateSolicitud(id: number, data: SolicitudTransferenciaUp
     } catch {}
     throw new Error(detail);
   }
-  return res.json();
+  const actualizada = await res.json();
+  revalidar(CLAVE.inventario); // finalizar o recibir mueve stock
+  return actualizada;
 }
 
 

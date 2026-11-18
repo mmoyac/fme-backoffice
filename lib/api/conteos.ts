@@ -1,4 +1,5 @@
 import { AuthService } from '../auth';
+import { CLAVE, revalidar } from '../hooks/claves';
 
 // Conteo de inventario (change OpenSpec fme-backend: add-conteo-inventario)
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -96,7 +97,9 @@ export async function registrarCantidad(id: number, itemId: number, cantidad: nu
 
 export async function finalizarConteo(id: number): Promise<ConteoDetalle> {
   const res = await fetch(`${BASE}/${id}/finalizar`, { method: 'POST', headers: AuthService.getAuthHeaders() });
-  return handle(res, 'Error al finalizar el conteo');
+  const conteo = await handle<ConteoDetalle>(res, 'Error al finalizar el conteo');
+  revalidar(CLAVE.inventario);
+  return conteo;
 }
 
 export async function cancelarConteo(id: number): Promise<ConteoDetalle> {

@@ -1,205 +1,195 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { getProductos, deleteProducto, type Producto } from '@/lib/api/productos';
-import { type Inventario } from '@/lib/api/inventario';
-import { type Local } from '@/lib/api/locales';
+import { useDeferredValue, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { deleteProducto, type Producto } from '@/lib/api/productos';
+import DataList, { type Columna } from '@/components/ui/DataList';
+import PageHeader from '@/components/ui/PageHeader';
+import {
+  revalidarProductos,
+  stockPorProducto,
+  useCategorias,
+  useInventarios,
+  useLocales,
+  useProductos,
+} from '@/lib/hooks/catalogos';
+
+const inputCls =
+  'px-4 py-2 rounded-lg bg-slate-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary w-full sm:w-auto';
 
 export default function ProductosPage() {
-  const [productos, setProductos] = useState<Producto[]>([]);
-  const [categorias, setCategorias] = useState<{ id: number; nombre: string }[]>([]);
-  const [locales, setLocales] = useState<Local[]>([]);
-  const [inventarios, setInventarios] = useState<Inventario[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const productosQ = useProductos();
+  const categoriasQ = useCategorias();
+  const localesQ = useLocales();
+  const inventariosQ = useInventarios();
   const [filtroNombre, setFiltroNombre] = useState('');
   const [filtroCategoria, setFiltroCategoria] = useState<number | 'all'>('all');
+  const busqueda = useDeferredValue(filtroNombre.trim().toLowerCase());
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  const categorias = useMemo(
+    () => (categoriasQ.data ?? []).filter((c) => (c as { activo?: boolean }).activo !== false),
+    [categoriasQ.data],
+  );
 
-  async function loadData() {
-    try {
-      setLoading(true);
-      const [prodData, catData, locData, invData] = await Promise.all([
-        getProductos(),
-        import('@/lib/api/maestras').then(m => m.getCategorias()),
-        import('@/lib/api/locales').then(m => m.getLocales()),
-        import('@/lib/api/inventario').then(m => m.getInventarios()),
-      ]);
-      setProductos(prodData);
-      setCategorias(catData.filter((c: any) => c.activo !== false));
-      setLocales(locData.filter((l: any) => l.activo !== false));
-      setInventarios(invData);
-      setError(null);
-    } catch (err) {
-      setError('Error al cargar productos, categorías o inventarios');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }
+  // Stock actual = suma de locales físicos activos (sin WEB); un mapa en vez de buscar por fila
+  const stock = useMemo(
+    () => stockPorProducto(inventariosQ.data ?? [], (localesQ.data ?? []).filter((l) => l.activo !== false)),
+    [inventariosQ.data, localesQ.data],
+  );
+
+  const ordenados = useMemo(
+    () => [...(productosQ.data ?? [])].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' })),
+    [productosQ.data],
+  );
+
+  const filtrados = useMemo(
+    () =>
+      ordenados.filter((p) => {
+        const coincideNombre =
+          !busqueda || p.nombre.toLowerCase().includes(busqueda) || (p.sku || '').toLowerCase().includes(busqueda);
+        const coincideCategoria = filtroCategoria === 'all' || p.categoria_id === filtroCategoria;
+        return coincideNombre && coincideCategoria;
+      }),
+    [ordenados, busqueda, filtroCategoria],
+  );
 
   async function handleDelete(id: number) {
     if (!confirm('¿Eliminar este producto?')) return;
-
     try {
       await deleteProducto(id);
-      await loadData();
+      await revalidarProductos();
     } catch (err) {
       alert('Error al eliminar producto');
       console.error(err);
     }
   }
 
-  // Ordenar productos alfabéticamente por nombre
-  const productosOrdenados = [...productos].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }));
-
-  // Filtrar productos por nombre y categoría
-  const productosFiltrados = productosOrdenados.filter(p => {
-    const coincideNombre = filtroNombre.trim().length === 0 ||
-      p.nombre.toLowerCase().includes(filtroNombre.toLowerCase()) ||
-      (p.sku || '').toLowerCase().includes(filtroNombre.toLowerCase());
-    const coincideCategoria = filtroCategoria === 'all' || p.categoria_id === filtroCategoria;
-    return coincideNombre && coincideCategoria;
-  });
-
-  // Calcular stock actual como suma de inventarios de locales activos (excluyendo WEB)
-  function getStockActual(productoId: number): number {
-    return locales
-      .filter(l => l.codigo !== 'WEB')
-      .map(l => {
-        const inv = inventarios.find(i => i.producto_id === productoId && i.local_id === l.id);
-        return inv?.cantidad_stock ?? 0;
-      })
-      .reduce((sum, val) => sum + val, 0);
-  }
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-400">Cargando...</div>
-      </div>
-    );
-  }
-
-  if (error) {
+  const error = productosQ.error || categoriasQ.error || localesQ.error || inventariosQ.error;
+  if (error && !productosQ.data) {
     return (
       <div className="bg-red-900/20 border border-red-500 text-red-200 px-4 py-3 rounded">
-        {error}
+        Error al cargar productos, categorías o inventarios
       </div>
     );
   }
+
+  const stockDe = (p: Producto) => stock.get(p.id) ?? 0;
+  const enUnidadCompra = (p: Producto) =>
+    p.unidad_compra_descripcion && p.factor_conversion_compra && p.factor_conversion_compra > 1
+      ? `${(stockDe(p) / p.factor_conversion_compra).toLocaleString('es-CL', { maximumFractionDigits: 2 })} ${p.unidad_compra_descripcion}`
+      : null;
+
+  const acciones = (p: Producto) => (
+    <div className="flex flex-wrap gap-x-2.5 gap-y-1">
+      <Link href={`/admin/productos/${p.id}`} className="text-primary hover:text-primary-dark">
+        Editar
+      </Link>
+      <Link href={`/admin/productos/${p.id}/receta`} className="text-blue-400 hover:text-blue-300">
+        Receta
+      </Link>
+      <button onClick={() => handleDelete(p.id)} className="text-red-400 hover:text-red-300">
+        Eliminar
+      </button>
+    </div>
+  );
+
+  const columnas: Columna<Producto>[] = [
+    { header: 'SKU', className: 'w-[9%]', cell: (p) => <span className="font-mono text-gray-300">{p.sku}</span> },
+    {
+      header: 'Nombre',
+      className: 'w-[24%]',
+      cell: (p) => (
+        <span className="text-white font-medium" title={p.nombre}>
+          {p.nombre}
+          {p.tiene_receta && <span className="ml-1" title="Tiene receta">📋</span>}
+        </span>
+      ),
+    },
+    { header: 'Categoría', className: 'w-[12%]', cell: (p) => <span className="text-gray-400">{p.categoria_nombre || '-'}</span> },
+    { header: 'Mín.', className: 'w-[7%] text-center', sinTruncar: true, cell: (p) => <span className="text-yellow-400 font-semibold">{p.stock_minimo ?? 0}</span> },
+    { header: 'Crít.', className: 'w-[7%] text-center', sinTruncar: true, cell: (p) => <span className="text-red-400 font-semibold">{p.stock_critico ?? 0}</span> },
+    {
+      header: 'Stock',
+      className: 'w-[10%] text-center',
+      sinTruncar: true,
+      cell: (p) => (
+        <>
+          <span className="font-bold text-white">{stockDe(p)}</span>
+          {enUnidadCompra(p) && <div className="text-xs text-yellow-400">{enUnidadCompra(p)}</div>}
+        </>
+      ),
+    },
+    { header: 'Unid.', className: 'w-[8%] text-center', cell: (p) => <span className="text-gray-400">{p.unidad_medida_simbolo || '-'}</span> },
+    { header: 'Acciones', className: 'w-[23%]', sinTruncar: true, cell: acciones },
+  ];
 
   return (
     <div>
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-        <h1 className="text-3xl font-bold text-white">Productos</h1>
-        <div className="flex flex-wrap gap-3 items-center">
-          <input
-            type="text"
-            className="px-4 py-2 rounded-lg bg-slate-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary w-full max-w-xs"
-            placeholder="Buscar producto o SKU..."
-            value={filtroNombre}
-            onChange={e => setFiltroNombre(e.target.value)}
-          />
-          <select
-            className="px-4 py-2 rounded-lg bg-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-primary"
-            value={filtroCategoria}
-            onChange={e => setFiltroCategoria(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-          >
-            <option value="all">Todas las categorías</option>
-            {categorias.map(cat => (
-              <option key={cat.id} value={cat.id}>{cat.nombre}</option>
-            ))}
-          </select>
+      <PageHeader
+        title="Productos"
+        actions={
           <Link
             href="/admin/productos/nuevo"
-            className="bg-primary hover:bg-primary-dark text-slate-900 font-semibold px-6 py-2 rounded-lg transition-colors"
+            className="bg-primary hover:bg-primary-dark text-slate-900 font-semibold px-6 py-2 rounded-lg transition-colors text-center"
           >
             + Nuevo Producto
           </Link>
-        </div>
-      </div>
-
-      {productosFiltrados.length === 0 ? (
-        <div className="bg-slate-800 rounded-lg p-8 text-center text-gray-400">
-          No hay productos. Crea uno nuevo para comenzar.
-        </div>
-      ) : (
-        <div className="bg-slate-800 rounded-lg overflow-hidden">
-          <div className="overflow-x-auto">
-          <table className="w-full min-w-[800px]">
-            <thead className="bg-slate-700">
-              <tr>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">SKU</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">Nombre</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">Categoría</th>
-                <th className="px-6 py-3 text-center text-sm font-semibold text-gray-300">Stock Mínimo</th>
-                <th className="px-6 py-3 text-center text-sm font-semibold text-gray-300">Stock Crítico</th>
-                <th className="px-6 py-3 text-center text-sm font-semibold text-gray-300">Stock Actual</th>
-                <th className="px-6 py-3 text-center text-sm font-semibold text-gray-300">Unidad</th>
-                <th className="px-6 py-3 text-center text-sm font-semibold text-gray-300">Receta</th>
-                <th className="px-6 py-3 text-right text-sm font-semibold text-gray-300">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-700">
-              {productosFiltrados.map((producto) => (
-                <tr key={producto.id} className="hover:bg-slate-700/50">
-                  <td className="px-6 py-4 text-sm text-gray-300 font-mono">{producto.sku}</td>
-                  <td className="px-6 py-4 text-sm text-white font-medium">{producto.nombre}</td>
-                  <td className="px-6 py-4 text-sm text-gray-400">{producto.categoria_nombre || '-'}</td>
-                  <td className="px-6 py-4 text-sm text-center text-yellow-400 font-semibold">{producto.stock_minimo ?? 0}</td>
-                  <td className="px-6 py-4 text-sm text-center text-red-400 font-semibold">{producto.stock_critico ?? 0}</td>
-                  <td className="px-6 py-4 text-sm text-center font-bold text-white">
-                    {getStockActual(producto.id)}
-                    {producto.unidad_compra_descripcion && producto.factor_conversion_compra && producto.factor_conversion_compra > 1 && (
-                      <div className="text-xs text-yellow-400 font-normal">
-                        {(getStockActual(producto.id) / producto.factor_conversion_compra).toLocaleString('es-CL', { maximumFractionDigits: 2 })} {producto.unidad_compra_descripcion}
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-center text-gray-400 font-normal">
-                    {producto.unidad_medida_simbolo || '-'}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-center">
-                    {producto.tiene_receta ? (
-                      <Link href={`/admin/productos/${producto.id}/receta`} className="inline-flex items-center gap-1 text-blue-400 hover:text-blue-300" title="Ver receta">
-                        📋 <span className="text-xs">Sí</span>
-                      </Link>
-                    ) : (
-                      <span className="text-gray-600 text-xs">—</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-right space-x-2">
-                    <Link
-                      href={`/admin/productos/${producto.id}`}
-                      className="text-primary hover:text-primary-dark"
-                    >
-                      Editar
-                    </Link>
-                    <Link
-                      href={`/admin/productos/${producto.id}/receta`}
-                      className="text-blue-400 hover:text-blue-300"
-                    >
-                      📋 Receta
-                    </Link>
-                    <button
-                      onClick={() => handleDelete(producto.id)}
-                      className="text-red-400 hover:text-red-300"
-                    >
-                      Eliminar
-                    </button>
-                  </td>
-                </tr>
+        }
+        filtros={
+          <>
+            <input
+              type="text"
+              className={`${inputCls} sm:max-w-xs`}
+              placeholder="Buscar producto o SKU..."
+              value={filtroNombre}
+              onChange={(e) => setFiltroNombre(e.target.value)}
+            />
+            <select
+              className={inputCls}
+              value={filtroCategoria}
+              onChange={(e) => setFiltroCategoria(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+            >
+              <option value="all">Todas las categorías</option>
+              {categorias.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.nombre}
+                </option>
               ))}
-            </tbody>
-          </table>
+            </select>
+          </>
+        }
+      />
+
+      <DataList
+        items={filtrados}
+        loading={productosQ.isLoading}
+        getKey={(p) => p.id}
+        columns={columnas}
+        empty="No hay productos. Crea uno nuevo para comenzar."
+        card={(p) => (
+          <div className="space-y-2">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-white font-medium break-words">{p.nombre}</div>
+                <div className="text-xs text-gray-400 font-mono">{p.sku}</div>
+                {p.categoria_nombre && <div className="text-xs text-gray-400">{p.categoria_nombre}</div>}
+              </div>
+              <div className="text-right shrink-0">
+                <div className="text-lg font-bold text-white">
+                  {stockDe(p)} <span className="text-sm font-normal text-gray-400">{p.unidad_medida_simbolo || ''}</span>
+                </div>
+                {enUnidadCompra(p) && <div className="text-xs text-yellow-400">{enUnidadCompra(p)}</div>}
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+              <span className="text-yellow-400">Mínimo: {p.stock_minimo ?? 0}</span>
+              <span className="text-red-400">Crítico: {p.stock_critico ?? 0}</span>
+              {p.tiene_receta && <span className="text-blue-400">📋 Con receta</span>}
+            </div>
+            <div className="pt-2 border-t border-slate-700 text-sm">{acciones(p)}</div>
           </div>
-        </div>
-      )}
+        )}
+      />
     </div>
   );
 }

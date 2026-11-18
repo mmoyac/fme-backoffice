@@ -1,4 +1,5 @@
 import { AuthService } from '../auth';
+import { CLAVE, revalidar } from '../hooks/claves';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -46,7 +47,9 @@ export async function transferirInventario(data: TransferenciaInventario): Promi
     const error = await response.json();
     throw new Error(error.detail || 'Error al transferir inventario');
   }
-  return response.json();
+  const resultado = await response.json();
+  revalidar(CLAVE.inventario);
+  return resultado;
 }
 
 export async function listarMovimientos(
