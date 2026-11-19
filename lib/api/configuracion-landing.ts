@@ -65,6 +65,9 @@ export interface ConfiguracionLanding {
     direccion?: string;
     razon_social?: string;
     resolucion_sanitaria?: string;
+    etiqueta_origen?: string;
+    etiqueta_comuna?: string;
+    etiqueta_logo_url?: string;
     texto_footer_descripcion?: string;
     texto_copyright?: string;
     
@@ -108,6 +111,9 @@ export interface ConfiguracionLandingCreate {
     direccion?: string;
     razon_social?: string;
     resolucion_sanitaria?: string;
+    etiqueta_origen?: string;
+    etiqueta_comuna?: string;
+    etiqueta_logo_url?: string;
     texto_footer_descripcion?: string;
     texto_copyright?: string;
     meta_title?: string;

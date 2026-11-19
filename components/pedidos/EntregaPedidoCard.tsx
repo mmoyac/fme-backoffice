@@ -45,6 +45,18 @@ export function EntregaPedidoCard({ pedido, onActualizado }: { pedido: Pedido; o
           <span className="text-gray-400">Modalidad</span>
           <span className="text-white font-medium">{esRetiro ? '🏪 Retiro en local' : '🚚 Despacho'}</span>
         </div>
+        {!esRetiro && pedido.comuna_entrega && (
+          <div className="flex justify-between">
+            <span className="text-gray-400">Comuna</span>
+            <span>{pedido.comuna_entrega}</span>
+          </div>
+        )}
+        {!esRetiro && pedido.costo_delivery != null && (
+          <div className="flex justify-between">
+            <span className="text-gray-400">Costo delivery</span>
+            <span>${Number(pedido.costo_delivery).toLocaleString('es-CL')}</span>
+          </div>
+        )}
         <div className="flex justify-between">
           <span className="text-gray-400">Estado de entrega</span>
           {entregado ? (

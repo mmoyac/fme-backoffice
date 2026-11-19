@@ -8,6 +8,8 @@ import { getLocales, Local } from '@/lib/api/locales';
 import { getProductos } from '@/lib/api/productos';
 import { useAuth } from '@/lib/AuthProvider';
 import { EditarCantidadesOPModal } from '@/components/produccion/EditarCantidadesOPModal';
+import { EtiquetasOrdenModal } from '@/components/produccion/EtiquetasOrdenModal';
+import { tieneModulo } from '@/lib/modulos';
 import DataList, { type Columna } from '@/components/ui/DataList';
 import PageHeader from '@/components/ui/PageHeader';
 
@@ -22,6 +24,16 @@ export default function ProduccionPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [ordenEditar, setOrdenEditar] = useState<OrdenProduccion | null>(null);
+    const [ordenEtiquetas, setOrdenEtiquetas] = useState<OrdenProduccion | null>(null);
+    const puedeEtiquetar = tieneModulo(user, 'etiquetado');
+
+    // Filtros (client-side)
+    const [filtroEstado, setFiltroEstado] = useState('');
+    const [filtroLocal, setFiltroLocal] = useState('');
+    const [filtroProducto, setFiltroProducto] = useState('');
+    const [filtroDesde, setFiltroDesde] = useState('');
+    const [filtroHasta, setFiltroHasta] = useState('');
+    const [filtroEtiquetas, setFiltroEtiquetas] = useState(''); // '' | 'pendientes' | 'impresas'
 
     useEffect(() => {
         loadData();
@@ -184,6 +196,16 @@ export default function ProduccionPage() {
                 🖨️
             </Link>
 
+            {orden.estado === 'FINALIZADA' && puedeEtiquetar && (
+                <button
+                    onClick={() => setOrdenEtiquetas(orden)}
+                    className="bg-slate-700 hover:bg-slate-600 text-gray-200 px-3 py-1 rounded text-xs flex items-center gap-1"
+                    title="Imprimir etiquetas nutricionales"
+                >
+                    🏷️
+                </button>
+            )}
+
             {orden.estado === 'PLANIFICADA' && (
                 <>
                     <button
@@ -214,11 +236,47 @@ export default function ProduccionPage() {
         </div>
     );
 
+    const textoProducto = filtroProducto.trim().toLowerCase();
+    const ordenesFiltradas = ordenes.filter(o => {
+        if (filtroEstado && o.estado !== filtroEstado) return false;
+        if (filtroLocal && String(o.local_id) !== filtroLocal) return false;
+        const fecha = (o.fecha_programada || '').slice(0, 10);
+        if (filtroDesde && fecha < filtroDesde) return false;
+        if (filtroHasta && fecha > filtroHasta) return false;
+        if (filtroEtiquetas === 'pendientes' && !(o.estado === 'FINALIZADA' && !o.etiquetas_impresas_at)) return false;
+        if (filtroEtiquetas === 'impresas' && !o.etiquetas_impresas_at) return false;
+        if (textoProducto && !o.detalles.some(d =>
+            (productosMap[d.producto_id] || '').toLowerCase().includes(textoProducto)
+        )) return false;
+        return true;
+    });
+    const hayFiltros = !!(filtroEstado || filtroLocal || filtroProducto || filtroDesde || filtroHasta || filtroEtiquetas);
+    const limpiarFiltros = () => {
+        setFiltroEstado(''); setFiltroLocal(''); setFiltroProducto(''); setFiltroDesde(''); setFiltroHasta(''); setFiltroEtiquetas('');
+    };
+
+    // Estado de etiquetas en OP finalizadas (control manual)
+    const etiquetasBadge = (o: OrdenProduccion) => {
+        if (!puedeEtiquetar || o.estado !== 'FINALIZADA') return null;
+        if (o.etiquetas_impresas_at) {
+            const por = o.etiquetas_impresas_por ? nombreUsuario(o.etiquetas_impresas_por) : '';
+            return (
+                <span className="block mt-1 text-[11px] text-green-400" title={`Impresas el ${new Date(o.etiquetas_impresas_at).toLocaleString('es-CL')}${por ? ` por ${por}` : ''}`}>
+                    🏷️ Impresas {new Date(o.etiquetas_impresas_at).toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit' })}
+                </span>
+            );
+        }
+        return <span className="block mt-1 text-[11px] text-amber-400">🏷️ Etiquetas pendientes</span>;
+    };
+    const actualizarOrden = (actualizada: OrdenProduccion) =>
+        setOrdenes(prev => prev.map(o => (o.id === actualizada.id ? actualizada : o)));
+    const inputCls = 'w-full px-3 py-2 rounded bg-slate-800 border border-slate-600 text-white text-sm focus:outline-none focus:border-primary';
+
     const columnas: Columna<OrdenProduccion>[] = [
         { header: 'ID', className: 'w-[6%]', cell: (o) => <span className="text-gray-300">#{o.id}</span> },
         { header: 'Local', className: 'w-[11%]', cell: (o) => <span className="text-white">{locales[o.local_id] || o.local_id}</span> },
         { header: 'Fecha Prog.', className: 'w-[12%]', sinTruncar: true, cell: (o) => <span className="text-gray-300">{new Date(o.fecha_programada).toLocaleDateString()}</span> },
-        { header: 'Estado', className: 'w-[12%]', sinTruncar: true, cell: estadoBadge },
+        { header: 'Estado', className: 'w-[12%]', sinTruncar: true, cell: (o) => <>{estadoBadge(o)}{etiquetasBadge(o)}</> },
         { header: 'Pedido / Producido', className: 'w-[28%]', sinTruncar: true, cell: pedidoProducido },
         { header: 'Notas', className: 'w-[15%]', cell: (o) => <span className="text-gray-400 italic" title={o.notas || undefined}>{o.notas || '-'}</span> },
         { header: 'Acciones', className: 'w-[16%] text-right', sinTruncar: true, cell: acciones },
@@ -238,11 +296,61 @@ export default function ProduccionPage() {
                 }
             />
 
+            <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4 items-end ${puedeEtiquetar ? 'lg:grid-cols-7' : 'lg:grid-cols-6'}`}>
+                <div>
+                    <label className="block text-xs text-gray-400 mb-1">Estado</label>
+                    <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)} className={inputCls}>
+                        <option value="">Todos</option>
+                        <option value="PLANIFICADA">Planificada</option>
+                        <option value="FINALIZADA">Finalizada</option>
+                        <option value="CANCELADA">Cancelada</option>
+                    </select>
+                </div>
+                {puedeEtiquetar && (
+                    <div>
+                        <label className="block text-xs text-gray-400 mb-1">Etiquetas</label>
+                        <select value={filtroEtiquetas} onChange={e => setFiltroEtiquetas(e.target.value)} className={inputCls}>
+                            <option value="">Todas</option>
+                            <option value="pendientes">Pendientes</option>
+                            <option value="impresas">Impresas</option>
+                        </select>
+                    </div>
+                )}
+                <div>
+                    <label className="block text-xs text-gray-400 mb-1">Local</label>
+                    <select value={filtroLocal} onChange={e => setFiltroLocal(e.target.value)} className={inputCls}>
+                        <option value="">Todos</option>
+                        {Object.entries(locales)
+                            .sort((a, b) => a[1].localeCompare(b[1]))
+                            .map(([id, nombre]) => <option key={id} value={id}>{nombre}</option>)}
+                    </select>
+                </div>
+                <div className="lg:col-span-2">
+                    <label className="block text-xs text-gray-400 mb-1">Producto</label>
+                    <input type="text" value={filtroProducto} onChange={e => setFiltroProducto(e.target.value)}
+                        placeholder="Buscar producto..." className={inputCls} />
+                </div>
+                <div>
+                    <label className="block text-xs text-gray-400 mb-1">Desde</label>
+                    <input type="date" value={filtroDesde} onChange={e => setFiltroDesde(e.target.value)} className={inputCls} />
+                </div>
+                <div>
+                    <label className="block text-xs text-gray-400 mb-1">Hasta</label>
+                    <input type="date" value={filtroHasta} onChange={e => setFiltroHasta(e.target.value)} className={inputCls} />
+                </div>
+            </div>
+            <div className="flex items-center justify-between mb-3 text-xs text-gray-400">
+                <span>{ordenesFiltradas.length} de {ordenes.length} órdenes</span>
+                {hayFiltros && (
+                    <button onClick={limpiarFiltros} className="text-primary hover:underline">Limpiar filtros</button>
+                )}
+            </div>
+
             <DataList
-                items={ordenes}
+                items={ordenesFiltradas}
                 getKey={(o) => o.id}
                 columns={columnas}
-                empty="No hay órdenes de producción activas."
+                empty={hayFiltros ? 'No hay órdenes que coincidan con los filtros.' : 'No hay órdenes de producción activas.'}
                 card={(o) => (
                     <div className="space-y-2">
                         <div className="flex items-start justify-between gap-3">
@@ -250,7 +358,7 @@ export default function ProduccionPage() {
                                 <div className="text-white font-semibold">OP #{o.id} · <span className="font-normal">{locales[o.local_id] || o.local_id}</span></div>
                                 <div className="text-xs text-gray-400">Programada {new Date(o.fecha_programada).toLocaleDateString()}</div>
                             </div>
-                            <div className="shrink-0">{estadoBadge(o)}</div>
+                            <div className="shrink-0 text-right">{estadoBadge(o)}{etiquetasBadge(o)}</div>
                         </div>
                         {pedidoProducido(o)}
                         {o.notas && <div className="text-xs text-gray-400 italic break-words">{o.notas}</div>}
@@ -265,6 +373,16 @@ export default function ProduccionPage() {
                     productosMap={productosMap}
                     onCerrar={() => setOrdenEditar(null)}
                     onGuardado={() => { setOrdenEditar(null); loadData(); }}
+                />
+            )}
+
+            {ordenEtiquetas && (
+                <EtiquetasOrdenModal
+                    orden={ordenEtiquetas}
+                    productosMap={productosMap}
+                    onCerrar={() => setOrdenEtiquetas(null)}
+                    esAdmin={esAdmin}
+                    onActualizada={actualizarOrden}
                 />
             )}
 

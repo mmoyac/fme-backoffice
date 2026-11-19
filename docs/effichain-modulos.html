@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Módulos de EffiChain</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --text: #1b1f24; --muted: #5b6470;
+    --line: #e2e5ea; --accent: #0f6fde; --accent-soft: #e6f0fc;
+    --core: #0e7c66; --core-soft: #e3f4ef; --tag: #f0f2f5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12151a; --card: #1b1f26; --text: #e8ebef; --muted: #9aa3ae;
+      --line: #2b313a; --accent: #5aa2ff; --accent-soft: #1c2a3d;
+      --core: #4cc9a8; --core-soft: #17302a; --tag: #252b34;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12151a; --card: #1b1f26; --text: #e8ebef; --muted: #9aa3ae;
+    --line: #2b313a; --accent: #5aa2ff; --accent-soft: #1c2a3d;
+    --core: #4cc9a8; --core-soft: #17302a; --tag: #252b34;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 40px 16px 64px; }
+  header h1 { font-size: 30px; margin: 0 0 6px; letter-spacing: -0.01em; }
+  header p { margin: 0; color: var(--muted); max-width: 720px; }
+  h2 { font-size: 18px; margin: 40px 0 14px; }
+  .core {
+    background: var(--core-soft); border: 1px solid var(--line);
+    border-left: 4px solid var(--core); border-radius: 10px; padding: 18px 20px;
+  }
+  .core h3 { margin: 0 0 6px; font-size: 16px; color: var(--core); }
+  .core p { margin: 0 0 10px; color: var(--muted); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+  .chips li { background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; font-size: 13px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+  .mod {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 18px 18px 16px; display: flex; flex-direction: column;
+  }
+  .mod .top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .mod h3 { margin: 0; font-size: 16px; }
+  .mod code { font-size: 12px; color: var(--muted); }
+  .mod p { margin: 8px 0 10px; color: var(--muted); font-size: 14px; }
+  .mod ul { margin: 0 0 12px; padding-left: 18px; font-size: 14px; }
+  .mod ul li { margin: 2px 0; }
+  .req { margin-top: auto; font-size: 12.5px; color: var(--muted); }
+  .req span { display: inline-block; background: var(--accent-soft); color: var(--accent); border-radius: 6px; padding: 1px 8px; margin-left: 4px; font-weight: 600; }
+  .req.none span { background: var(--tag); color: var(--muted); }
+  table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; font-size: 14px; }
+  th, td { text-align: left; padding: 9px 14px; border-bottom: 1px solid var(--line); }
+  th { font-size: 12.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  tr:last-child td { border-bottom: 0; }
+  .tablewrap { overflow-x: auto; }
+  footer { margin-top: 40px; color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Módulos de EffiChain</h1>
+    <p>EffiChain se contrata por módulos. El núcleo viene siempre incluido; los demás se activan por cliente (tenant) desde la consola de plataforma. Algunos módulos requieren otro para funcionar.</p>
+  </header>
+
+  <h2>Núcleo (siempre incluido)</h2>
+  <div class="core">
+    <h3>Base del sistema</h3>
+    <p>Lo que todo cliente tiene, independiente del plan contratado.</p>
+    <ul class="chips">
+      <li>Dashboard</li><li>Productos y recetas</li><li>Clientes y crédito</li><li>Precios</li>
+      <li>Locales</li><li>Usuarios y roles</li><li>Mantenedores</li><li>Alertas</li>
+      <li>Centro de capacitación</li><li>Configuración (pasarelas, landing, tarifas de delivery)</li>
+    </ul>
+  </div>
+
+  <h2>Módulos contratables</h2>
+  <div class="grid">
+
+    <article class="mod">
+      <div class="top"><h3>Ventas</h3><code>ventas</code></div>
+      <p>El corazón comercial: registrar y gestionar pedidos.</p>
+      <ul>
+        <li>Pedidos y su detalle</li>
+        <li>Punto de venta (POS) en el backoffice, con modo offline</li>
+        <li>Caja diaria</li>
+        <li>Solicitudes de clientes</li>
+      </ul>
+      <div class="req none">Requiere <span>nada</span></div>
+    </article>
+
+    <article class="mod">
+      <div class="top"><h3>Cotizaciones</h3><code>cotizaciones</code></div>
+      <p>Presupuestos para clientes antes de convertirlos en pedido.</p>
+      <ul>
+        <li>Crear, editar y enviar cotizaciones</li>
+        <li>Convertir una cotización en pedido</li>
+      </ul>
+      <div class="req">Requiere <span>Ventas</span></div>
+    </article>
+
+    <article class="mod">
+      <div class="top"><h3>Pre-venta de cajas</h3><code>preventa</code></div>
+      <p>Venta anticipada de cajas armadas para entrega programada.</p>
+      <ul>
+        <li>Pedidos de cajas</li>
+        <li>Stock de cajas y resumen</li>
+        <li>Picking de cajas para despacho</li>
+      </ul>
+      <div class="req">Requiere <span>Ventas</span></div>
+    </article>
+
+    <article class="mod">
+      <div class="top"><h3>Tienda online</h3><code>tienda_online</code></div>
+      <p>Sitio de venta pública conectado al catálogo y al stock.</p>
+      <ul>
+        <li>Landing y catálogo de productos</li>
+        <li>Checkout con pago online (Mercado Pago, Flow, Khipu)</li>
+        <li>Seguimiento del pedido por enlace</li>
+        <li>Feed para Google Merchant Center</li>
+      </ul>
+      <div class="req">Requiere <span>Ventas</span></div>
+    </article>
+
+    <article class="mod">
+      <div class="top"><h3>Inventario</h3><code>inventario</code></div>
+      <p>Control de existencias por local y ubicación.</p>
+      <ul>
+        <li>Stock por producto, local y lote</li>
+        <li>Transferencias entre locales</li>
+        <li>Conteo de inventario y ajustes</li>
+        <li>Alertas de stock mínimo</li>
+      </ul>
+      <div class="req none">Requiere <span>nada</span></div>
+    </article>
+
+    <article class="mod">
+      <div class="top"><h3>Compras</h3><code>compras</code></div>
+      <p>Abastecimiento: desde la orden de compra hasta la recepción.</p>
+      <ul>
+        <li>Órdenes de compra y proveedores</li>
+        <li>Facturas de proveedor</li>
+        <li>Recepción, lotes, enrolamientos y ubicaciones</li>
+        <li>Precios por proveedor</li>
+      </ul>
+      <div class="req">Requiere <span>Inventario</span></div>
+    </article>
+
+    <article class="mod">
+      <div class="top"><h3>Producción</h3><code>produccion</code></div>
+      <p>Fabricación a partir de recetas, con costeo real.</p>
+      <ul>
+        <li>Producciones y órdenes de trabajo</li>
+        <li>Rol de producción que informa lo producido</li>
+        <li>Consumo de insumos según receta</li>
+        <li>Costeo con gastos operacionales</li>
+      </ul>
+      <div class="req">Requiere <span>Inventario</span></div>
+    </article>
+
+    <article class="mod">
+      <div class="top"><h3>Etiquetado nutricional</h3><code>etiquetado</code></div>
+      <p>Etiquetas según la normativa chilena, generadas desde la receta.</p>
+      <ul>
+        <li>Tabla nutricional calculada</li>
+        <li>Sellos octagonales “ALTO EN”</li>
+        <li>Impresión en rollo DK-11202 y hoja A4 (PDF)</li>
+      </ul>
+      <div class="req">Requiere <span>Producción</span></div>
+    </article>
+
+    <article class="mod">
+      <div class="top"><h3>Despacho</h3><code>despacho</code></div>
+      <p>Logística de entrega de los pedidos.</p>
+      <ul>
+        <li>Rutas y tablero de despacho</li>
+        <li>Vehículos y app del despachador</li>
+        <li>Calculadora de despacho</li>
+        <li>Avisos al cliente (confirmación, en ruta, entregado)</li>
+      </ul>
+      <div class="req">Requiere <span>Ventas</span></div>
+    </article>
+
+    <article class="mod">
+      <div class="top"><h3>Cobranza</h3><code>cobranza</code></div>
+      <p>Seguimiento de lo que se debe y su recuperación.</p>
+      <ul>
+        <li>Cuentas por cobrar y gestiones de cobro</li>
+        <li>Notas de crédito</li>
+        <li>Reportes de crédito de clientes</li>
+      </ul>
+      <div class="req">Requiere <span>Ventas</span></div>
+    </article>
+
+    <article class="mod">
+      <div class="top"><h3>Comisiones</h3><code>comisiones</code></div>
+      <p>Cálculo de comisiones de vendedores sobre las ventas.</p>
+      <ul>
+        <li>Comisiones por vendedor y período</li>
+      </ul>
+      <div class="req">Requiere <span>Ventas</span></div>
+    </article>
+
+    <article class="mod">
+      <div class="top"><h3>Fidelización</h3><code>fidelizacion</code></div>
+      <p>Programa de puntos para premiar a los clientes que vuelven.</p>
+      <ul>
+        <li>Acumulación de puntos por compra y categoría</li>
+        <li>Canje de puntos</li>
+      </ul>
+      <div class="req">Requiere <span>Ventas</span></div>
+    </article>
+
+  </div>
+
+  <h2>Dependencias entre módulos</h2>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Módulo base</th><th>Módulos que dependen de él</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Ventas</strong></td><td>Cotizaciones, Pre-venta de cajas, Tienda online, Despacho, Cobranza, Comisiones, Fidelización</td></tr>
+        <tr><td><strong>Inventario</strong></td><td>Compras, Producción</td></tr>
+        <tr><td><strong>Producción</strong></td><td>Etiquetado nutricional</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <footer>EffiChain · effi4tech.cl · Catálogo de módulos al 18-11-2026</footer>
+</div>
+</body>
+</html>

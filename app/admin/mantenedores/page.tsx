@@ -47,6 +47,7 @@ export default function MantenedoresPage() {
         { id: "canales_venta",         icono: "📡",  titulo: "Canales de Venta",         desc: "POS, Landing, WhatsApp, Teléfono y otros" },
         { id: "config_landing",        icono: "🌐",  titulo: "Config. Landing",          desc: "Apariencia de la landing page", modulos: ["tienda_online"] },
         { id: "pasarelas_pago",        icono: "💳",  titulo: "Pasarelas de pago",        desc: "Pagos en línea de la tienda (Mercado Pago, Flow, Khipu)", modulos: ["tienda_online"] },
+        { id: "tarifas_delivery",      icono: "🚚",  titulo: "Tarifas de delivery",      desc: "Comunas con delivery de la tienda y su costo", modulos: ["tienda_online"] },
         { id: "tipos_ot",              icono: "⚙️",  titulo: "Tipos de OT",              desc: "Tipos de Orden de Trabajo: Producción, Servicio, etc.", modulos: ["produccion"] },
         { id: "ot_etapas",             icono: "🔧",  titulo: "Etapas de OT",             desc: "Flujo de etapas por tipo de Orden de Trabajo", modulos: ["produccion"] },
         { id: "roles_permisos",        icono: "🔐",  titulo: "Roles y Permisos",         desc: "Roles del sistema y permisos de menú" },
@@ -284,6 +285,23 @@ export default function MantenedoresPage() {
                                 className="inline-block bg-primary hover:bg-primary-dark text-slate-900 font-semibold px-6 py-3 rounded-lg transition-colors"
                             >
                                 🌐 Ir a Configuración de Landing
+                            </a>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === "tarifas_delivery" && (
+                    <div>
+                        <h2 className="text-xl font-semibold text-white mb-2">Tarifas de delivery</h2>
+                        <p className="text-gray-400 mb-4">
+                            Comunas a las que la tienda online hace delivery y su costo (el cliente lo ve en el checkout)
+                        </p>
+                        <div className="bg-slate-700 rounded-lg p-6 text-center">
+                            <a
+                                href="/admin/configuracion/tarifas-delivery"
+                                className="inline-block bg-primary hover:bg-primary-dark text-slate-900 font-semibold px-6 py-3 rounded-lg transition-colors"
+                            >
+                                🚚 Ir a Tarifas de delivery
                             </a>
                         </div>
                     </div>

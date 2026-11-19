@@ -60,6 +60,12 @@ export interface EtiquetaCompleta {
   empresa_resolucion_sanitaria: string | null;
   empresa_email: string | null;
   empresa_telefono: string | null;
+  /** Origen impreso en la etiqueta (ej. "Producto Chileno"). */
+  empresa_origen?: string | null;
+  /** Comuna del pie de la etiqueta (ej. "Santiago, Lampa"). */
+  empresa_comuna?: string | null;
+  /** Logo para etiquetas (o el logo general); puede ser ruta relativa a la API. */
+  empresa_logo_url?: string | null;
 }
 
 export interface InformacionNutricionalUpdate {

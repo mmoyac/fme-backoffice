@@ -79,6 +79,9 @@ export default function ConfiguracionLandingPage() {
         direccion: data.direccion,
         razon_social: data.razon_social,
         resolucion_sanitaria: data.resolucion_sanitaria,
+        etiqueta_origen: data.etiqueta_origen,
+        etiqueta_comuna: data.etiqueta_comuna,
+        etiqueta_logo_url: data.etiqueta_logo_url,
         texto_footer_descripcion: data.texto_footer_descripcion,
         texto_copyright: data.texto_copyright,
         meta_title: data.meta_title,
@@ -662,6 +665,44 @@ export default function ConfiguracionLandingPage() {
                 placeholder="RS N° 1234/2024"
               />
             </div>
+          </div>
+
+          {/* Datos para etiquetas nutricionales (formato 75×62 mm) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">Origen (etiqueta)</label>
+              <input
+                type="text"
+                maxLength={100}
+                value={formData.etiqueta_origen || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, etiqueta_origen: e.target.value }))}
+                className="w-full p-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
+                placeholder="Producto Chileno"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">Comuna (pie de etiqueta)</label>
+              <input
+                type="text"
+                maxLength={100}
+                value={formData.etiqueta_comuna || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, etiqueta_comuna: e.target.value }))}
+                className="w-full p-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
+                placeholder="Santiago, Lampa"
+              />
+            </div>
+          </div>
+          <div className="mb-4">
+            <ImageUpload
+              label="Logo para etiquetas (blanco y negro)"
+              currentUrl={formData.etiqueta_logo_url}
+              tipo="logo"
+              onUploadSuccess={(url) => setFormData(prev => ({ ...prev, etiqueta_logo_url: url }))}
+              acceptedFormats=".jpg,.jpeg,.png,.webp"
+            />
+            <p className="text-xs text-slate-400 mt-1">
+              Se imprime en impresoras térmicas: usa una versión en blanco y negro, sin fondo de color. Si lo dejas vacío, la etiqueta usa el logo de la empresa.
+            </p>
           </div>
 
           <div className="mb-4">

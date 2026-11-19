@@ -51,6 +51,8 @@ export interface OrdenProduccion {
     detalles: DetalleOrden[];
     solicitado_por?: UsuarioRef | null;
     producido_por?: UsuarioRef | null;
+    etiquetas_impresas_at?: string | null;
+    etiquetas_impresas_por?: UsuarioRef | null;
 }
 
 export interface OrdenProduccionCreate {
@@ -121,6 +123,19 @@ export async function finalizarOrden(id: number, payload?: ConfirmacionFinalizac
         const error = await response.json();
         throw new Error(error.detail || 'Error al finalizar orden');
     }
+}
+
+/** Confirmación manual de etiquetas impresas (marcar = POST, desmarcar = DELETE, solo admin). */
+export async function setEtiquetasImpresas(id: number, impresas: boolean): Promise<OrdenProduccion> {
+    const response = await fetch(`${API_URL}/api/produccion/ordenes/${id}/etiquetas-impresas`, {
+        method: impresas ? 'POST' : 'DELETE',
+        headers: AuthService.getAuthHeaders(),
+    });
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.detail || 'Error al actualizar el estado de las etiquetas');
+    }
+    return response.json();
 }
 
 export async function deleteOrden(id: number): Promise<void> {

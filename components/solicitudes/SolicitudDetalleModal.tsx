@@ -144,9 +144,10 @@ const SolicitudDetalleModal: React.FC<Props> = ({ solicitud, localesMap, product
   }
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-slate-800 rounded-lg p-6 max-w-lg w-full shadow-xl border border-slate-700 relative text-white">
-        <button className="absolute top-2 right-2 text-gray-400 hover:text-primary" onClick={onClose}>✕</button>
-        <h2 className="text-xl font-bold mb-4">Solicitud de Transferencia #{solicitud.solicitud_id}</h2>
+      <div className="bg-slate-800 rounded-lg max-w-lg w-full max-h-[90vh] flex flex-col shadow-xl border border-slate-700 relative text-white">
+        <button className="absolute top-2 right-2 text-gray-400 hover:text-primary z-10" onClick={onClose}>✕</button>
+        <h2 className="text-xl font-bold px-6 pt-6 pb-4 shrink-0">Solicitud de Transferencia #{solicitud.solicitud_id}</h2>
+        <div className="flex-1 min-h-0 overflow-y-auto px-6">
         <div className="mb-2 text-sm">
           <strong>Local Origen:</strong> {localesMap[solicitud.local_origen_id]?.nombre || solicitud.local_origen_id}<br />
           <strong>Local Destino:</strong> {localesMap[solicitud.local_destino_id]?.nombre || solicitud.local_destino_id}<br />
@@ -165,7 +166,7 @@ const SolicitudDetalleModal: React.FC<Props> = ({ solicitud, localesMap, product
           <div className="mb-2 text-sm"><strong>Nota:</strong> {solicitud.nota}</div>
         )}
         <table className="w-full border border-slate-700 mb-4">
-          <thead>
+          <thead className="sticky top-0">
             <tr className="bg-slate-700">
               <th className="py-2 px-3 text-xs text-primary border-b border-slate-700">Producto</th>
               <th className="py-2 px-3 text-xs text-primary border-b border-slate-700">Solicitado</th>
@@ -197,7 +198,8 @@ const SolicitudDetalleModal: React.FC<Props> = ({ solicitud, localesMap, product
             ))}
           </tbody>
         </table>
-        <div className="flex flex-col gap-2 mt-4">
+        </div>
+        <div className="flex flex-col gap-2 px-6 pt-2 shrink-0 border-t border-slate-700">
           <div className="flex gap-2 justify-end">
             <button
               className="px-4 py-2 rounded bg-slate-600 text-gray-200 hover:bg-slate-500 transition-colors"
@@ -227,7 +229,7 @@ const SolicitudDetalleModal: React.FC<Props> = ({ solicitud, localesMap, product
             </div>
           )}
         </div>
-        <div className="text-xs text-right text-slate-400 mt-2">Visualizado: {new Date().toLocaleString('es-CL')}</div>
+        <div className="text-xs text-right text-slate-400 mt-2 px-6 pb-4 shrink-0">Visualizado: {new Date().toLocaleString('es-CL')}</div>
       </div>
     </div>
   );

@@ -125,6 +125,10 @@ Guía completa: `fme-backend/docs/PASARELAS_PAGO.md`. Especificación: change Op
   - estado **En Ruta** y filtro **Pago** (pagados / por pagar);
   - filtros iniciales desde la URL (`?estado=`, `?pagado=si|no`);
   - "Creado por" muestra **🛒 Tienda online** en pedidos hechos por el cliente en la landing (canal LANDING).
+* **Mantenedores → Tarifas de delivery** (change `add-delivery-por-comuna`; `app/admin/configuracion/tarifas-delivery/page.tsx`, `lib/api/tarifas-delivery.ts`, pestaña restringida a `tienda_online`, API `/api/admin/tarifas-delivery`):
+  - comunas a las que la tienda hace delivery y su costo (crear, editar, activar/desactivar, eliminar); nombre único por tenant sin distinguir mayúsculas ni tildes;
+  - sin tarifas activas, la tienda ofrece solo Retiro en casa central;
+  - el detalle del pedido (tarjeta **Entrega**, `components/pedidos/EntregaPedidoCard.tsx`) muestra comuna y costo de delivery.
 * **Confirmación automática:** un pedido pagado en línea se confirma solo y descuenta inventario del local de despacho por defecto de su tipo. Si no hay stock ahí, queda pagado y PENDIENTE y los admins reciben una notificación en la campana para confirmarlo a mano eligiendo otro local.
 
 ---

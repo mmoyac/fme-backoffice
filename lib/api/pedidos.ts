@@ -53,6 +53,7 @@ export interface Pedido {
   retirado_por_nombre?: string | null;
   retirado_por_rut?: string | null;
   nota_entrega?: string | null;
+  comuna_entrega?: string | null; // add-delivery-por-comuna
   pagado: boolean;
   inventario_descontado: boolean;
   notas?: string;
