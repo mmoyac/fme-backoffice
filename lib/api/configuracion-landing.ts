@@ -79,6 +79,8 @@ export interface ConfiguracionLanding {
     mostrar_precios: boolean;
     mostrar_stock: boolean;
     habilitar_carrito: boolean;
+    /** Checkout: ofrecer "Solicitar pedido sin pagar ahora" */
+    permitir_pedido_sin_pago?: boolean;
 
     // Configuración de Delivery
     costo_fijo_delivery?: number | null;
@@ -121,6 +123,7 @@ export interface ConfiguracionLandingCreate {
     mostrar_precios?: boolean;
     mostrar_stock?: boolean;
     habilitar_carrito?: boolean;
+    permitir_pedido_sin_pago?: boolean;
     costo_fijo_delivery?: number | null;
     costo_por_km_delivery?: number | null;
     costo_por_kilo_delivery?: number | null;

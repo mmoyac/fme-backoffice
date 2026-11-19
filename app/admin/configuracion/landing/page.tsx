@@ -89,6 +89,7 @@ export default function ConfiguracionLandingPage() {
         mostrar_precios: data.mostrar_precios,
         mostrar_stock: data.mostrar_stock,
         habilitar_carrito: data.habilitar_carrito,
+        permitir_pedido_sin_pago: data.permitir_pedido_sin_pago ?? true,
         costo_fijo_delivery: data.costo_fijo_delivery ?? null,
         costo_por_km_delivery: data.costo_por_km_delivery ?? null,
         costo_por_kilo_delivery: data.costo_por_kilo_delivery ?? null,
@@ -812,6 +813,28 @@ export default function ConfiguracionLandingPage() {
                   type="checkbox"
                   checked={formData.habilitar_carrito ?? true}
                   onChange={(e) => setFormData(prev => ({ ...prev, habilitar_carrito: e.target.checked }))}
+                  className="sr-only peer"
+                />
+                <div className="w-14 h-7 bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-800 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-teal-600"></div>
+              </label>
+            </div>
+
+            {/* Pedido sin pago en línea (change add-interruptor-pedido-sin-pago) */}
+            <div className="bg-slate-700 p-4 rounded-lg flex items-center justify-between gap-4">
+              <div>
+                <h3 className="text-white font-semibold flex items-center">
+                  📞 Permitir pedidos sin pago en línea
+                </h3>
+                <p className="text-sm text-slate-400 mt-1">
+                  Muestra en el checkout la opción &quot;Solicitar pedido sin pagar ahora&quot; (el pago se coordina después).
+                  Si la desactivas, el cliente solo puede pagar con una pasarela de producción activa; sin pasarela, la tienda no recibe pedidos.
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                <input
+                  type="checkbox"
+                  checked={formData.permitir_pedido_sin_pago ?? true}
+                  onChange={(e) => setFormData(prev => ({ ...prev, permitir_pedido_sin_pago: e.target.checked }))}
                   className="sr-only peer"
                 />
                 <div className="w-14 h-7 bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-800 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-teal-600"></div>
