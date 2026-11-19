@@ -130,6 +130,25 @@ export default function HojasRutaPage() {
     cargar();
   }, [cargar]);
 
+  // Viene de la bandeja de Despacho: ?nueva=1&pedidos=1,2&solicitudes=5 → abre "Nueva Hoja de Ruta"
+  // con esos pendientes marcados (los que ya no estén disponibles se ignoran). Change improve-despacho-bandeja.
+  const [preseleccionAplicada, setPreseleccionAplicada] = useState(false);
+  useEffect(() => {
+    if (preseleccionAplicada || loading || typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('nueva') !== '1') return;
+    setPreseleccionAplicada(true);
+    const ids = (clave: string) => new Set((params.get(clave) || '').split(',').map(Number).filter(Boolean));
+    const pedidos = ids('pedidos');
+    const solicitudes = ids('solicitudes');
+    const marcados = pedidosDisponibles
+      .filter(p => (p.tipo === 'solicitud' ? solicitudes.has(p.id) : pedidos.has(p.id)))
+      .map(p => p.id);
+    setPedidosSeleccionados(new Set(marcados));
+    setModalCrear(true);
+    router.replace('/admin/despacho/rutas');
+  }, [loading, pedidosDisponibles, preseleccionAplicada, router]);
+
   const togglePedido = (id: number) => {
     setPedidosSeleccionados((prev) => {
       const next = new Set(prev);

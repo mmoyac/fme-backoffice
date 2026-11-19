@@ -37,7 +37,33 @@ export interface PedidoResumen {
   // Extras para solicitudes
   local_origen_nombre?: string;
   local_destino_nombre?: string;
+  /** Comuna de entrega del pedido (tienda web); null en pedidos del backoffice y solicitudes */
+  comuna?: string | null;
 }
+
+export interface PagadoSinConfirmar {
+  id: number;
+  numero_pedido: string;
+  cliente_nombre: string | null;
+  monto_total: number;
+  fecha_pedido: string | null;
+  comuna: string | null;
+}
+
+export interface BandejaDespacho {
+  contadores: {
+    por_despachar: number;
+    pagados_sin_confirmar: number;
+    en_ruta: number;
+    entregados_hoy: number;
+  };
+  pendientes: PedidoResumen[];
+  pagados_sin_confirmar: PagadoSinConfirmar[];
+}
+
+/** Portada de Despacho: contadores, pendientes por despachar y pagados en línea sin confirmar. */
+export const obtenerBandejaDespacho = (): Promise<BandejaDespacho> =>
+  apiRequest('/api/hojas-ruta/bandeja');
 
 export interface HojaRutaItem {
   id: number;

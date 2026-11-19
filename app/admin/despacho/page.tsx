@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Truck, Package, MapPin, CarFront, BarChart3 } from 'lucide-react';
+import BandejaDespacho from '@/components/despacho/BandejaDespacho';
 
 export default function DespachoPage() {
   return (
@@ -13,11 +14,14 @@ export default function DespachoPage() {
             Gestión de Despachos
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Rutas, vehículos y seguimiento de entregas
+            Pendientes por despachar, rutas y seguimiento de entregas
           </p>
         </div>
       </div>
 
+      <BandejaDespacho />
+
+      <h2 className="text-lg font-semibold text-gray-900 dark:text-white pt-2">Herramientas</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
         {/* Hojas de Ruta */}
